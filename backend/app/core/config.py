@@ -1,6 +1,6 @@
 """Application configuration loaded from environment variables."""
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     minio_endpoint: str = "http://localhost:9000"
     minio_access_key: str = "admin"
     minio_secret_key: str = "admin12345"
+
+    # ── Carbon / energy API (electricityMaps) ────────────────────────────────
+    electricity_maps_token: Optional[str] = None    # set in .env, never commit
+    electricity_maps_zone:  str = "DK-DK1"          # sandbox key only works for DK-DK1
+    electricity_maps_url:   str = "https://api.electricitymap.org/v3"
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:3001"]

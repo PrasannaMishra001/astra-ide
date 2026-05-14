@@ -20,9 +20,11 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
       - name: Import-check backend modules
-        run: python -c "import app.main; import app.api.auth; import app.api.workspaces"
+        run: python -c "import app.main; import app.api.auth; import app.api.workspaces; import app.api.carbon"
       - name: Verify schema generation
         run: python -c "from app.db.session import Base, engine; from app.models import User, Workspace; Base.metadata.create_all(bind=engine)"
+      - name: Run backend unit tests
+        run: python -m unittest discover -s tests -v
 
   # ── ML packages (risk scorer + scheduler + prewarming) ────────────────────
   ml:

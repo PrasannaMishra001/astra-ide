@@ -128,6 +128,25 @@ Transitions status to `RUNNING`. In Phase ≥ 1 this also launches a pod.
 }
 ```
 
+## Carbon intensity
+
+### GET `/carbon/intensity?zone=DK-DK1`
+
+Returns current grid carbon intensity in gCO2eq/kWh for the requested zone.
+Falls back to a static historical average if the API is unreachable or quota
+is exhausted (so the scheduler always gets a number).
+
+```json
+200: {
+  "zone":             "DK-DK1",
+  "carbon_intensity": 53.0,
+  "is_estimated":     true,
+  "is_fallback":      false,
+  "source":           "api",
+  "timestamp":        1715703600.5
+}
+```
+
 ## Health endpoints
 
 | Path | Service |
