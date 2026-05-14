@@ -1,21 +1,27 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Python (only inside backend/ and ml/ — frontend/src/lib is source code, must be tracked)
+backend/__pycache__/
+backend/build/
+backend/dist/
+backend/lib/
+backend/lib64/
+backend/var/
+backend/wheels/
+backend/*.egg-info/
+ml/__pycache__/
+ml/build/
+ml/dist/
+ml/lib/
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg

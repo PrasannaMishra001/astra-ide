@@ -1,0 +1,122 @@
+// API client for the ASTRA-IDE backend (FastAPI).
+// Reads JWT from localStorage; rewrites /api/* to the backend via Next.js rewrites.
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: false,
+});
+
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = window.localStorage.getItem('astra_token');
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+// ── Types matching backend schemas ─────────────────────────────────────────
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  trust_score: number;
+  preferred_lang: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type:   string;
+  user:         User;
+}
+
+export interface Workspace {
+  id: number;
+  name: string;
+  language: string;
+  status: 'PENDING' | 'PREWARMED' | 'RUNNING' | 'STOPPED' | 'FAILED' | 'ARCHIVED';
+  sandbox_tier: 'runc' | 'gvisor' | 'firecracker';
+  risk_score: number;
+  network_access: boolean;
+  filesystem_write: boolean;
+  cpu_request: number;
+  memory_request: number;
+  cluster_id: string;
+  node_name: string;
+  pod_name: string;
+  yjs_room: string;
+  owner_id: number;
+  created_at: string;
+  updated_at: string;
+  last_active_at: string;
+}
+
+export interface WorkspaceCreate {
+  name: string;
+  language: string;
+  network_access?: boolean;
+  filesystem_write?: boolean;
+  cpu_request?: number;
+  memory_request?: number;
+  initial_code?: string;
+}
+
+// ── Auth ────────────────────────────────────────────────────────────────────
+
+export async function register(email: string, username: string, password: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>('/auth/register', { email, username, password });
+  return data;
+}
+
+export async function login(username_or_email: string, password: string): Promise<TokenResponse> {
+  // FastAPI's OAuth2PasswordRequestForm expects form-encoded body
+  const form = new URLSearchParams();
+  form.append('username', username_or_email);
+  form.append('password', password);
+  const { data } = await api.post<TokenResponse>('/auth/login', form, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+  return data;
+}
+
+export async function fetchMe(): Promise<User> {
+  const { data } = await api.get<User>('/auth/me');
+  return data;
+}
+
+// ── Workspaces ──────────────────────────────────────────────────────────────
+
+export async function listWorkspaces(): Promise<Workspace[]> {
+  const { data } = await api.get<{ total: number; items: Workspace[] }>('/workspaces');
+  return data.items;
+}
+
+export async function createWorkspace(payload: WorkspaceCreate): Promise<Workspace> {
+  const { data } = await api.post<Workspace>('/workspaces', payload);
+  return data;
+}
+
+export async function getWorkspace(id: number): Promise<Workspace> {
+  const { data } = await api.get<Workspace>(`/workspaces/${id}`);
+  return data;
+}
+
+export async function startWorkspace(id: number): Promise<Workspace> {
+  const { data } = await api.post<Workspace>(`/workspaces/${id}/start`);
+  return data;
+}
+
+export async function stopWorkspace(id: number): Promise<Workspace> {
+  const { data } = await api.post<Workspace>(`/workspaces/${id}/stop`);
+  return data;
+}
+
+export async function deleteWorkspace(id: number): Promise<void> {
+  await api.delete(`/workspaces/${id}`);
+}
+
+export default api;
