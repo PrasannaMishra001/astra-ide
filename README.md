@@ -45,16 +45,27 @@ Then:
 
 ## Component Status
 
-| Component        | State       |
-|------------------|-------------|
-| Backend API      | scaffolded  |
-| Frontend         | scaffolded  |
-| Collab server    | scaffolded  |
-| PPO scheduler    | env stub    |
-| LSTM prewarming  | model stub  |
-| Risk scorer      | implemented |
-| eBPF probes      | planned     |
-| Karmada config   | planned     |
+| Component        | State                                          |
+|------------------|------------------------------------------------|
+| Backend API      | working — auth + workspace CRUD + JWT          |
+| Frontend         | working — login / register / dashboard / editor|
+| Collab server    | working — y-websocket relay + per-room stats   |
+| PPO scheduler    | Gymnasium env + reward + training script (7 tests passing) |
+| LSTM prewarming  | model + dataset generator + train script (6 tests passing) |
+| Risk scorer      | full implementation (7 tests passing)          |
+| K8s manifests    | base + Helm chart + Karmada policy             |
+| eBPF probes      | Tetragon TracingPolicy committed; custom probes planned |
+| GitHub Actions   | CI for all components + Docker image push      |
+
+---
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system overview, data flow
+- [docs/API.md](docs/API.md) — REST endpoints
+- [docs/ML.md](docs/ML.md) — PPO state/action/reward spec, LSTM training
+- [docs/DEPLOY.md](docs/DEPLOY.md) — local + Oracle Cloud + Karmada
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — first-time setup, conventions
 
 ---
 
@@ -71,16 +82,6 @@ Then:
 **Runtimes:** runc, gVisor (runsc), Firecracker (via Kata)
 
 **CI:** GitHub Actions, GHCR
-
----
-
-## Documentation
-
-See [docs/](./docs/) for:
-- Architecture overview
-- API reference
-- ML training procedure
-- Deployment guide
 
 ---
 
