@@ -8,11 +8,11 @@ import {
   startWorkspace,
   stopWorkspace,
   type Workspace,
-} from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+} from '../../../lib/api';
+import { useAuth } from '../../../lib/auth';
 
 // Editor is client-only (uses window)
-const CollabEditor = dynamic(() => import('@/components/CollabEditor'), { ssr: false });
+const CollabEditor = dynamic(() => import('../../../components/CollabEditor'), { ssr: false });
 
 export default function WorkspacePage() {
   const params = useParams<{ id: string }>();

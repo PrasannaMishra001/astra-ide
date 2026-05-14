@@ -9,8 +9,8 @@ import {
   startWorkspace,
   stopWorkspace,
   type Workspace,
-} from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+} from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 
 const LANGUAGES = ['python', 'javascript', 'go', 'rust', 'java', 'cpp', 'bash'];
 
