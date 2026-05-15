@@ -1,6 +1,6 @@
 """Pydantic schemas for workspace endpoints."""
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -46,3 +46,43 @@ class WorkspaceOut(BaseModel):
 class WorkspaceList(BaseModel):
     total: int
     items: list[WorkspaceOut]
+
+
+# ── Sharing ──────────────────────────────────────────────────────────────────
+
+class ShareRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    role:     str = Field(default="editor", pattern="^(editor|viewer)$")
+
+
+class MemberOut(BaseModel):
+    user_id:  int
+    username: str
+    role:     str
+    added_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MemberList(BaseModel):
+    total: int
+    items: List[MemberOut]
+
+
+# ── Execution ────────────────────────────────────────────────────────────────
+
+class ExecuteRequest(BaseModel):
+    language: str = Field(min_length=1, max_length=32)
+    code:     str = Field(min_length=1, max_length=200_000)
+    stdin:    Optional[str] = None
+
+
+class ExecuteResponse(BaseModel):
+    language:       str
+    exit_code:      int
+    stdout:         str
+    stderr:         str
+    runtime_ms:     int
+    timeout:        bool
+    truncated:      bool

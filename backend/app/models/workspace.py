@@ -12,6 +12,9 @@ WORKSPACE_STATUSES = ("PENDING", "PREWARMED", "RUNNING", "STOPPED", "FAILED", "A
 # Sandbox tiers: runc (fast) → gvisor (medium isolation) → firecracker (microVM)
 SANDBOX_TIERS = ("runc", "gvisor", "firecracker")
 
+# Member roles
+MEMBER_ROLES = ("owner", "editor", "viewer")
+
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -36,4 +39,23 @@ class Workspace(Base):
     updated_at:      Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_active_at:  Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    owner = relationship("User", back_populates="workspaces")
+    owner   = relationship("User", back_populates="workspaces")
+    members = relationship("WorkspaceMember", back_populates="workspace",
+                           cascade="all, delete-orphan", lazy="select")
+
+
+class WorkspaceMember(Base):
+    """
+    Many-to-many between users and workspaces for collaborative access.
+    The workspace's `owner_id` field is the primary owner; this table tracks
+    additional collaborators who can read/edit but not delete or share further.
+    """
+    __tablename__ = "workspace_members"
+
+    workspace_id: Mapped[int]      = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), primary_key=True)
+    user_id:      Mapped[int]      = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    role:         Mapped[str]      = mapped_column(String(16), default="editor")
+    added_at:     Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    workspace = relationship("Workspace", back_populates="members")
+    user      = relationship("User")

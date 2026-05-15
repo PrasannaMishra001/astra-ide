@@ -131,4 +131,69 @@ export async function deleteWorkspace(id: number): Promise<void> {
   await api.delete(`/workspaces/${id}`);
 }
 
+// ── Sharing ────────────────────────────────────────────────────────────────
+
+export interface WorkspaceMember {
+  user_id:  number;
+  username: string;
+  role:     'owner' | 'editor' | 'viewer';
+  added_at: string;
+}
+
+export async function shareWorkspace(
+  id: number, username: string, role: 'editor' | 'viewer' = 'editor',
+): Promise<{ user_id: number; username: string; role: string }> {
+  const { data } = await api.post(`/workspaces/${id}/share`, { username, role });
+  return data;
+}
+
+export async function listMembers(id: number): Promise<WorkspaceMember[]> {
+  const { data } = await api.get<{ total: number; items: WorkspaceMember[] }>(
+    `/workspaces/${id}/members`,
+  );
+  return data.items;
+}
+
+export async function revokeMember(workspaceId: number, userId: number): Promise<void> {
+  await api.delete(`/workspaces/${workspaceId}/members/${userId}`);
+}
+
+// ── Code execution ─────────────────────────────────────────────────────────
+
+export interface ExecuteResponse {
+  language:   string;
+  exit_code:  number;
+  stdout:     string;
+  stderr:     string;
+  runtime_ms: number;
+  timeout:    boolean;
+  truncated:  boolean;
+}
+
+export async function executeCode(
+  workspaceId: number, language: string, code: string, stdin?: string,
+): Promise<ExecuteResponse> {
+  const { data } = await api.post<ExecuteResponse>(
+    `/workspaces/${workspaceId}/execute`,
+    { language, code, stdin },
+  );
+  return data;
+}
+
+// ── Carbon ─────────────────────────────────────────────────────────────────
+
+export interface CarbonReading {
+  zone:             string;
+  carbon_intensity: number;
+  is_estimated:     boolean;
+  is_fallback:      boolean;
+  source:           string;
+  timestamp:        number;
+}
+
+export async function getCarbonIntensity(zone: string): Promise<CarbonReading> {
+  const { data } = await api.get<CarbonReading>(`/carbon/intensity?zone=${encodeURIComponent(zone)}`);
+  return data;
+}
+
 export default api;
