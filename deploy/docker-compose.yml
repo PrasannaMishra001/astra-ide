@@ -80,8 +80,14 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     environment:
-      NEXT_PUBLIC_BACKEND_URL:    http://backend:8000
-      NEXT_PUBLIC_COLLAB_WS_URL:  ws://localhost:1234
+      # BACKEND_URL is server-only — used by Next.js rewrites at runtime to
+      # proxy /api/* to the backend container over Docker's internal network.
+      BACKEND_URL:                http://backend:8000
+      # NEXT_PUBLIC_* vars are baked into the JS bundle and used by the
+      # BROWSER. PUBLIC_HOST must be the address users type into their browser.
+      # In production, override this at compose-up time:
+      #   PUBLIC_HOST=34.47.224.18 docker compose up -d
+      NEXT_PUBLIC_COLLAB_WS_URL:  ws://${PUBLIC_HOST:-localhost}:1234
     ports: ["3000:3000"]
     depends_on:
       - backend

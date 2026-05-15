@@ -16,11 +16,17 @@ const nextConfig = {
     return config;
   },
 
+  // Server-side proxy for /api/* → backend.
+  // IMPORTANT: use a NON-public env var here. `NEXT_PUBLIC_*` gets baked into
+  // the JS bundle at build time, but rewrites are evaluated at server startup,
+  // so we want a separate variable that's read fresh when the Next.js server
+  // boots inside the container.
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/:path*`,
+        destination: `${backendUrl}/api/v1/:path*`,
       },
     ];
   },
