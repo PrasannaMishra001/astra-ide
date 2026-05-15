@@ -52,6 +52,10 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+    # Loads carbon token + any other secrets from backend/.env (gitignored).
+    # Values in `environment:` below take precedence over this file.
+    env_file:
+      - ../backend/.env
     environment:
       DATABASE_URL:    postgresql+psycopg2://astra:astra_dev@postgres:5432/astra
       REDIS_URL:       redis://redis:6379/0
