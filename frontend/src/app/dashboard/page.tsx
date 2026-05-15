@@ -16,7 +16,7 @@ const LANGUAGES = ['python', 'javascript', 'go', 'rust', 'java', 'cpp', 'bash'];
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { token, user, clearSession } = useAuth();
+  const { token, user, hydrated, clearSession } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -27,12 +27,15 @@ export default function DashboardPage() {
   const [networkAccess, setNetworkAccess] = useState(false);
 
   useEffect(() => {
+    // Wait for Zustand to load persisted state from localStorage before
+    // deciding whether the user is logged in. Otherwise refresh = log-out.
+    if (!hydrated) return;
     if (!token) {
       router.push('/login');
       return;
     }
     refresh();
-  }, [token]);
+  }, [token, hydrated]);
 
   async function refresh() {
     setLoading(true);

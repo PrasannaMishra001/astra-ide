@@ -17,17 +17,18 @@ const CollabEditor = dynamic(() => import('../../../components/CollabEditor'), {
 export default function WorkspacePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, hydrated } = useAuth();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!hydrated) return;     // wait for persisted auth to load
     if (!token) {
       router.push('/login');
       return;
     }
     refresh();
-  }, [token]);
+  }, [token, hydrated]);
 
   async function refresh() {
     try {

@@ -1,5 +1,6 @@
 // API client for the ASTRA-IDE backend (FastAPI).
-// Reads JWT from localStorage; rewrites /api/* to the backend via Next.js rewrites.
+// Reads JWT from the Zustand auth store (which persists to localStorage).
+// Rewrites /api/* to the backend via Next.js rewrites.
 import axios from 'axios';
 
 const api = axios.create({
@@ -9,10 +10,21 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = window.localStorage.getItem('astra_token');
-    if (token) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${token}`;
+    // Read directly from localStorage to avoid a circular import with auth.ts.
+    // Zustand's persist middleware stores under key `astra-auth` as JSON:
+    //   { "state": { "token": "...", "user": {...} }, "version": 0 }
+    const raw = window.localStorage.getItem('astra-auth');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { state?: { token?: string } };
+        const token = parsed?.state?.token;
+        if (token) {
+          config.headers = config.headers ?? {};
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch {
+        /* corrupt storage — ignore */
+      }
     }
   }
   return config;
