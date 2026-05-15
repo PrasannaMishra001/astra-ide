@@ -12,9 +12,17 @@ WORKDIR /app
 COPY .npmrc ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Avoid building with telemetry / lint-on-build
+
+# Next.js inlines `rewrites()` destinations and any `NEXT_PUBLIC_*` env vars
+# at BUILD time. Anything we need baked into the production bundle must be
+# present as ENV here, before `npm run build` runs.
+ARG BACKEND_URL=http://backend:8000
+ARG NEXT_PUBLIC_COLLAB_WS_URL=ws://localhost:1234
+ENV BACKEND_URL=${BACKEND_URL}
+ENV NEXT_PUBLIC_COLLAB_WS_URL=${NEXT_PUBLIC_COLLAB_WS_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
 RUN npm run build
 
 # ── runtime stage ───────────────────────────────────────────────────────────
