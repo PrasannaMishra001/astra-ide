@@ -80,11 +80,14 @@ export default function WorkspacePage() {
         </div>
       </header>
 
-      <section className="flex-1">
+      <section className="flex-1 min-h-0">
         <CollabEditor
+          workspaceId={ws.id}
           room={ws.yjs_room}
           language={ws.language}
+          initialCode={undefined}
           username={user.username}
+          isOwner={ws.owner_id === user.id}
         />
       </section>
     </main>
