@@ -20,6 +20,8 @@ import { executeCode, type ExecuteResponse } from '../lib/api';
 import { cn } from '../lib/utils';
 import OutputPanel from './OutputPanel';
 import ShareModal from './ShareModal';
+import EditorStatusBar from './EditorStatusBar';
+import KeybindingsHelp from './KeybindingsHelp';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -30,6 +32,8 @@ interface Props {
   initialCode?: string;
   username:    string;
   isOwner:     boolean;
+  status?:     string;       // workspace status — shown in status bar
+  sandbox?:    string;       // sandbox tier — shown in status bar
 }
 
 // Display name → Monaco's language ID (for syntax highlighting + keybindings)
@@ -75,9 +79,12 @@ function toMonacoLang(workspaceLang: string): string {
 
 export default function CollabEditor({
   workspaceId, room, language, initialCode = '', username, isOwner,
+  status = 'PENDING', sandbox = 'runc',
 }: Props) {
   const [currentLang, setCurrentLang] = useState(toMonacoLang(language));
   const [peers, setPeers] = useState<{ name: string; color: string }[]>([]);
+  const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 });
+  const [showHelp, setShowHelp] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<ExecuteResponse | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -132,7 +139,25 @@ export default function CollabEditor({
     bindingRef.current = new MonacoBinding(
       ytext, instance.getModel()!, new Set([instance]), provider.awareness,
     );
+
+    // Track cursor position for the status bar
+    instance.onDidChangeCursorPosition((e) => {
+      setCursorPos({ line: e.position.lineNumber, column: e.position.column });
+    });
   };
+
+  // Ctrl/Cmd + K opens the keybindings help (VS Code uses Ctrl+K, Ctrl+S — we
+  // shorten it for cloud convenience).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setShowHelp((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   async function onRun() {
@@ -292,6 +317,17 @@ export default function CollabEditor({
         />
       )}
 
+      {/* VS Code-style status bar — always visible at the bottom */}
+      <EditorStatusBar
+        language={currentLang}
+        line={cursorPos.line}
+        column={cursorPos.column}
+        peers={peers.length}
+        status={status}
+        sandbox={sandbox}
+        onOpenHelp={() => setShowHelp(true)}
+      />
+
       {/* Share modal — only mount when open */}
       {showShare && (
         <ShareModal
@@ -299,6 +335,9 @@ export default function CollabEditor({
           onClose={() => setShowShare(false)}
         />
       )}
+
+      {/* Keybindings cheatsheet (opens via Ctrl/Cmd+K or status bar "?") */}
+      <KeybindingsHelp open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }

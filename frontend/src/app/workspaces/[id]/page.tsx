@@ -88,6 +88,8 @@ export default function WorkspacePage() {
           initialCode={undefined}
           username={user.username}
           isOwner={ws.owner_id === user.id}
+          status={ws.status}
+          sandbox={ws.sandbox_tier}
         />
       </section>
     </main>
