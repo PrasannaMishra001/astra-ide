@@ -11,6 +11,7 @@ import { Cpu, Network, Zap, Activity, Leaf } from 'lucide-react';
 
 import ClusterCanvas, { type ClusterNode, type ClusterEdge } from '../../components/ui/ClusterCanvas';
 import ThreeDCard from '../../components/ui/ThreeDCard';
+import ActivityFeed from '../../components/ActivityFeed';
 import { listWorkspaces, type Workspace, getCarbonIntensity } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
@@ -123,6 +124,9 @@ export default function ClustersPage() {
             accent="from-purple-500/20"
           />
         </div>
+
+        {/* Live scheduler / sandbox / eBPF activity feed */}
+        <ActivityFeed workspaces={workspaces} className="mt-2" />
 
         <p className="text-xs text-slate-500 italic text-center pt-4">
           Topology renders the workspaces visible to your account. eBPF telemetry &amp; PPO decisions

@@ -19,7 +19,7 @@ import { Play, Download, Share2, Loader2 } from 'lucide-react';
 import { executeCode, type ExecuteResponse } from '../lib/api';
 import { cn } from '../lib/utils';
 import { toast } from '../lib/toast';
-import OutputPanel from './OutputPanel';
+import BottomPanel from './BottomPanel';
 import ShareModal from './ShareModal';
 import EditorStatusBar from './EditorStatusBar';
 import KeybindingsHelp from './KeybindingsHelp';
@@ -324,12 +324,17 @@ export default function CollabEditor({
         />
       </div>
 
-      {/* Output panel */}
+      {/* VS Code-style tabbed bottom panel — output / problems / terminal */}
       {(output || running) && (
-        <OutputPanel
+        <BottomPanel
           result={output}
           running={running}
           onClose={() => setOutput(null)}
+          workspace={{
+            name:     `ws-${workspaceId}`,
+            language: currentLang,
+            sandbox,
+          }}
         />
       )}
 
