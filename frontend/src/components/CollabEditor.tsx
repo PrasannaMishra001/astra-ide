@@ -18,6 +18,7 @@ import { Play, Download, Share2, Loader2 } from 'lucide-react';
 
 import { executeCode, type ExecuteResponse } from '../lib/api';
 import { cn } from '../lib/utils';
+import { toast } from '../lib/toast';
 import OutputPanel from './OutputPanel';
 import ShareModal from './ShareModal';
 import EditorStatusBar from './EditorStatusBar';
@@ -146,8 +147,8 @@ export default function CollabEditor({
     });
   };
 
-  // Ctrl/Cmd + K opens the keybindings help (VS Code uses Ctrl+K, Ctrl+S — we
-  // shorten it for cloud convenience).
+  // Ctrl/Cmd + K opens the keybindings help. Also listen to a custom event
+  // dispatched by the command palette so "Show keyboard shortcuts" works there.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.shiftKey) {
@@ -155,8 +156,13 @@ export default function CollabEditor({
         setShowHelp((v) => !v);
       }
     };
+    const onEvent = () => setShowHelp(true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('astra:open-help', onEvent);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('astra:open-help', onEvent);
+    };
   }, []);
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -174,12 +180,21 @@ export default function CollabEditor({
     try {
       const result = await executeCode(workspaceId, executorLang(currentLang), code);
       setOutput(result);
+      if (result.timeout) {
+        toast.warning('Timed out', `Execution exceeded the 5s limit.`);
+      } else if (result.exit_code === 0) {
+        toast.success('Run succeeded', `Finished in ${result.runtime_ms}ms`);
+      } else {
+        toast.error('Run failed', `Exit code ${result.exit_code}`);
+      }
     } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'execute failed';
       setOutput({
         language: currentLang, exit_code: -1, stdout: '',
-        stderr: err?.response?.data?.detail || err?.message || 'execute failed',
+        stderr: msg,
         runtime_ms: 0, timeout: false, truncated: false,
       });
+      toast.error('Could not run', msg);
     } finally {
       setRunning(false);
     }
@@ -196,6 +211,7 @@ export default function CollabEditor({
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
+    toast.success('Downloaded', filename);
   }
 
   const isExecutable = useMemo(() => EXECUTABLE.has(currentLang), [currentLang]);

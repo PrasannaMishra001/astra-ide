@@ -11,8 +11,10 @@ import {
   startWorkspace, stopWorkspace, type Workspace,
 } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { toast } from '../../lib/toast';
 import ThreeDCard from '../../components/ui/ThreeDCard';
 import { cn } from '../../lib/utils';
+import { templatesForLanguage, defaultTemplateFor } from '../../lib/templates';
 
 const LANGUAGES = [
   { id: 'python',     emoji: '🐍' },
@@ -37,6 +39,9 @@ export default function DashboardPage() {
   const [language, setLanguage] = useState('python');
   const [networkAccess, setNetworkAccess] = useState(false);
   const [filesystemWrite, setFilesystemWrite] = useState(true);
+  const [templateId, setTemplateId] = useState<string>(
+    defaultTemplateFor('python')?.id ?? '',
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -53,13 +58,22 @@ export default function DashboardPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    await createWorkspace({
-      name, language,
-      network_access: networkAccess,
-      filesystem_write: filesystemWrite,
-    });
-    setName(''); setShowCreate(false);
-    refresh();
+    try {
+      const template = templatesForLanguage(language).find((t) => t.id === templateId);
+      const ws = await createWorkspace({
+        name, language,
+        network_access: networkAccess,
+        filesystem_write: filesystemWrite,
+        initial_code: template?.code ?? '',
+      });
+      setName(''); setShowCreate(false);
+      toast.success('Workspace created',
+        `Risk scored to ${ws.sandbox_tier} (${ws.risk_score.toFixed(2)})`);
+      refresh();
+    } catch (e: any) {
+      toast.error('Could not create',
+        e?.response?.data?.detail || 'Server error');
+    }
   }
 
   const owned   = workspaces.filter((w) => w.owner_id === user?.id);
@@ -192,7 +206,11 @@ export default function DashboardPage() {
               {LANGUAGES.map((l) => (
                 <button
                   key={l.id} type="button"
-                  onClick={() => setLanguage(l.id)}
+                  onClick={() => {
+                    setLanguage(l.id);
+                    // Reset template to default for the new language
+                    setTemplateId(defaultTemplateFor(l.id)?.id ?? '');
+                  }}
                   className={cn(
                     'flex flex-col items-center gap-1 px-2 py-2 rounded text-xs border transition-all',
                     language === l.id
@@ -205,6 +223,48 @@ export default function DashboardPage() {
                 </button>
               ))}
             </div>
+
+            {/* Starter-code template picker (only if templates exist for this lang) */}
+            {templatesForLanguage(language).length > 0 && (
+              <>
+                <label className="block text-xs text-slate-400 mb-1">Starter template</label>
+                <div className="space-y-1.5 mb-4">
+                  {templatesForLanguage(language).map((t) => (
+                    <label key={t.id}
+                           className={cn(
+                             'flex items-start gap-2 p-2 rounded border cursor-pointer transition-all text-sm',
+                             templateId === t.id
+                               ? 'bg-astra-600/15 border-astra-500'
+                               : 'bg-slate-800/60 border-slate-700 hover:border-slate-600',
+                           )}>
+                      <input type="radio" name="template"
+                             value={t.id} checked={templateId === t.id}
+                             onChange={() => setTemplateId(t.id)}
+                             className="mt-1" />
+                      <div>
+                        <div className="font-medium">{t.label}</div>
+                        <div className="text-xs text-slate-400">{t.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                  <label className={cn(
+                    'flex items-start gap-2 p-2 rounded border cursor-pointer transition-all text-sm',
+                    templateId === ''
+                      ? 'bg-astra-600/15 border-astra-500'
+                      : 'bg-slate-800/60 border-slate-700 hover:border-slate-600',
+                  )}>
+                    <input type="radio" name="template"
+                           value="" checked={templateId === ''}
+                           onChange={() => setTemplateId('')}
+                           className="mt-1" />
+                    <div>
+                      <div className="font-medium">Empty</div>
+                      <div className="text-xs text-slate-400">Start from scratch</div>
+                    </div>
+                  </label>
+                </div>
+              </>
+            )}
 
             <label className="flex items-center gap-2 mb-2 text-sm text-slate-300">
               <input type="checkbox" checked={networkAccess}
@@ -302,7 +362,14 @@ function WorkspaceCard({ ws, onChange, isOwner }:
             <button type="button"
                     onClick={async () => {
                       if (confirm(`Delete workspace "${ws.name}"?`)) {
-                        await deleteWorkspace(ws.id); onChange();
+                        try {
+                          await deleteWorkspace(ws.id);
+                          toast.success('Workspace deleted', ws.name);
+                          onChange();
+                        } catch (e: any) {
+                          toast.error('Delete failed',
+                            e?.response?.data?.detail || 'Server error');
+                        }
                       }
                     }}
                     className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-900/80 hover:bg-rose-800 text-rose-100 ml-auto">

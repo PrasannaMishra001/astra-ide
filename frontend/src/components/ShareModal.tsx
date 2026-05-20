@@ -8,6 +8,7 @@ import {
   shareWorkspace, listMembers, revokeMember,
   type WorkspaceMember,
 } from '../lib/api';
+import { toast } from '../lib/toast';
 
 interface Props {
   workspaceId: number;
@@ -36,23 +37,30 @@ export default function ShareModal({ workspaceId, onClose }: Props) {
     setError(null);
     setSubmitting(true);
     try {
-      await shareWorkspace(workspaceId, username.trim(), role);
+      const invitee = username.trim();
+      await shareWorkspace(workspaceId, invitee, role);
       setUsername('');
       refresh();
+      toast.success('Invite sent', `@${invitee} can now ${role === 'editor' ? 'edit' : 'view'}.`);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Failed to share');
+      const msg = e?.response?.data?.detail || 'Failed to share';
+      setError(msg);
+      toast.error('Could not share', msg);
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function onRevoke(userId: number) {
+  async function onRevoke(userId: number, username?: string) {
     if (!confirm('Revoke this user\'s access?')) return;
     try {
       await revokeMember(workspaceId, userId);
       refresh();
+      toast.success('Access revoked', username ? `@${username} removed.` : undefined);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Failed to revoke');
+      const msg = e?.response?.data?.detail || 'Failed to revoke';
+      setError(msg);
+      toast.error('Could not revoke', msg);
     }
   }
 
@@ -128,7 +136,7 @@ export default function ShareModal({ workspaceId, onClose }: Props) {
                   <div className="text-xs text-slate-400 capitalize">{m.role}</div>
                 </div>
                 {m.role !== 'owner' && (
-                  <button onClick={() => onRevoke(m.user_id)} type="button"
+                  <button onClick={() => onRevoke(m.user_id, m.username)} type="button"
                           className="text-xs px-2 py-1 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-200">
                     Revoke
                   </button>
