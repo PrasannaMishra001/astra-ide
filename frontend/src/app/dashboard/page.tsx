@@ -71,10 +71,20 @@ export default function DashboardPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.08),_transparent_50%)]" />
 
       <header className="relative border-b border-slate-800 px-6 py-3 flex items-center justify-between bg-slate-950/60 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="ASTRA-IDE" width={32} height={32} priority className="rounded" />
-          <span className="text-lg font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="ASTRA-IDE" width={32} height={32} priority className="rounded" />
+            <span className="text-lg font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
+          </Link>
+          <nav className="hidden md:flex items-center gap-1 text-sm">
+            <Link href="/dashboard" className="px-3 py-1.5 rounded text-astra-300 bg-slate-800/60">
+              Workspaces
+            </Link>
+            <Link href="/clusters" className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">
+              Clusters
+            </Link>
+          </nav>
+        </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-slate-400">@{user?.username}</span>
           <button
