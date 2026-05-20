@@ -115,6 +115,22 @@ export default function DashboardPage() {
           </motion.button>
         </div>
 
+        {/* Top-line stats — sandbox mix, status, languages */}
+        {workspaces.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <SummaryStat label="Total" value={workspaces.length} hint="across all clusters" />
+            <SummaryStat label="Running"
+              value={workspaces.filter((w) => w.status === 'RUNNING').length}
+              hint="live now" accent="emerald" />
+            <SummaryStat label="Sandbox mix"
+              value={`${workspaces.filter((w) => w.sandbox_tier === 'runc').length}/${workspaces.filter((w) => w.sandbox_tier === 'gvisor').length}/${workspaces.filter((w) => w.sandbox_tier === 'firecracker').length}`}
+              hint="runc / gvisor / fc" />
+            <SummaryStat label="Avg risk"
+              value={workspaces.length > 0 ? (workspaces.reduce((s, w) => s + w.risk_score, 0) / workspaces.length).toFixed(2) : '0.00'}
+              hint="0.0–1.0 scale" accent="amber" />
+          </div>
+        )}
+
         {loading && <p className="text-slate-400">Loading…</p>}
 
         {!loading && workspaces.length === 0 && (
@@ -296,5 +312,30 @@ function WorkspaceCard({ ws, onChange, isOwner }:
         </div>
       </div>
     </ThreeDCard>
+  );
+}
+
+function SummaryStat({
+  label, value, hint, accent = 'astra',
+}: {
+  label: string; value: string | number; hint?: string;
+  accent?: 'astra' | 'emerald' | 'amber' | 'rose' | 'purple';
+}) {
+  const accentColors: Record<string, string> = {
+    astra:   'border-astra-600/30 from-astra-600/10',
+    emerald: 'border-emerald-600/30 from-emerald-600/10',
+    amber:   'border-amber-600/30 from-amber-600/10',
+    rose:    'border-rose-600/30 from-rose-600/10',
+    purple:  'border-purple-600/30 from-purple-600/10',
+  };
+  return (
+    <div className={cn(
+      'p-4 rounded-xl border bg-gradient-to-br to-transparent backdrop-blur',
+      accentColors[accent],
+    )}>
+      <div className="text-xs uppercase tracking-wider text-slate-500 mb-1">{label}</div>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+      {hint && <div className="text-xs text-slate-400 mt-0.5">{hint}</div>}
+    </div>
   );
 }
