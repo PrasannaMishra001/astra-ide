@@ -196,4 +196,83 @@ export async function getCarbonIntensity(zone: string): Promise<CarbonReading> {
   return data;
 }
 
+// ── Events / Activity feed ─────────────────────────────────────────────────
+
+export interface SchedulerEvent {
+  id:           number;
+  timestamp:    string;
+  kind:         'scheduler' | 'sandbox' | 'ebpf' | 'carbon' | 'prewarm' | 'collab' | 'system';
+  title:        string;
+  detail:       string;
+  workspace_id: number;
+  cluster_id:   string;
+  node_name:    string;
+}
+
+export async function listEvents(opts: { limit?: number; kind?: string } = {}):
+  Promise<SchedulerEvent[]> {
+  const params = new URLSearchParams();
+  if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.kind)  params.set('kind', opts.kind);
+  const { data } = await api.get<{ total: number; items: SchedulerEvent[] }>(
+    `/events?${params.toString()}`,
+  );
+  return data.items;
+}
+
+// ── Live cluster + node metrics ────────────────────────────────────────────
+
+export interface NodeMetrics {
+  cluster_id:    string;
+  node_name:     string;
+  cpu_util:      number;
+  memory_util:   number;
+  network_kbps:  number;
+  run_queue_len: number;
+  active_pods:   number;
+}
+
+export interface ClusterMetrics {
+  cluster_id:   string;
+  location:     string;
+  carbon_gco2:  number;
+  total_pods:   number;
+  nodes:        NodeMetrics[];
+}
+
+export interface MetricsSnapshot {
+  timestamp: string;
+  clusters:  ClusterMetrics[];
+}
+
+export async function getNodeMetrics(): Promise<MetricsSnapshot> {
+  const { data } = await api.get<MetricsSnapshot>('/metrics/nodes');
+  return data;
+}
+
+// ── Benchmarks ─────────────────────────────────────────────────────────────
+
+export interface BenchmarkRow {
+  algorithm:       string;
+  avg_latency_ms:  number;
+  p95_latency_ms:  number;
+  utilization_pct: number;
+  balance_score:   number;
+  energy_kwh:      number;
+  sla_violations:  number;
+}
+
+export interface BenchmarkReport {
+  description: string;
+  rows:        BenchmarkRow[];
+  metadata:    Record<string, string>;
+}
+
+export async function runBenchmark(n_jobs = 200, seed = 42): Promise<BenchmarkReport> {
+  const { data } = await api.get<BenchmarkReport>(
+    `/benchmarks/run?n_jobs=${n_jobs}&seed=${seed}`,
+  );
+  return data;
+}
+
 export default api;

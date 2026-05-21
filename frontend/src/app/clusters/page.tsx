@@ -12,27 +12,41 @@ import { Cpu, Network, Zap, Activity, Leaf } from 'lucide-react';
 import ClusterCanvas, { type ClusterNode, type ClusterEdge } from '../../components/ui/ClusterCanvas';
 import ThreeDCard from '../../components/ui/ThreeDCard';
 import ActivityFeed from '../../components/ActivityFeed';
-import { listWorkspaces, type Workspace, getCarbonIntensity } from '../../lib/api';
+import {
+  listWorkspaces, getNodeMetrics, type Workspace, type MetricsSnapshot,
+} from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
+
+const METRICS_POLL_MS = 4000;
 
 export default function ClustersPage() {
   const router = useRouter();
   const { token, user, hydrated, clearSession } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [carbon, setCarbon] = useState<{ a: number | null; b: number | null }>({ a: null, b: null });
+  const [metrics, setMetrics]       = useState<MetricsSnapshot | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
     if (!token) { router.push('/login'); return; }
     listWorkspaces().then(setWorkspaces).catch(() => {});
-    Promise.all([
-      getCarbonIntensity('DK-DK1').catch(() => null),
-      getCarbonIntensity('IN-NO').catch(() => null),
-    ]).then(([a, b]) => {
-      setCarbon({ a: a?.carbon_intensity ?? null, b: b?.carbon_intensity ?? null });
-    });
+
+    let cancelled = false;
+    async function pollMetrics() {
+      try {
+        const snap = await getNodeMetrics();
+        if (!cancelled) setMetrics(snap);
+      } catch { /* ignore — backend may still be coming up */ }
+    }
+    pollMetrics();
+    const id = setInterval(pollMetrics, METRICS_POLL_MS);
+    return () => { cancelled = true; clearInterval(id); };
   }, [token, hydrated]);
+
+  // Derive carbon from the live metrics snapshot (more accurate than hitting
+  // the carbon API ourselves — the backend already refreshes it on a schedule)
+  const carbonA = metrics?.clusters.find((c) => c.cluster_id === 'cluster-a')?.carbon_gco2 ?? null;
+  const carbonB = metrics?.clusters.find((c) => c.cluster_id === 'cluster-b')?.carbon_gco2 ?? null;
 
   // Build the topology from the user's workspaces — each workspace
   // becomes a pod attached to one of the two clusters.
@@ -51,11 +65,15 @@ export default function ClustersPage() {
 
       <header className="relative border-b border-slate-800 px-6 py-3 flex items-center justify-between bg-slate-950/60 backdrop-blur">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-astra-500 text-sm hover:underline">← Dashboard</Link>
           <Link href="/" className="flex items-center gap-2">
             <Image src="/logo.png" alt="ASTRA-IDE" width={28} height={28} className="rounded" />
             <span className="text-base font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
           </Link>
+          <nav className="hidden md:flex items-center gap-1 text-sm ml-2">
+            <Link href="/dashboard"  className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Workspaces</Link>
+            <Link href="/clusters"   className="px-3 py-1.5 rounded text-astra-300 bg-slate-800/60">Clusters</Link>
+            <Link href="/benchmarks" className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Benchmarks</Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-slate-400">@{user?.username}</span>
@@ -102,31 +120,42 @@ export default function ClustersPage() {
           <StatCard
             icon={<Leaf     size={20} className="text-lime-400"    />}
             label="Carbon (gCO₂/kWh)"
-            value={carbon.a !== null ? carbon.a.toFixed(0) : '—'}
-            sub={`cluster-b: ${carbon.b !== null ? carbon.b.toFixed(0) : '—'}`}
+            value={carbonA !== null ? carbonA.toFixed(0) : '—'}
+            sub={`cluster-b: ${carbonB !== null ? carbonB.toFixed(0) : '—'}`}
           />
         </div>
+
+        {/* Live node metrics — CPU, memory, network — polled every 4s */}
+        {metrics && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {metrics.clusters.flatMap((c) =>
+              c.nodes.map((n) => (
+                <NodeMetricCard key={`${c.cluster_id}/${n.node_name}`} node={n} />
+              )),
+            )}
+          </div>
+        )}
 
         {/* Per-cluster cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ClusterDetailCard
             name="cluster-a"
             location="DK-DK1 (Denmark West)"
-            carbon={carbon.a}
+            carbon={carbonA}
             podCount={workspaces.filter((w) => w.cluster_id === 'local' || w.cluster_id === 'cluster-a').length}
             accent="from-emerald-500/20"
           />
           <ClusterDetailCard
             name="cluster-b"
             location="IN-NO (India North)"
-            carbon={carbon.b}
+            carbon={carbonB}
             podCount={workspaces.filter((w) => w.cluster_id === 'cluster-b').length}
             accent="from-purple-500/20"
           />
         </div>
 
         {/* Live scheduler / sandbox / eBPF activity feed */}
-        <ActivityFeed workspaces={workspaces} className="mt-2" />
+        <ActivityFeed className="mt-2" />
 
         <p className="text-xs text-slate-500 italic text-center pt-4">
           Topology renders the workspaces visible to your account. eBPF telemetry &amp; PPO decisions
@@ -152,6 +181,50 @@ function StatCard({ icon, label, value, sub }:
     </ThreeDCard>
   );
 }
+
+function NodeMetricCard({ node }: { node: NodeMetricsT }) {
+  return (
+    <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/40 backdrop-blur">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-slate-300">{node.node_name}</span>
+        <span className="text-[10px] text-slate-500">{node.cluster_id}</span>
+      </div>
+      <Bar label="CPU"      value={node.cpu_util}    color="bg-astra-500" />
+      <Bar label="Memory"   value={node.memory_util} color="bg-purple-500" />
+      <div className="flex justify-between text-[10px] text-slate-400 mt-2 font-mono">
+        <span>runq {node.run_queue_len.toFixed(1)}</span>
+        <span>net {node.network_kbps.toFixed(0)}KiB/s</span>
+        <span>pods {node.active_pods}</span>
+      </div>
+    </div>
+  );
+}
+
+function Bar({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="mb-1.5">
+      <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
+        <span>{label}</span>
+        <span className="font-mono">{(value * 100).toFixed(0)}%</span>
+      </div>
+      <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className={cn('h-full transition-all duration-500', color)}
+             style={{ width: `${Math.min(100, value * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+// Type alias to satisfy TS — same shape as api.NodeMetrics
+type NodeMetricsT = {
+  cluster_id:    string;
+  node_name:     string;
+  cpu_util:      number;
+  memory_util:   number;
+  network_kbps:  number;
+  run_queue_len: number;
+  active_pods:   number;
+};
 
 function ClusterDetailCard({
   name, location, carbon, podCount, accent,

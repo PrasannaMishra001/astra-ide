@@ -84,19 +84,45 @@ def create_workspace_for_user(
         initial_code=req.initial_code,
         yjs_room=f"ws-{uuid.uuid4().hex[:12]}",
         owner_id=user.id,
-        # In Phase 0 we mock these; later the scheduler client fills them in.
-        cluster_id="local",
-        node_name="dev-node-0",
+        cluster_id="cluster-a",         # filled in by scheduler immediately below
+        node_name="",
         pod_name=f"ws-{user.id}-{uuid.uuid4().hex[:8]}",
     )
     db.add(workspace)
     db.commit()
     db.refresh(workspace)
+
+    # Ask the scheduler where to place this workspace — picks cluster + node
+    # based on current cluster_state telemetry + carbon intensity.
+    from app.services import scheduler_service           # local import avoids cycle
+    decision = scheduler_service.decide_placement(workspace)
+    workspace.cluster_id = decision.cluster_id
+    workspace.node_name  = decision.node_name
+    db.commit()
+    db.refresh(workspace)
+
+    # Record the sandbox-tier decision in the activity feed
+    from app.services import events_service
+    events_service.record(
+        kind="sandbox",
+        title=f'Sandbox "{tier}" assigned to {req.name}',
+        detail=f"risk={risk:.2f} · language={req.language} · "
+               f"network={req.network_access} · fs_write={req.filesystem_write}",
+        workspace_id=workspace.id,
+        cluster_id=workspace.cluster_id,
+        node_name=workspace.node_name,
+    )
     return workspace
 
 
 def transition_status(db: Session, workspace: Workspace, new_status: str) -> Workspace:
+    previous = workspace.status
     workspace.status = new_status
     db.commit()
     db.refresh(workspace)
+
+    # If the workspace stopped or was archived, release the node slot
+    if new_status in ("STOPPED", "ARCHIVED", "FAILED") and previous == "RUNNING":
+        from app.services import scheduler_service
+        scheduler_service.release_workspace(workspace)
     return workspace

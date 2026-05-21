@@ -8,7 +8,8 @@ from app.core.config import get_settings
 from app.db.session import Base, engine
 
 # Import models to register them with SQLAlchemy's metadata
-from app.models import User, Workspace, WorkspaceMember  # noqa: F401
+from app.models import User, Workspace, WorkspaceMember, SchedulerEvent  # noqa: F401
+from app.services import telemetry_loop
 
 settings = get_settings()
 
@@ -17,7 +18,12 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Create tables on startup (for dev — use Alembic in production)
     Base.metadata.create_all(bind=engine)
-    yield
+    # Kick off the background telemetry/event simulator
+    await telemetry_loop.start()
+    try:
+        yield
+    finally:
+        await telemetry_loop.stop()
 
 
 app = FastAPI(

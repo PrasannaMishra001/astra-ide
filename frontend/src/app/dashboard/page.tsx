@@ -91,12 +91,9 @@ export default function DashboardPage() {
             <span className="text-lg font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
-            <Link href="/dashboard" className="px-3 py-1.5 rounded text-astra-300 bg-slate-800/60">
-              Workspaces
-            </Link>
-            <Link href="/clusters" className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">
-              Clusters
-            </Link>
+            <Link href="/dashboard"  className="px-3 py-1.5 rounded text-astra-300 bg-slate-800/60">Workspaces</Link>
+            <Link href="/clusters"   className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Clusters</Link>
+            <Link href="/benchmarks" className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Benchmarks</Link>
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">
