@@ -1,4 +1,3 @@
-# Python (only inside backend/ and ml/ — frontend/src/lib is source code, must be tracked)
 backend/__pycache__/
 backend/build/
 backend/dist/
