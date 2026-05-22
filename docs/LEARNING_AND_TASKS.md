@@ -1,7 +1,12 @@
-# ASTRA-IDE — Learning Path & Concrete Tasks for Udit & Yash
+# ASTRA-IDE — Learning Path & Concrete Tasks (all 3 members)
 
 > **Read this first, in order.** It tells you (1) what's already built and how, (2) what you need to learn,
 > (3) what to build next. Each section ends with concrete tickets.
+>
+> Roles map to BTP report Section 11 — sorted by roll number:
+> - **Prasanna Mishra (2023IMT-059)** — Infrastructure & Scheduler
+> - **Udit Srivastava (2023IMT-084)** — AI / ML
+> - **Yash Wani (2023IMT-087)** — IDE Frontend + Backend API
 
 ---
 
@@ -75,9 +80,106 @@ something that already exists.
 ## Part B — Tech stack to learn (organized by role)
 
 Don't try to learn everything. Learn the parts for **your role**, in order. Each topic lists the
-minimum knowledge to be useful, plus the best free source.
+minimum knowledge to be useful, plus the best free source. Sections are listed by roll number.
 
-### B.1 For Yash (Frontend + Backend API lead)
+### B.1 For Prasanna (Infrastructure & Scheduler lead, 2023IMT-059)
+
+#### Week 1 (the basics — must know to keep operating the cluster)
+| Topic | Why | Source |
+|---|---|---|
+| **Linux shell** — `ssh`, `tmux`, `journalctl`, file permissions | Daily VM ops | https://linuxjourney.com/ (the "Command Line" track) |
+| **Docker fundamentals** — image vs container, layers, networks | Already deploying daily | https://docs.docker.com/get-started/ |
+| **Docker Compose** — services, depends_on, networks, volumes | Our local + prod stack | read `deploy/docker-compose.yml` line by line |
+| **Networking primer** — TCP, ports, DNS resolution inside docker | Debugging "why can't backend reach postgres?" | https://docker-curriculum.com/#docker-network |
+| **Git advanced** — rebase, force-with-lease, bisect | Cleanup before submitting paper | https://git-scm.com/book chapter 7 |
+
+#### Week 2 (Kubernetes deep dive — biggest single thing to learn)
+| Topic | Why | Source |
+|---|---|---|
+| **Pods, Deployments, Services** | The K8s data model | https://kubernetes.io/docs/concepts/ (the "Workloads" section) |
+| **kubectl basics** — `get`, `describe`, `logs`, `apply`, `port-forward` | Daily debugging tool | https://kubernetes.io/docs/reference/kubectl/cheatsheet/ |
+| **Namespaces + RBAC** | Per-user workspace isolation | one chapter of "Kubernetes Up & Running" (PDF) |
+| **Helm charts** — `values.yaml`, templates, hooks | How we deploy | https://helm.sh/docs/intro/quickstart/ |
+| **k3s** — what's stripped from upstream K8s, when it bites | Our cluster of choice | https://docs.k3s.io/quick-start |
+| **RuntimeClass** (this is the magic) | How adaptive sandboxing actually selects runc/gvisor/firecracker | https://kubernetes.io/docs/concepts/containers/runtime-class/ |
+
+#### Week 3 (eBPF + telemetry — the research differentiator)
+| Topic | Why | Source |
+|---|---|---|
+| **eBPF mental model** — verifier, maps, programs, kprobes/tracepoints | The Phase-4 deliverable | https://ebpf.io/what-is-ebpf/ |
+| **Tetragon by Cilium** — installation + tracing policy syntax | We have a TracingPolicy in `k8s/base/eBPF-tetragon-policy.yaml` | https://tetragon.io/docs/getting-started/ |
+| **libbpf-bootstrap** | Writing custom probes for sched_switch | https://github.com/libbpf/libbpf-bootstrap (clone + run examples) |
+| **sched_ext** — Linux 6.12's pluggable scheduler hooks | Future work — citable in the paper | https://lwn.net/Articles/958939/ (the canonical LWN article) |
+| **Go basics** — goroutines, channels, gRPC server | Telemetry aggregator daemon | https://tour.golang.org (~3 hours) |
+| **gRPC + protobuf** | Aggregator → PPO agent RPC | https://grpc.io/docs/languages/go/quickstart/ |
+
+#### Week 4 (sandbox runtimes — the security pillar)
+| Topic | Why | Source |
+|---|---|---|
+| **gVisor (runsc)** — install, RuntimeClass, syscall filter | Tier 2 sandbox | https://gvisor.dev/docs/quick_start/ |
+| **Firecracker microVM** + **Kata Containers** | Tier 3 sandbox | https://katacontainers.io/learn/ |
+| **OCI runtime spec** — what `runc`, `runsc`, `kata-fc` all implement | Why they're interchangeable | https://github.com/opencontainers/runtime-spec |
+
+#### Week 5 (multi-cluster + autoscaling)
+| Topic | Why | Source |
+|---|---|---|
+| **Karmada** — PropagationPolicy, OverridePolicy, replicaScheduling | Cross-cluster routing | https://karmada.io/docs/get-started/ |
+| **KEDA** — ScaledObject, scaler triggers (Prometheus, cron) | Event-driven autoscaling | https://keda.sh/docs/2.14/concepts/ |
+| **Prometheus** — metrics, scrape configs, PromQL | Observability backbone | https://prometheus.io/docs/prometheus/latest/getting_started/ |
+| **Grafana** — dashboards, variables | Visualization for the paper | https://grafana.com/tutorials/grafana-fundamentals/ |
+| **electricityMaps API** | Carbon dimension | https://www.electricitymaps.com/free-tier-api (already wired) |
+
+#### Concrete tasks for Prasanna (next 4 weeks)
+
+| # | Task | Difficulty | What you'll learn |
+|---|---|---|---|
+| 1 | **Install k3s on a fresh GCP VM**, get `kubectl get nodes` working. Apply `k8s/base/namespace.yaml`. | easy | K8s bootstrap basics |
+| 2 | **Deploy the backend/frontend/collab images** from GHCR to this k3s cluster via `k8s/base/*.yaml`. Verify with port-forward. | medium | Helm/kustomize workflow |
+| 3 | **Install Tetragon** via Helm. Apply our TracingPolicy. `kubectl logs -n kube-system tetragon-...` should show events. | medium | eBPF tooling end-to-end |
+| 4 | **Write the Go telemetry aggregator** — reads from BPF ring buffer, aggregates 500ms windows, exposes gRPC. Live in `ebpf/aggregator/`. | hard | Go + gRPC + eBPF integration |
+| 5 | **Install gVisor + Kata Containers** on the worker node. Apply `runtime-classes.yaml`. Verify a Pod with `runtimeClassName: gvisor` runs. | hard | Sandbox runtimes wiring |
+| 6 | **Wire the second cluster + Karmada.** Use the second GCP VM (free trial covers it). `karmadactl join` both. Apply the PropagationPolicy. | hard | Multi-cluster federation |
+| 7 | **KEDA ScaledObject** for the backend — scales replicas based on `workspace_pending_queue_total` Prometheus metric. | medium | Event-driven autoscaling |
+| 8 | **Load testing with Locust** — 50 concurrent users creating workspaces, generate latency histogram for the paper. | easy | Benchmarking methodology |
+
+### B.2 For Udit (AI / ML lead, 2023IMT-084)
+
+#### Week 1 (the basics — must know to read our code)
+| Topic | Why | Source |
+|---|---|---|
+| **Python type hints + dataclasses** | Every ML module uses them | https://docs.python.org/3/library/typing.html (skim) |
+| **NumPy** — arrays, broadcasting, `np.random` | The PPO state vector is an `np.ndarray` | https://numpy.org/learn/ |
+| **Markov Decision Process** — state, action, reward, policy | RL foundation | https://spinningup.openai.com/en/latest/spinningup/rl_intro.html |
+| **PyTorch basics** | LSTM model is pure PyTorch | https://pytorch.org/tutorials/beginner/basics/intro.html (1 hour) |
+
+#### Week 2 (RL specifically)
+| Topic | Why | Source |
+|---|---|---|
+| **Policy gradient methods** (REINFORCE → PPO) | What our scheduler does | Spinning Up: PPO page (https://spinningup.openai.com/en/latest/algorithms/ppo.html) |
+| **Stable-Baselines3** | Our PPO implementation | https://stable-baselines3.readthedocs.io/en/master/guide/quickstart.html |
+| **Gymnasium** (formerly OpenAI Gym) | Env interface | https://gymnasium.farama.org/introduction/basic_usage/ |
+| **TensorBoard** | Visualize training | `tensorboard --logdir runs/ppo/tensorboard` |
+
+#### Week 3 (LSTM + neural net basics)
+| Topic | Why | Source |
+|---|---|---|
+| **RNN → LSTM** intuition | Prewarming model | https://colah.github.io/posts/2015-08-Understanding-LSTMs/ (best blog post on LSTMs) |
+| **Binary cross-entropy loss** | What our LSTM minimizes | PyTorch `nn.BCELoss` docs |
+| **Adam optimizer** | What we use | one paragraph in any PyTorch tutorial |
+| **Precision / recall / F1** | Evaluation metrics | https://scikit-learn.org/stable/modules/model_evaluation.html#precision-recall-and-f-measures |
+
+#### Concrete tasks for Udit (next 4 weeks)
+
+| # | Task | Difficulty | What you'll learn |
+|---|---|---|---|
+| 1 | **Train the PPO model end-to-end.** Run `python -m ml.scheduler.train --timesteps 200000 --out runs/ppo_v1`. Open TensorBoard. Write a 1-page eval note in `ml/scheduler/EVAL.md` with: reward curve screenshot, hyperparameters, final mean reward. | easy | PPO training, hyperparameter logging |
+| 2 | **Tune the reward weights.** Try (α=0.5, β=0.2, γ=0.1, δ=0.2) vs the default. Compare final eval reward. Document in EVAL.md. | medium | Reward engineering — the most impactful research lever |
+| 3 | **Train the LSTM prewarmer.** Run `python -m ml.prewarming.train --users 100 --days 30 --epochs 20`. Target F1 > 0.75. Save model. | easy | LSTM training, classification metrics |
+| 4 | **Wire the trained PPO into the backend.** In `scheduler_service.decide_placement()`, if `runs/ppo/model.zip` exists, load it and call `model.predict(obs)` instead of the heuristic. | medium | Bridging RL → production code |
+| 5 | **Ablation study.** Re-train PPO without the carbon dimension. Compare the latency / utilization charts. Write up in EVAL.md — this is paper-worthy. | hard | Research methodology |
+| 6 | **Benchmarks: replace synthetic latency with model prediction.** Improve `backend/app/api/benchmarks.py` to use the trained PPO for the "ppo" row instead of the heuristic. | medium | Putting the model in the demo loop |
+
+### B.3 For Yash (Frontend + Backend API lead, 2023IMT-087)
 
 #### Week 1 (the basics — must know to read our code)
 | Topic | Why | Source |
@@ -117,44 +219,7 @@ minimum knowledge to be useful, plus the best free source.
 | 5 | **User profile page** at `/profile` — show stats (workspaces, runs, languages used) | new page + backend stats endpoint | easy |
 | 6 | **Workspace settings page** with members + sandbox tier preview + danger-zone delete | new page reusing ShareModal logic | easy |
 
-### B.2 For Udit (AI / ML lead)
-
-#### Week 1 (the basics — must know to read our code)
-| Topic | Why | Source |
-|---|---|---|
-| **Python type hints + dataclasses** | Every ML module uses them | https://docs.python.org/3/library/typing.html (skim) |
-| **NumPy** — arrays, broadcasting, `np.random` | The PPO state vector is an `np.ndarray` | https://numpy.org/learn/ |
-| **Markov Decision Process** — state, action, reward, policy | RL foundation | https://spinningup.openai.com/en/latest/spinningup/rl_intro.html |
-| **PyTorch basics** | LSTM model is pure PyTorch | https://pytorch.org/tutorials/beginner/basics/intro.html (1 hour) |
-
-#### Week 2 (RL specifically)
-| Topic | Why | Source |
-|---|---|---|
-| **Policy gradient methods** (REINFORCE → PPO) | What our scheduler does | Spinning Up: PPO page (https://spinningup.openai.com/en/latest/algorithms/ppo.html) |
-| **Stable-Baselines3** | Our PPO implementation | https://stable-baselines3.readthedocs.io/en/master/guide/quickstart.html |
-| **Gymnasium** (formerly OpenAI Gym) | Env interface | https://gymnasium.farama.org/introduction/basic_usage/ |
-| **TensorBoard** | Visualize training | `tensorboard --logdir runs/ppo/tensorboard` |
-
-#### Week 3 (LSTM + neural net basics)
-| Topic | Why | Source |
-|---|---|---|
-| **RNN → LSTM** intuition | Prewarming model | https://colah.github.io/posts/2015-08-Understanding-LSTMs/ (best blog post on LSTMs) |
-| **Binary cross-entropy loss** | What our LSTM minimizes | PyTorch `nn.BCELoss` docs |
-| **Adam optimizer** | What we use | one paragraph in any PyTorch tutorial |
-| **Precision / recall / F1** | Evaluation metrics | https://scikit-learn.org/stable/modules/model_evaluation.html#precision-recall-and-f-measures |
-
-#### Concrete tasks for Udit (next 4 weeks)
-
-| # | Task | Difficulty | What you'll learn |
-|---|---|---|---|
-| 1 | **Train the PPO model end-to-end.** Run `python -m ml.scheduler.train --timesteps 200000 --out runs/ppo_v1`. Open TensorBoard. Write a 1-page eval note in `ml/scheduler/EVAL.md` with: reward curve screenshot, hyperparameters, final mean reward. | easy | PPO training, hyperparameter logging |
-| 2 | **Tune the reward weights.** Try (α=0.5, β=0.2, γ=0.1, δ=0.2) vs the default. Compare final eval reward. Document in EVAL.md. | medium | Reward engineering — the most impactful research lever |
-| 3 | **Train the LSTM prewarmer.** Run `python -m ml.prewarming.train --users 100 --days 30 --epochs 20`. Target F1 > 0.75. Save model. | easy | LSTM training, classification metrics |
-| 4 | **Wire the trained PPO into the backend.** In `scheduler_service.decide_placement()`, if `runs/ppo/model.zip` exists, load it and call `model.predict(obs)` instead of the heuristic. | medium | Bridging RL → production code |
-| 5 | **Ablation study.** Re-train PPO without the carbon dimension. Compare the latency / utilization charts. Write up in EVAL.md — this is paper-worthy. | hard | Research methodology |
-| 6 | **Benchmarks: replace synthetic latency with model prediction.** Improve `backend/app/api/benchmarks.py` to use the trained PPO for the "ppo" row instead of the heuristic. | medium | Putting the model in the demo loop |
-
-### B.3 Shared (everyone)
+### B.4 Shared (everyone)
 | Topic | Why | Source |
 |---|---|---|
 | **Git branching + PRs** | Workflow | https://docs.github.com/en/get-started/using-git |
@@ -269,21 +334,23 @@ Read these critically — these are good "PR opportunities" to learn the codebas
 
 ---
 
-## Part E — How the two of you (Udit, Yash) can start TODAY
+## Part E — How everyone starts TODAY
 
-### Right now (30 min)
-1. Accept the GitHub invite (check your email — the repo invite link).
-2. Clone the repo: `git clone https://github.com/PrasannaMishra001/astra-ide.git`
+### Right now (30 min — applies to all 3)
+1. Accept the GitHub repo invite (check email).
+2. Clone: `git clone https://github.com/PrasannaMishra001/astra-ide.git`
 3. Open `docs/TEAM_GUIDE.md` and `docs/LEARNING_AND_TASKS.md` (this file).
 4. Read Part A above. Click the file paths to skim each one.
 
 ### This week (3-4 hours)
-- **Yash:** follow Section B.1 Week 1 (TS / React / Next.js basics). Run the dev stack locally per `docs/DEVELOPMENT.md`.
+- **Prasanna:** follow Section B.1 Week 1 (Linux, Docker, Git advanced). Bring up a clean k3s on a fresh VM. Run `kubectl get nodes`.
 - **Udit:** follow Section B.2 Week 1. Install Python + PyTorch + Stable-Baselines3. Run the existing tests: `python -m unittest ml.risk_scorer.test_scorer ml.scheduler.test_env ml.prewarming.test_dataset -v`.
+- **Yash:** follow Section B.3 Week 1 (TS / React / Next.js basics). Run the dev stack locally per `docs/DEVELOPMENT.md`.
 
-### By next week
-- **Yash:** open your first PR with the xterm.js terminal panel. Pattern after `BottomPanel.tsx`.
+### By next week — first PR each
+- **Prasanna:** deploy backend/frontend/collab to your fresh k3s via `kubectl apply -k k8s/base`. PR the `EVAL_K8S.md` note.
 - **Udit:** train PPO once. Save the model. Commit a 1-page `ml/scheduler/EVAL.md`.
+- **Yash:** open your first PR with the xterm.js terminal panel. Pattern after `BottomPanel.tsx`.
 
 ---
 
