@@ -34,7 +34,9 @@ jobs:
         id: meta
         run: |
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "tag=${{ env.REGISTRY }}/${{ env.OWNER }}/astra-ide-${{ matrix.service }}" >> $GITHUB_OUTPUT
+          # GHCR/Docker registries require lowercase repository names
+          OWNER_LC=$(echo "${{ env.OWNER }}" | tr '[:upper:]' '[:lower:]')
+          echo "tag=${{ env.REGISTRY }}/${OWNER_LC}/astra-ide-${{ matrix.service }}" >> $GITHUB_OUTPUT
           echo "sha=$SHA_SHORT" >> $GITHUB_OUTPUT
 
       - uses: docker/build-push-action@v6

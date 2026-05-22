@@ -106,8 +106,8 @@ def create_workspace_for_user(
     events_service.record(
         kind="sandbox",
         title=f'Sandbox "{tier}" assigned to {req.name}',
-        detail=f"risk={risk:.2f} · language={req.language} · "
-               f"network={req.network_access} · fs_write={req.filesystem_write}",
+        detail=f"risk={risk:.2f} | language={req.language} | "
+               f"network={req.network_access} | fs_write={req.filesystem_write}",
         workspace_id=workspace.id,
         cluster_id=workspace.cluster_id,
         node_name=workspace.node_name,

@@ -108,8 +108,8 @@ def decide_placement(
         kind="scheduler",
         title=f"PPO placed {workspace.name} on {decision.node_name}",
         detail=(
-            f"score={decision.score:.3f} · {decision.reasoning} · "
-            f"sandbox={decision.sandbox_tier} · risk={workspace.risk_score:.2f}"
+            f"score={decision.score:.3f} | {decision.reasoning} | "
+            f"sandbox={decision.sandbox_tier} | risk={workspace.risk_score:.2f}"
         ),
         workspace_id=workspace.id,
         cluster_id=decision.cluster_id,
@@ -130,7 +130,7 @@ def release_workspace(workspace: Workspace) -> None:
 def _explain(node, cluster) -> str:
     return (
         f"cpu={node.cpu_util:.2f} mem={node.memory_util:.2f} "
-        f"runq={node.run_queue_len:.1f} carbon={cluster.carbon_gco2:.0f}gCO₂"
+        f"runq={node.run_queue_len:.1f} carbon={cluster.carbon_gco2:.0f}gCO2"
     )
 
 

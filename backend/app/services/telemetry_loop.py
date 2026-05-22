@@ -40,7 +40,7 @@ async def telemetry_main_loop() -> None:
     try:
         events_service.record(
             kind="system", title="ASTRA-IDE scheduler online",
-            detail="PPO policy loaded · eBPF probes attached · activity stream live",
+            detail="PPO policy loaded |eBPF probes attached |activity stream live",
         )
     except Exception as e:
         logger.warning("Could not write startup event: %s", e)
@@ -91,7 +91,7 @@ def _emit_random_event() -> None:
     if r < 0.5:
         events_service.record(
             kind="ebpf",
-            title=f"sched_switch · {node.name}",
+            title=f"sched_switch |{node.name}",
             detail=(
                 f"cpu={node.cpu_util:.2f} mem={node.memory_util:.2f} "
                 f"runq={node.run_queue_len:.1f} net={node.network_kbps:.0f}KiB/s"
@@ -101,21 +101,21 @@ def _emit_random_event() -> None:
     elif r < 0.75:
         events_service.record(
             kind="prewarm",
-            title="LSTM prewarmer · scoring active users",
-            detail=f"top probability {_rng.uniform(0.62, 0.94):.2f} · warmed pods=2",
+            title="LSTM prewarmer |scoring active users",
+            detail=f"top probability {_rng.uniform(0.62, 0.94):.2f} |warmed pods=2",
         )
     elif r < 0.9:
         events_service.record(
             kind="carbon",
-            title=f"Carbon read · {cluster.zone}",
-            detail=f"{cluster.carbon_gco2:.0f} gCO₂/kWh · {_carbon_grade(cluster.carbon_gco2)}",
+            title=f"Carbon read |{cluster.zone}",
+            detail=f"{cluster.carbon_gco2:.0f} gCO2/kWh |{_carbon_grade(cluster.carbon_gco2)}",
             cluster_id=cluster.id,
         )
     else:
         events_service.record(
             kind="collab",
             title="Yjs awareness flush",
-            detail=f"rooms updated · clients={_rng.randint(1, 8)}",
+            detail=f"rooms updated |clients={_rng.randint(1, 8)}",
         )
 
 
