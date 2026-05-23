@@ -1,3 +1,10 @@
+# Personal / internal docs (kept locally, not shared with team)
+docs/BUILD_JOURNAL.md
+docs/ASCII_LOGO.md
+docs/EVAL_*.md
+docs-private/
+notes-*.md
+
 backend/__pycache__/
 backend/build/
 backend/dist/

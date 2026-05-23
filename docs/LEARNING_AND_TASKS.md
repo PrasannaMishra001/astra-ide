@@ -334,23 +334,13 @@ Read these critically — these are good "PR opportunities" to learn the codebas
 
 ---
 
-## Part E — How everyone starts TODAY
+## Part E — First commit each
 
-### Right now (30 min — applies to all 3)
-1. Accept the GitHub repo invite (check email).
-2. Clone: `git clone https://github.com/PrasannaMishra001/astra-ide.git`
-3. Open `docs/TEAM_GUIDE.md` and `docs/LEARNING_AND_TASKS.md` (this file).
-4. Read Part A above. Click the file paths to skim each one.
+(For environment setup steps see the root `README.md`.)
 
-### This week (3-4 hours)
-- **Prasanna:** follow Section B.1 Week 1 (Linux, Docker, Git advanced). Bring up a clean k3s on a fresh VM. Run `kubectl get nodes`.
-- **Udit:** follow Section B.2 Week 1. Install Python + PyTorch + Stable-Baselines3. Run the existing tests: `python -m unittest ml.risk_scorer.test_scorer ml.scheduler.test_env ml.prewarming.test_dataset -v`.
-- **Yash:** follow Section B.3 Week 1 (TS / React / Next.js basics). Run the dev stack locally per `docs/DEVELOPMENT.md`.
-
-### By next week — first PR each
-- **Prasanna:** deploy backend/frontend/collab to your fresh k3s via `kubectl apply -k k8s/base`. PR the `EVAL_K8S.md` note.
-- **Udit:** train PPO once. Save the model. Commit a 1-page `ml/scheduler/EVAL.md`.
-- **Yash:** open your first PR with the xterm.js terminal panel. Pattern after `BottomPanel.tsx`.
+- **Prasanna:** Section B.1 Week 1 (Linux, Docker, Git advanced). Bring up a clean k3s on a fresh VM. Deploy the existing images from GHCR via `kubectl apply -k k8s/base`. Commit a 1-page `docs/EVAL_K8S.md`.
+- **Udit:** Section B.2 Week 1 (NumPy + PyTorch + Stable-Baselines3). Run the existing tests: `python -m unittest ml.risk_scorer.test_scorer ml.scheduler.test_env ml.prewarming.test_dataset -v`. Train PPO once: `python -m ml.scheduler.train --timesteps 100000 --out runs/ppo_v1`. Commit `ml/scheduler/EVAL.md` with the reward curve screenshot + hyperparameters.
+- **Yash:** Section B.3 Week 1 (TS / React / Next.js basics). Pattern after `BottomPanel.tsx` and add the xterm.js terminal panel as a new tab.
 
 ---
 
