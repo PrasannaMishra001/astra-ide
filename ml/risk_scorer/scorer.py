@@ -48,71 +48,92 @@ LANG_SCORE_MANAGED = 0.2
 LANG_SCORE_UNKNOWN = 0.5
 
 
-# ── Escape-vector signatures (docs/research §2.5) ─────────────────────────────
-# HIGH = direct escape / arbitrary host exec; MEDIUM = enabling primitive.
-# Severity contributes to the code-signature subscore (capped at 1.0).
-_HIGH_SEVERITY = 0.50
-_MED_SEVERITY  = 0.25
+# ── Escape-vector signatures, grounded in Paper 2 Table 1 ─────────────────────
+# Marchand et al., "Quantifying Frontier LLM Capabilities for Container Sandbox
+# Escape", arXiv:2603.02277 (2026) — Table 1 (18 CVE-backed escape scenarios with
+# difficulty 1-5) and Fig 2 (success rate by difficulty).
+#
+# Each primitive carries the difficulty the paper assigned to its CVE/mechanism.
+# We map difficulty -> static-code severity INVERSELY: an easier-to-exploit
+# primitive (diff 1, near-certain success per Fig 2) is more alarming to find in
+# submitted code than a diff-5 kernel exploit that also needs a vulnerable kernel
+# and expert skill. Calibrated to Fig 2 (diff 1-2 high, diff 3 ~0.40, diff 4-5
+# ~0 but kept non-zero for defence-in-depth).
+_DIFF_SEVERITY: dict[int, float] = {1: 1.00, 2: 0.85, 3: 0.65, 4: 0.50, 5: 0.40}
 
-# Shell tokens (word-boundary matched). Maps token -> severity.
+
+def _sev(difficulty: int) -> float:
+    """Static-code severity for a Paper-2 escape primitive of given difficulty."""
+    return _DIFF_SEVERITY[difficulty]
+
+
+# Shell tokens (word-boundary matched) -> severity; difficulty + CVE per Table 1.
 _SHELL_VECTORS: dict[str, float] = {
-    # namespace / mount escapes (CVE-2022-0185, chroot breakout)
-    "unshare":       _HIGH_SEVERITY,
-    "nsenter":       _HIGH_SEVERITY,
-    "setns":         _HIGH_SEVERITY,
-    "pivot_root":    _HIGH_SEVERITY,
-    "mount":         _HIGH_SEVERITY,
-    "umount":        _MED_SEVERITY,
-    # kernel module loading
-    "insmod":        _HIGH_SEVERITY,
-    "modprobe":      _MED_SEVERITY,
-    "init_module":   _HIGH_SEVERITY,
-    # cgroup release_agent escape (CVE-2022-0492)
-    "release_agent": _HIGH_SEVERITY,
-    # runtime socket / runc overwrite (CVE-2019-5736)
-    "docker.sock":   _HIGH_SEVERITY,
-    "/proc/self/exe": _HIGH_SEVERITY,
-    # destructive / persistence
-    "rm -rf /":      _MED_SEVERITY,
-    "chmod 777":     _MED_SEVERITY,
-    "mknod":         _MED_SEVERITY,
-    "dd if=":        _MED_SEVERITY,
+    "/proc/self/exe":    _sev(3),  # runc overwrite, CVE-2019-5736
+    "release_agent":     _sev(3),  # cgroup escape, CVE-2022-0492
+    "notify_on_release": _sev(3),  # same chain
+    "docker.sock":       _sev(1),  # daemon/API exposure (near-certain)
+    "unshare":           _sev(2),  # namespace escape / CAP_SYS_ADMIN
+    "nsenter":           _sev(2),
+    "setns":             _sev(2),
+    "pivot_root":        _sev(2),
+    "mount":             _sev(2),
+    "umount":            _sev(3),
+    "ptrace":            _sev(2),  # pid-ns + CAP_SYS_PTRACE
+    "insmod":            _sev(3),  # CAP_SYS_MODULE kernel module load
+    "modprobe":          _sev(3),
+    "init_module":       _sev(3),
+    "finit_module":      _sev(3),
+    "open_by_handle_at": _sev(3),  # CAP_DAC_READ_SEARCH Shocker
+    "kubectl cp":        _sev(4),  # CVE-2019-1002101 tar overwrite
+    "kernel.core_pattern": _sev(5),# CRI-O pinns, CVE-2022-0811
+    "af_packet":         _sev(5),  # packet socket UAF, CVE-2017-7308
+    "cap_net_raw":       _sev(5),
+    # destructive / persistence (Paper 1 blacklist class)
+    "rm -rf /":  _sev(3),
+    "mkfs":      _sev(3),
+    "chmod 777": _sev(4),
+    "mknod":     _sev(4),
+    "dd if=":    _sev(4),
 }
 
-# Strings that are escape vectors regardless of language
+# Escape strings flagged regardless of language.
 _GENERIC_VECTORS: dict[str, float] = {
-    "release_agent":  _HIGH_SEVERITY,
-    "docker.sock":    _HIGH_SEVERITY,
-    "/proc/self/exe": _HIGH_SEVERITY,
-    "/var/run/docker": _HIGH_SEVERITY,
+    "release_agent":   _sev(3),
+    "docker.sock":     _sev(1),
+    "/proc/self/exe":  _sev(3),
+    "/var/run/docker": _sev(1),
 }
 
 # Python modules whose import signals host-reach capability (severity on USE).
 _PY_DANGEROUS_MODULES = {
-    "ctypes":     _HIGH_SEVERITY,   # raw memory / direct syscall
-    "pty":        _HIGH_SEVERITY,   # interactive shell spawn
-    "subprocess": _MED_SEVERITY,    # child process (HIGH if shell=True, handled below)
-    "socket":     _MED_SEVERITY,    # raw network
+    "ctypes":     _sev(2),   # raw memory / direct syscall (CAP_SYS_ADMIN-class)
+    "pty":        _sev(2),   # interactive shell spawn
+    "subprocess": _sev(4),   # child process (escalated if shell=True, below)
+    "socket":     _sev(4),   # raw network
 }
 
 # Python builtins / calls that are escape-grade.
 _PY_DANGEROUS_CALLS = {
-    "eval":   _HIGH_SEVERITY,
-    "exec":   _HIGH_SEVERITY,
-    "compile": _MED_SEVERITY,
-    "__import__": _MED_SEVERITY,
+    "eval":       _sev(2),
+    "exec":       _sev(2),
+    "compile":    _sev(4),
+    "__import__": _sev(4),
 }
 
-# Python os.* functions that exec or fork.
+# Python os.* functions that exec, fork, or change identity.
 _PY_OS_DANGEROUS = {
-    "system":   _HIGH_SEVERITY,
-    "popen":    _HIGH_SEVERITY,
-    "execv":    _HIGH_SEVERITY, "execve": _HIGH_SEVERITY, "execl": _HIGH_SEVERITY,
-    "execlp":   _HIGH_SEVERITY, "execvp": _HIGH_SEVERITY,
-    "fork":     _MED_SEVERITY,
-    "setuid":   _HIGH_SEVERITY, "setgid": _HIGH_SEVERITY,
-    "fchmod":   _MED_SEVERITY,
+    "system":   _sev(2),
+    "popen":    _sev(2),
+    "execv":    _sev(2), "execve": _sev(2), "execl": _sev(2),
+    "execlp":   _sev(2), "execvp": _sev(2),
+    "fork":     _sev(4),
+    "setuid":   _sev(2), "setgid": _sev(2),
+    "fchmod":   _sev(4),
 }
+
+# subprocess(..., shell=True) is escape-grade (Paper 1 §4.2 "Uncertain"/unsafe).
+_SUBPROCESS_SHELL_SEVERITY = _sev(2)
 
 
 @dataclass
@@ -304,7 +325,7 @@ class RiskScorer:
                             for kw in node.keywords
                         )
                         if shell_true:
-                            sev += _HIGH_SEVERITY
+                            sev += _SUBPROCESS_SHELL_SEVERITY
                             matched.append("subprocess(shell=True)")
 
         return sev, matched

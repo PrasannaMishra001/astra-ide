@@ -176,5 +176,46 @@ class TestAblationConfig(unittest.TestCase):
         self.assertIn("firecracker", text)
 
 
+class TestPaper2DifficultySeverity(unittest.TestCase):
+    """
+    Severity must follow Paper 2 (arXiv:2603.02277) Table 1 difficulty ratings,
+    inverse-mapped: an easier-to-exploit primitive (diff 1) yields HIGHER
+    static-code severity than a diff-5 kernel exploit.
+    """
+    def setUp(self):
+        self.s = RiskScorer()
+
+    def _sig(self, code: str, lang: str = "bash") -> float:
+        return self.s.score_detailed(WorkloadRequest(
+            language=lang, filesystem_write=False, user_trust=0.9,
+            code_snippet=code)).code_signature
+
+    def test_diff1_docker_sock_outranks_diff5_packet_socket(self):
+        # docker.sock (diff 1, severity 1.00) > af_packet (diff 5, severity 0.40)
+        self.assertGreater(self._sig("cat /var/run/docker.sock"),
+                           self._sig("socket(AF_PACKET, SOCK_RAW)"))
+
+    def test_diff2_unshare_outranks_diff3_insmod(self):
+        # unshare (diff 2, 0.85) > insmod (diff 3, 0.65)
+        self.assertGreater(self._sig("unshare -rn"), self._sig("insmod evil.ko"))
+
+    def test_known_cve_vectors_detected(self):
+        # Spot-check vectors from Table 1 across all three layers
+        for token in ["/proc/self/exe", "release_agent", "kubectl cp",
+                      "kernel.core_pattern", "open_by_handle_at"]:
+            b = self.s.score_detailed(WorkloadRequest(
+                language="bash", filesystem_write=False, user_trust=0.9,
+                code_snippet=f"do something with {token} here"))
+            self.assertGreater(b.code_signature, 0.0, f"{token} not detected")
+
+    def test_difficulty_severity_map_values(self):
+        from ml.risk_scorer.scorer import _DIFF_SEVERITY
+        self.assertEqual(_DIFF_SEVERITY[1], 1.00)
+        self.assertEqual(_DIFF_SEVERITY[5], 0.40)
+        # monotonic non-increasing with difficulty
+        vals = [_DIFF_SEVERITY[d] for d in (1, 2, 3, 4, 5)]
+        self.assertEqual(vals, sorted(vals, reverse=True))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

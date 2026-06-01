@@ -23,32 +23,41 @@ LANG_SCORE_INTERP  = 0.5
 LANG_SCORE_MANAGED = 0.2
 LANG_SCORE_UNKNOWN = 0.5
 
-_HIGH_SEVERITY = 0.50
-_MED_SEVERITY  = 0.25
+# Difficulty -> severity, inverse-mapped from Paper 2 (arXiv:2603.02277) Table 1
+# + Fig 2. Easier-to-exploit primitive (diff 1) => higher static-code severity.
+_DIFF_SEVERITY: dict[int, float] = {1: 1.00, 2: 0.85, 3: 0.65, 4: 0.50, 5: 0.40}
+
+
+def _sev(difficulty: int) -> float:
+    return _DIFF_SEVERITY[difficulty]
+
 
 _SHELL_VECTORS: dict[str, float] = {
-    "unshare": _HIGH_SEVERITY, "nsenter": _HIGH_SEVERITY, "setns": _HIGH_SEVERITY,
-    "pivot_root": _HIGH_SEVERITY, "mount": _HIGH_SEVERITY, "umount": _MED_SEVERITY,
-    "insmod": _HIGH_SEVERITY, "modprobe": _MED_SEVERITY, "init_module": _HIGH_SEVERITY,
-    "release_agent": _HIGH_SEVERITY, "docker.sock": _HIGH_SEVERITY,
-    "/proc/self/exe": _HIGH_SEVERITY,
-    "rm -rf /": _MED_SEVERITY, "chmod 777": _MED_SEVERITY,
-    "mknod": _MED_SEVERITY, "dd if=": _MED_SEVERITY,
+    "/proc/self/exe": _sev(3), "release_agent": _sev(3), "notify_on_release": _sev(3),
+    "docker.sock": _sev(1),
+    "unshare": _sev(2), "nsenter": _sev(2), "setns": _sev(2), "pivot_root": _sev(2),
+    "mount": _sev(2), "umount": _sev(3), "ptrace": _sev(2),
+    "insmod": _sev(3), "modprobe": _sev(3), "init_module": _sev(3), "finit_module": _sev(3),
+    "open_by_handle_at": _sev(3), "kubectl cp": _sev(4),
+    "kernel.core_pattern": _sev(5), "af_packet": _sev(5), "cap_net_raw": _sev(5),
+    "rm -rf /": _sev(3), "mkfs": _sev(3), "chmod 777": _sev(4),
+    "mknod": _sev(4), "dd if=": _sev(4),
 }
 _GENERIC_VECTORS: dict[str, float] = {
-    "release_agent": _HIGH_SEVERITY, "docker.sock": _HIGH_SEVERITY,
-    "/proc/self/exe": _HIGH_SEVERITY, "/var/run/docker": _HIGH_SEVERITY,
+    "release_agent": _sev(3), "docker.sock": _sev(1),
+    "/proc/self/exe": _sev(3), "/var/run/docker": _sev(1),
 }
-_PY_DANGEROUS_MODULES = {"ctypes": _HIGH_SEVERITY, "pty": _HIGH_SEVERITY,
-                         "subprocess": _MED_SEVERITY, "socket": _MED_SEVERITY}
-_PY_DANGEROUS_CALLS   = {"eval": _HIGH_SEVERITY, "exec": _HIGH_SEVERITY,
-                         "compile": _MED_SEVERITY, "__import__": _MED_SEVERITY}
-_PY_OS_DANGEROUS      = {"system": _HIGH_SEVERITY, "popen": _HIGH_SEVERITY,
-                         "execv": _HIGH_SEVERITY, "execve": _HIGH_SEVERITY,
-                         "execl": _HIGH_SEVERITY, "execlp": _HIGH_SEVERITY,
-                         "execvp": _HIGH_SEVERITY, "fork": _MED_SEVERITY,
-                         "setuid": _HIGH_SEVERITY, "setgid": _HIGH_SEVERITY,
-                         "fchmod": _MED_SEVERITY}
+_PY_DANGEROUS_MODULES = {"ctypes": _sev(2), "pty": _sev(2),
+                         "subprocess": _sev(4), "socket": _sev(4)}
+_PY_DANGEROUS_CALLS   = {"eval": _sev(2), "exec": _sev(2),
+                         "compile": _sev(4), "__import__": _sev(4)}
+_PY_OS_DANGEROUS      = {"system": _sev(2), "popen": _sev(2),
+                         "execv": _sev(2), "execve": _sev(2),
+                         "execl": _sev(2), "execlp": _sev(2),
+                         "execvp": _sev(2), "fork": _sev(4),
+                         "setuid": _sev(2), "setgid": _sev(2),
+                         "fchmod": _sev(4)}
+_SUBPROCESS_SHELL_SEVERITY = _sev(2)
 
 
 @dataclass
@@ -194,7 +203,7 @@ class RiskScorer:
                             for kw in node.keywords
                         )
                         if shell_true:
-                            sev += _HIGH_SEVERITY
+                            sev += _SUBPROCESS_SHELL_SEVERITY
                             matched.append("subprocess(shell=True)")
         return sev, matched
 
