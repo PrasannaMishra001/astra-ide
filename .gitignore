@@ -5,6 +5,9 @@ docs/EVAL_*.md
 docs-private/
 notes-*.md
 
+# Research paper PDFs — too big for git, fetched manually via docs/research/papers/README.md
+docs/research/papers/*.pdf
+
 backend/__pycache__/
 backend/build/
 backend/dist/
