@@ -121,8 +121,10 @@ class TestTable1SafetyValidation(unittest.TestCase):
             with _Workspace() as wd:
                 r = tx.run("touch added.txt", wd, _exec_valid_change)
                 # After commit: added.txt persists, originals intact
+                with open(os.path.join(wd, "important.txt")) as fh:
+                    original_intact = fh.read() == "ORIGINAL"
                 if (r.committed and os.path.exists(os.path.join(wd, "added.txt"))
-                        and open(os.path.join(wd, "important.txt")).read() == "ORIGINAL"):
+                        and original_intact):
                     committed += 1
         self.assertEqual(committed, self.N)  # 100% committed
 
