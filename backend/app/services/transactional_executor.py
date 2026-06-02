@@ -59,24 +59,32 @@ _SAFE_GIT_SUBCOMMANDS = frozenset({
 
 # UNSAFE: destructive command signatures. Blocked, never executed.
 # NOTE: classify() lowercases the command first, so all patterns use lowercase.
+# The flag-skip group (-{1,2}[a-z-]+\s+)* tolerates long flags (e.g.
+# --no-preserve-root) appearing *between* the -rf token and the / target —
+# without it `rm -rf --no-preserve-root /` slips through (found via the NL2Bash
+# + SandboxEscapeBench benchmark, benchmarks/b4_sandboxing).
 _UNSAFE_PATTERNS = [
-    re.compile(r"\brm\s+(-[a-z]*\s+)*-[a-z]*r[a-z]*f?[a-z]*\s+/(?:\s|$|\*)"),  # rm -rf /
-    re.compile(r"\brm\s+(-[a-z]*\s+)*-[a-z]*f[a-z]*r[a-z]*\s+/(?:\s|$|\*)"),   # rm -fr /
+    re.compile(r"\brm\s+(-{1,2}[a-z-]+\s+)*-[a-z]*r[a-z]*f?[a-z]*\s+(-{1,2}[a-z-]+\s+)*/(?:\s|$|\*)"),  # rm -rf /
+    re.compile(r"\brm\s+(-{1,2}[a-z-]+\s+)*-[a-z]*f[a-z]*r[a-z]*\s+(-{1,2}[a-z-]+\s+)*/(?:\s|$|\*)"),   # rm -fr /
+    re.compile(r"--no-preserve-root"),                       # flag exists only to wipe /
     re.compile(r"\bmkfs(\.\w+)?\b"),                          # mkfs / mkfs.ext4
     re.compile(r"\bdd\b.*\bof=/dev/(sd|nvme|vd|hd)\w*"),      # dd of=/dev/sda
     re.compile(r">\s*/dev/(sd|nvme|vd|hd)\w*"),               # > /dev/sda
     re.compile(r":\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;"),# fork bomb :(){ :|:& };:
     re.compile(r"\bchmod\b.*\b000\b.*/\s*$"),                 # chmod -R 000 /
-    re.compile(r"\bshred\b.*\s/dev/"),                        # shred /dev/...
+    re.compile(r"\bshred\b.*\s/(dev|etc|boot|bin|usr|lib)/"), # shred device or system file
     re.compile(r">\s*/etc/(passwd|shadow|sudoers)"),          # clobber critical files
-    re.compile(r"\bmv\b.*\s/(bin|etc|usr|boot|lib)\b.*\s/dev/null"),
+    re.compile(r"\bmv\b[^|;&>\n]*\s/dev/null(?:\s|$)"),       # mv <path> /dev/null (destroy)
+    re.compile(r">\s*/proc/sysrq-trigger"),                   # control/crash host kernel
+    re.compile(r"(?:-v|--volume)\s+/:/"),                     # docker run -v /:/host (host-root mount)
+    re.compile(r"\bunshare\b[^|;&\n]*\b(--map-root-user|sh|bash)\b"),  # new-namespace root/shell
 ]
 
 # UNSAFE escape primitives (subset of Paper-2 vectors that are flat-out blocked
 # rather than sandboxed — direct host-escape attempts).
 _UNSAFE_ESCAPE_TOKENS = frozenset({
     "release_agent", "/proc/self/exe", "docker.sock", "/var/run/docker",
-    "pivot_root", "init_module", "insmod",
+    "pivot_root", "init_module", "insmod", "nsenter", "sysrq-trigger",
 })
 
 
