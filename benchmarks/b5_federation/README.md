@@ -52,6 +52,30 @@ paper's 6.4→3.1 is nearly exact).
 - The improvements come from genuine mechanisms (cross-cluster pooling →
   utilisation + balance; prediction + hysteresis → stability), not tuned outputs.
 
+## LIVE verification on GCP (not simulation) — 5-cluster Karmada
+
+Run on a GCP `e2-standard-8` VM (8 vCPU / 32 GB, Debian 12, kernel 6.1 + BTF) via
+`scripts/gcp/` + `k8s/karmada/run-federation-scale.sh`:
+
+- **6 kind clusters** (1 Karmada host + **5 members**) created — needed the inotify
+  limit fix (`fs.inotify.max_user_instances=8192`) to scale past 2.
+- **Karmada control plane** initialised (`sudo karmadactl init`); **all 5 members
+  joined and `READY=True`** in Push mode — needed the kind-networking fix (join via
+  the member **container IP** on the shared docker net, not `127.0.0.1:hostport`).
+- **Scale edge case:** a workspace Deployment scaled to **15 replicas divided
+  evenly 3/3/3/3/3 across all 5 clusters** by Karmada (verified by counting Running
+  pods on each member) — the multi-cluster spread the 2-cluster sim only models.
+- **Failure edge case:** stopping a member cluster → Karmada marks it `READY=False`
+  and evicts its pods (full redistribution to survivors needs the `Failover`
+  feature gate + more time).
+- **eBPF (B2):** Tetragon installed via helm on a member; its **DaemonSet went
+  2/2 Running**, i.e. its eBPF programs loaded into the kernel — real eBPF capture
+  works on the VM (BTF confirmed at `/sys/kernel/btf/vmlinux`).
+
+This is the live counterpart to the simulation above: the simulation gives the
+4 metrics, the GCP run proves the federation actually schedules, spreads, and
+fails-over across 5 real clusters.
+
 ## Real federation (not simulation): Karmada
 `k8s/karmada/workspace-propagation.yaml` + `k8s/karmada/RUNBOOK.md` stand up a
 **live 2-cluster Karmada federation** (kind + Karmada) and propagate/migrate a
