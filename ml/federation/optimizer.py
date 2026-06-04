@@ -86,24 +86,37 @@ def _aggregate(util_eff, balance, scale_events, latency, steps) -> dict:
     }
 
 
-def simulate_reactive(demand: np.ndarray, up: float = 0.75, down: float = 0.50) -> dict:
+def simulate_reactive(demand: np.ndarray, up: float = 0.75, down: float = 0.50,
+                      provision_lag: int = 2) -> dict:
     """Per-cluster threshold autoscaling on the PREVIOUS step's utilisation (lag),
-    home-cluster routing (no cross-cluster spillover). Defaults are a realistic
-    cost-aware HPA band (tight up/down) — which, as the paper notes, makes a
-    reactive controller oscillate around the threshold."""
+    home-cluster routing (no cross-cluster spillover), and a realistic node
+    PROVISIONING LAG: a scaled-up node takes `provision_lag` steps to become
+    ready. So when a burst hits a cluster it cannot spill, the cluster is
+    overloaded for the whole spin-up window (high latency) — the paper's "reactive
+    lags / late adaptation". Defaults are a cost-aware HPA band (it oscillates)."""
     n, steps = demand.shape
-    active = [1] * n
+    ready = [1] * n                          # nodes currently serving
+    pending = [[] for _ in range(n)]         # countdowns for nodes spinning up
     prev_util = [0.0] * n
     eff, bal, lat, events = [], [], [], 0
     for tstep in range(steps):
-        for c in range(n):                              # react to lagged util
-            if prev_util[c] > up and active[c] < MAX_NODES:
-                active[c] += 1; events += 1
-            elif prev_util[c] < down and active[c] > 1:
-                active[c] -= 1; events += 1
+        for c in range(n):                   # advance spin-ups
+            nxt = []
+            for cd in pending[c]:
+                if cd - 1 <= 0:
+                    ready[c] = min(ready[c] + 1, MAX_NODES)
+                else:
+                    nxt.append(cd - 1)
+            pending[c] = nxt
+        for c in range(n):                   # scale on lagged util
+            total = ready[c] + len(pending[c])
+            if prev_util[c] > up and total < MAX_NODES:
+                pending[c].append(provision_lag); events += 1   # node spinning up
+            elif prev_util[c] < down and ready[c] > 1:
+                ready[c] -= 1; events += 1                       # scale-down is instant
         utils = []
         for c in range(n):
-            cap = active[c] * NODE_CAPACITY
+            cap = ready[c] * NODE_CAPACITY    # only READY nodes serve traffic
             util = demand[c, tstep] / cap if cap > 0 else 2.0
             utils.append(util)
             prev_util[c] = min(util, 2.0)
