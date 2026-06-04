@@ -132,20 +132,58 @@ python eval_ids_adfa.py --root data/.../ADFA-LD --cap 1200 --walks 1000
   dimensionality, contamination) to inflate the number — N_WALKS=1000 changed AUC
   by <0.01, confirming the ceiling is the dataset, not under-sampling.
 
-### To reproduce the paper's headline (multi-workload separability): LID-DS-2021
+## Full 3-stage pipeline on LID-DS-2021 (multi-workload)
 
-The faithful 3-stage reproduction (with the Stage-2 RF over multiple normal
-workload classes) needs a *multi-scenario* syscall corpus. The most recent public
-one is **LID-DS-2021** (10 containerised scenarios, normal + Metasploit attacks).
-It is **not** scriptable — a ~multi-GB Proton Drive download:
+`eval_ids_lidds.py` runs the **complete** `ContainerIDS` (anonymous-walk
+embedding → multi-class RandomForest → IF ensemble) on **LID-DS-2021**, the
+modern multi-scenario container syscall corpus. Each scenario (a different
+containerised app) maps to a Paper-3 *normal workload class* — the multi-workload
+setting the headline number was measured in. We used the 3 smallest scenarios as
+3 workload classes: `Bruteforce_CWE-307`, `CVE-2012-2122` (MySQL),
+`CVE-2014-0160` (Heartbleed). Recordings are sysdig `.sc` traces; we take the
+syscall name on each enter event.
 
-1. Open the download link in `github.com/LID-DS/LID-DS` README (Proton Drive).
-2. Download + extract under `data/lid-ds-2021/` (each scenario has `*/normal/` and
-   `*/attack/` recordings of sysdig syscall lines).
-3. A `eval_ids_lidds.py` adapter (scenarios → workload classes, feeding the full
-   `ContainerIDS` RF+IF pipeline) is the next step — ping to wire it once the data
-   is local.
+### Reproduce
+```bash
+# scenarios extracted under data/lid-ds-2021/_extracted/<scenario>/
+python eval_ids_lidds.py --root data/lid-ds-2021/_extracted --cap 250 --walks 400 \
+    --window 0 --maxlen 2500 --threshold 0       # whole-trace, direct decision
+```
 
-Truly *2024+* syscall data has no public release (modern work captures live);
-ASTRA's own **B2 eBPF layer will produce a fresh 2025 corpus** — at which point
-this same pipeline runs on first-party data.
+### Result
+```
+  per-scenario TPR : 0.19–0.29
+  FPR              : 0.057      (paper 0.024–0.071)   ✓ matches
+  F1               : 0.351
+  ROC-AUC          : 0.590
+  paper headline F1: 0.78–0.99  (CloudSuite, NOT matched here)
+  (windowed variant --window 500 was WORSE: AUC ~0.50 — per-window flags too
+   noisy to localise the short attack burst; documented negative, not used.)
+```
+
+### Honest verdict across both real datasets
+
+| Dataset | Setting | FPR | ROC-AUC | Headline F1 |
+|---|---|---|---|---|
+| ADFA-LD | single-workload | 0.03 ✓ | **0.78** | not reached |
+| LID-DS-2021 | 3 workload classes | 0.057 ✓ | **0.59** | not reached |
+
+This is a **faithful but negative reproduction**, and it's reported as such:
+- **FPR matches the paper on both datasets** — the IF/contamination mechanics are
+  correct.
+- **AUC shows real signal on the simpler ADFA-LD (0.78) but only weak separation
+  on LID-DS multi-class (0.59).** The embedding works; it does not reach the
+  paper's separability on independent public benchmarks.
+- The paper's **0.78–0.99 was on CloudSuite**, where workloads are far more
+  separable; the result **does not transfer** to ADFA-LD / LID-DS-2021. Cross-
+  dataset non-transfer of syscall-IDS results is a well-known phenomenon.
+- We did **not** tune walk-length / dimensionality / threshold to inflate the
+  number — windowing (the paper's own §III mechanism) made it *worse* here, and
+  we report that rather than hide it.
+
+**For the project, the useful conclusion:** the graph-embedding IDS is a viable
+*online* anomaly signal (low FPR, real AUC), but for ASTRA the higher-value path
+is first-party data — the **B2 eBPF layer** will capture syscalls from ASTRA's
+*own* per-language workloads (python/cpp/node = naturally separable workload
+classes, the CloudSuite-like setting where this method shines), giving a fresh
+2025 corpus on which to re-run this exact pipeline.

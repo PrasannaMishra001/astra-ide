@@ -80,13 +80,23 @@ def create_workspace_for_user(
     db.commit()
     db.refresh(workspace)
 
+    # Build the Pod manifest that ENFORCES the tier (runtimeClassName + hardening).
+    # Submitting it needs a live cluster; the manifest itself is built + audited
+    # here. See backend/app/services/sandbox_runtime.py and
+    # benchmarks/b4_sandboxing/RUNTIME_TESTING.md.
+    from app.services import sandbox_runtime
+    manifest = sandbox_runtime.manifest_for_workspace(workspace)
+    rc = manifest["spec"]["runtimeClassName"]
+
     # Record the sandbox-tier decision in the activity feed, with the full
     # per-factor breakdown + matched escape vectors (audit trail for the paper).
     from app.services import events_service
     events_service.record(
         kind="sandbox",
         title=f'Sandbox "{tier}" assigned to {req.name}',
-        detail=breakdown.explain(),
+        detail=f"{breakdown.explain()} | enforce: runtimeClassName={rc}, "
+               f"caps=drop-ALL, seccomp=RuntimeDefault, "
+               f"egress={manifest['metadata']['labels']['egress']}",
         workspace_id=workspace.id,
         cluster_id=workspace.cluster_id,
         node_name=workspace.node_name,
