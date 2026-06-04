@@ -16,14 +16,31 @@ echo "== Karmada scale test: 1 host + $N members =="
 # 0. prereqs check
 for t in docker kind kubectl karmadactl; do command -v "$t" >/dev/null || { echo "missing $t"; exit 1; }; done
 
+# 0b. raise inotify limits — REQUIRED to run many kind clusters (each runs systemd
+# and consumes inotify instances; the default ~128 is exhausted past ~2 clusters,
+# giving "could not find a log line that matches Reached target Multi-User System").
+sudo sysctl -w fs.inotify.max_user_watches=1048576 >/dev/null
+sudo sysctl -w fs.inotify.max_user_instances=8192 >/dev/null
+sudo sysctl -w kernel.keys.maxkeys=2000 >/dev/null 2>&1 || true
+echo "inotify limits raised: instances=$(cat /proc/sys/fs/inotify/max_user_instances)"
+
 # 1. host + N member clusters
 kind create cluster --name karmada-host --wait 120s
 for i in $(seq 1 "$N"); do kind create cluster --name "member$i" --wait 120s; done
 
-# 2. Karmada control plane on the host
+# 2. Karmada control plane on the host. `karmadactl init` manages /etc/karmada as
+# root, so run it with sudo, then chown the output so member joins (as the user)
+# can read the generated karmada-apiserver config.
 kubectl config use-context kind-karmada-host
-karmadactl init --kubeconfig "$HOME/.kube/config"
-KCFG="$HOME/.kube/karmada-apiserver.config"
+sudo rm -rf /etc/karmada
+sudo karmadactl init --kubeconfig "$HOME/.kube/config"
+sudo chown -R "$(id -u):$(id -g)" /etc/karmada
+# locate the karmada-apiserver kubeconfig (path varies by version)
+KCFG=$(ls /etc/karmada/karmada-apiserver.config \
+          "$HOME/.kube/karmada-apiserver.config" \
+          "$HOME/.kube/karmada.config" 2>/dev/null | head -1)
+[ -z "$KCFG" ] && { echo "FATAL: karmada apiserver config not found after init"; exit 1; }
+echo "karmada config: $KCFG"
 
 # 3. join all members
 for i in $(seq 1 "$N"); do
