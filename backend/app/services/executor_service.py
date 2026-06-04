@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -31,6 +32,23 @@ from dataclasses import dataclass
 # Hard limits
 TIMEOUT_SECONDS = 5
 MAX_OUTPUT_BYTES = 10 * 1024     # 10 KB per stream
+
+
+def _resolve_python() -> str:
+    """Pick a working Python interpreter: python3 (Linux containers) → python
+    (Windows dev) → the backend's own interpreter. The Windows `python3` is a
+    Store stub that returns 9009, so we probe rather than assume."""
+    for cand in (sys.executable, "python3", "python"):
+        try:
+            if cand and subprocess.run([cand, "--version"], capture_output=True,
+                                       timeout=5).returncode == 0:
+                return cand
+        except Exception:
+            continue
+    return sys.executable
+
+
+PYTHON = _resolve_python()
 
 
 @dataclass
@@ -109,7 +127,7 @@ def _execute_python(code: str, stdin: str | None) -> ExecutionResult:
         src = os.path.join(tmpdir, "main.py")
         with open(src, "w", encoding="utf-8") as f:
             f.write(code)
-        result = _run(["python3", src], stdin, tmpdir)
+        result = _run([PYTHON, src], stdin, tmpdir)
         result.language = "python"
         return result
 
