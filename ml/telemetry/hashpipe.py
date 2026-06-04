@@ -22,8 +22,13 @@ from typing import List, Optional, Tuple
 
 
 def _h(key: int, stage: int, m: int) -> int:
-    # distinct per-stage hash (mix the stage in)
-    return (hash((key, stage * 0x9E3779B1)) & 0x7FFFFFFF) % m
+    # Deterministic per-stage hash (NOT Python's salted hash(), which varies per
+    # process and would make Top-K non-reproducible). Knuth multiplicative mix.
+    x = (int(key) * 2654435761 + stage * 0x9E3779B1) & 0xFFFFFFFF
+    x ^= (x >> 16)
+    x = (x * 0x45D9F3B) & 0xFFFFFFFF
+    x ^= (x >> 16)
+    return x % m
 
 
 @dataclass
