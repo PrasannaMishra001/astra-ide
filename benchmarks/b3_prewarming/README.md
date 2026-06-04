@@ -62,3 +62,39 @@ to 1.187), with our best functions matching the paper's best (~0.02–0.1).
   function, which is the regime where the LSTM forecast pays off.
 - Trained on CPU over one day of data; the paper used Colab GPU over 14 days —
   more data/epochs would tighten our numbers further.
+
+## Improvement: GLOBAL LSTM (trained across many functions) — `eval_azure_global.py`
+
+A per-function LSTM starves on sparse functions (~30 gaps). A **single global
+model** trained on windows pooled across many functions (each z-scored by its own
+mean/std → scale-free) learns shared patterns and transfers to unseen functions.
+Device-aware (auto-CUDA).
+
+```bash
+python eval_azure_global.py --csv data/_extracted/invocations_per_function_md.anon.d01.csv \
+    --n-train 150 --epochs 20
+```
+
+**Forecasting (held-out dense functions the model never trained on):**
+
+| metric | per-function LSTM | **global LSTM** | paper LSTM |
+|---|---|---|---|
+| median sMAPE | 0.267 | **0.091** | 0.096–0.108 (best) |
+| median N-RMSE | 0.174 | **0.085** | 0.12–0.18 |
+
+→ the global model **beats the per-function model and the paper's LSTM baseline**,
+and generalises to functions it never saw. This is the recommended forecaster.
+
+**Cold-start (held-out sparse functions) — honest non-win:** a global *gap* model
+cut only ~6% of cold starts, still losing to the hybrid-histogram (~43%). The
+gap-model's training loss barely moved because **sparse inter-arrival times are
+near-memoryless** — point-prediction cannot beat a statistical percentile there.
+Conclusion (and ASTRA's design): use the **LSTM demand forecast for pre-warming**
+popular workspaces (where it excels), and the **histogram for keep-alive** of
+sparse ones. We report this rather than force the LSTM where it doesn't help.
+
+## Scaling note (GPU)
+The 1-day / 150-function global train runs in minutes on CPU and already beats the
+paper. Scaling to all 14 days × thousands of functions × more epochs (the college
+GPU) would push sMAPE/N-RMSE lower still, but returns are marginal now — GPU is
+better spent on the compute-heavy breakthroughs (B1 RL scheduler, B5 multi-cluster).

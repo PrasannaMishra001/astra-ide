@@ -85,5 +85,31 @@ class TestLSTMForecaster(unittest.TestCase):
         self.assertTrue(np.isfinite(out[0]))
 
 
+class TestGlobalForecaster(unittest.TestCase):
+    """A global model trained on MANY functions must generalise to a HELD-OUT
+    function it never saw (the whole point of the global approach for B3)."""
+
+    def test_generalises_to_unseen_function(self):
+        from ml.prewarming.global_forecaster import GlobalForecaster
+        rng = np.random.default_rng(1)
+        # 12 functions: same family of daily shapes, different scale/phase/noise.
+        train_series = []
+        for k in range(12):
+            t = np.arange(360)
+            phase = rng.uniform(0, 6)
+            scale = rng.uniform(5, 50)
+            s = scale * (1.2 + np.sin(2 * np.pi * t / 24 + phase)) + rng.normal(0, 1, 360)
+            train_series.append(np.clip(s, 0, None))
+        gf = GlobalForecaster(input_len=24, hidden=24, layers=2, epochs=40,
+                              lr=5e-3, batch_size=128, seed=0).fit(train_series)
+        # Held-out function from the same family, new phase/scale:
+        t = np.arange(360)
+        held = np.clip(33 * (1.2 + np.sin(2 * np.pi * t / 24 + 2.0))
+                       + rng.normal(0, 1, 360), 0, None)
+        m = gf.evaluate(held)
+        self.assertGreater(m["r2"], 0.5, f"global R2 too low on unseen fn: {m['r2']:.3f}")
+        self.assertLess(m["n_rmse"], 0.25, f"global N-RMSE too high: {m['n_rmse']:.3f}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

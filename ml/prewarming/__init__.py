@@ -14,8 +14,9 @@ from ml.prewarming.forecaster import (
     InvocationForecaster, smape, rmse, normalized_rmse, r2_score, all_metrics,
     make_windows, persistence_forecast,
 )
+from ml.prewarming.global_forecaster import GlobalForecaster
 
 __all__ = [
-    "InvocationForecaster", "smape", "rmse", "normalized_rmse", "r2_score",
-    "all_metrics", "make_windows", "persistence_forecast",
+    "InvocationForecaster", "GlobalForecaster", "smape", "rmse", "normalized_rmse",
+    "r2_score", "all_metrics", "make_windows", "persistence_forecast",
 ]
