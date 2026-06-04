@@ -83,9 +83,11 @@ class TestIDSPipeline(unittest.TestCase):
             "web_search":      [8, 9],
         }
         by_class = {}
-        for name, cyc in cycles.items():
+        # deterministic per-class seed (NOT Python's salted hash(), which varies per
+        # process and made this test flaky)
+        for ci, (name, cyc) in enumerate(cycles.items()):
             traces = [_structured_trace(cyc, 60, noise=0.05, rng=rng) for _ in range(40)]
-            by_class[name] = _embed_many(traces, seed0=hash(name) % 1000)
+            by_class[name] = _embed_many(traces, seed0=100 + ci * 100)
         cls.ids = ContainerIDS(seed=42).fit(by_class)
 
         # Held-out NORMAL samples (same generators)
