@@ -18,6 +18,8 @@ RuntimeClass handlers mirror k8s/base/runtime-classes.yaml.
 """
 from __future__ import annotations
 
+import os
+from dataclasses import dataclass
 from typing import Optional
 
 # tier -> (RuntimeClass name, container-runtime handler, node label gate)
@@ -134,3 +136,59 @@ def manifest_for_workspace(ws) -> dict:
         cpu_request=ws.cpu_request, memory_request=ws.memory_request,
         network_access=ws.network_access, filesystem_write=ws.filesystem_write,
     )
+
+
+# ── Applying the manifest (the actual launch) ──────────────────────────────────
+
+def to_yaml(manifest: dict) -> str:
+    """Render the manifest for `kubectl apply -f -` (the manual / GCP-node path)."""
+    import yaml
+    return yaml.safe_dump(manifest, sort_keys=False, default_flow_style=False)
+
+
+@dataclass
+class LaunchResult:
+    applied:       bool
+    pod_name:      str
+    runtime_class: str
+    reason:        str
+    manifest_yaml: str
+
+
+def apply_workspace_pod(ws, *, dry_run: Optional[bool] = None) -> LaunchResult:
+    """
+    Submit the workspace's enforcement manifest to Kubernetes.
+
+    Safe by default: it is a DRY-RUN (no cluster call) unless
+    `ASTRA_K8S_APPLY=1` is set AND the kubernetes client + a reachable cluster
+    exist. Without a cluster it returns the rendered YAML so the pod can be
+    applied by hand on the GCP node (see benchmarks/b4_sandboxing/RUNTIME_TESTING.md).
+    This keeps the enforcement path fully exercised in dev (Windows) while the
+    real gVisor/Firecracker launch happens on the Linux cluster.
+    """
+    manifest = manifest_for_workspace(ws)
+    y = to_yaml(manifest)
+    rc = manifest["spec"]["runtimeClassName"]
+    pod = manifest["metadata"]["name"]
+
+    if dry_run is None:
+        dry_run = os.getenv("ASTRA_K8S_APPLY") != "1"
+    if dry_run:
+        return LaunchResult(False, pod, rc,
+                            "dry-run (set ASTRA_K8S_APPLY=1 on a cluster to apply)", y)
+
+    try:
+        from kubernetes import client, config  # optional dependency
+    except ImportError:
+        return LaunchResult(False, pod, rc,
+                            "kubernetes client not installed; apply YAML manually", y)
+    try:
+        try:
+            config.load_incluster_config()
+        except Exception:
+            config.load_kube_config()
+        client.CoreV1Api().create_namespaced_pod(
+            namespace=manifest["metadata"]["namespace"], body=manifest)
+        return LaunchResult(True, pod, rc, "applied", y)
+    except Exception as e:                       # cluster unreachable / RBAC / dup
+        return LaunchResult(False, pod, rc, f"apply failed: {type(e).__name__}: {e}", y)

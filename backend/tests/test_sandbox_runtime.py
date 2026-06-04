@@ -60,5 +60,32 @@ class TestDefenceInDepth(unittest.TestCase):
         self.assertEqual(res["limits"]["memory"], "2048Mi")
 
 
+class _FakeWS:
+    """Minimal stand-in for an ORM Workspace (no DB needed)."""
+    id = 12; owner_id = 4; language = "python"; sandbox_tier = "firecracker"
+    pod_name = "ws-4-deadbeef"; node_name = ""; cpu_request = 0.5
+    memory_request = 512; network_access = False; filesystem_write = True
+
+
+class TestApplyAndYaml(unittest.TestCase):
+    def test_to_yaml_roundtrips_runtime_class(self):
+        import yaml
+        y = sr.to_yaml(sr.manifest_for_workspace(_FakeWS()))
+        self.assertEqual(yaml.safe_load(y)["spec"]["runtimeClassName"], "firecracker")
+
+    def test_apply_defaults_to_dry_run(self):
+        res = sr.apply_workspace_pod(_FakeWS())          # no ASTRA_K8S_APPLY
+        self.assertFalse(res.applied)
+        self.assertEqual(res.runtime_class, "firecracker")
+        self.assertIn("dry-run", res.reason)
+        self.assertIn("runtimeClassName: firecracker", res.manifest_yaml)
+
+    def test_apply_degrades_gracefully_without_cluster(self):
+        # Force the non-dry-run path; with no kube client/cluster it must NOT raise.
+        res = sr.apply_workspace_pod(_FakeWS(), dry_run=False)
+        self.assertFalse(res.applied)
+        self.assertTrue(res.reason)                      # a human-readable reason
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

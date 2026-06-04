@@ -110,6 +110,22 @@ def transition_status(db: Session, workspace: Workspace, new_status: str) -> Wor
     db.commit()
     db.refresh(workspace)
 
+    # Starting up → apply the tier-enforcement Pod manifest. Dry-run by default
+    # (no cluster in dev); real gVisor/Firecracker launch happens on the cluster
+    # when ASTRA_K8S_APPLY=1. The decision is always audited in the activity feed.
+    if new_status == "RUNNING" and previous != "RUNNING":
+        from app.services import sandbox_runtime, events_service
+        res = sandbox_runtime.apply_workspace_pod(workspace)
+        events_service.record(
+            kind="sandbox",
+            title=f'{"Launched" if res.applied else "Planned"} pod {res.pod_name} '
+                  f'({res.runtime_class})',
+            detail=f"runtimeClassName={res.runtime_class}; {res.reason}",
+            workspace_id=workspace.id,
+            cluster_id=workspace.cluster_id,
+            node_name=workspace.node_name,
+        )
+
     # If the workspace stopped or was archived, release the node slot
     if new_status in ("STOPPED", "ARCHIVED", "FAILED") and previous == "RUNNING":
         from app.services import scheduler_service
