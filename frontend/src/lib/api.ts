@@ -180,6 +180,28 @@ export async function executeCode(
   return data;
 }
 
+// ── Workspace files + GitHub import ────────────────────────────────────────
+
+export interface WsFile { path: string; type: 'file' | 'dir'; size?: number; }
+
+export async function importRepo(workspaceId: number, gitUrl: string):
+  Promise<{ ok: boolean; detail: string; file_count: number }> {
+  const { data } = await api.post(`/workspaces/${workspaceId}/import-repo`, { git_url: gitUrl });
+  return data;
+}
+export async function listFiles(workspaceId: number): Promise<WsFile[]> {
+  const { data } = await api.get<{ files: WsFile[] }>(`/workspaces/${workspaceId}/files`);
+  return data.files;
+}
+export async function readFile(workspaceId: number, path: string): Promise<string> {
+  const { data } = await api.get<{ content: string }>(
+    `/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`);
+  return data.content;
+}
+export async function writeFile(workspaceId: number, path: string, content: string): Promise<void> {
+  await api.put(`/workspaces/${workspaceId}/file`, { path, content });
+}
+
 // ── Carbon ─────────────────────────────────────────────────────────────────
 
 export interface CarbonReading {

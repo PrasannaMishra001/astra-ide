@@ -13,6 +13,7 @@ import { useAuth } from '../../../lib/auth';
 
 // Editor is client-only (uses window)
 const CollabEditor = dynamic(() => import('../../../components/CollabEditor'), { ssr: false });
+const FileManager = dynamic(() => import('../../../components/FileManager'), { ssr: false });
 
 export default function WorkspacePage() {
   const params = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ export default function WorkspacePage() {
   const { token, user, hydrated } = useAuth();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'collab' | 'files'>('files');
 
   useEffect(() => {
     if (!hydrated) return;     // wait for persisted auth to load
@@ -68,6 +70,17 @@ export default function WorkspacePage() {
           {ws.status}
         </span>
 
+        <div className="ml-2 flex rounded overflow-hidden border border-slate-700 text-xs">
+          <button onClick={() => setView('files')}
+            className={`px-3 py-1 ${view === 'files' ? 'bg-slate-700 text-white' : 'bg-slate-900 text-slate-400'}`}>
+            Files
+          </button>
+          <button onClick={() => setView('collab')}
+            className={`px-3 py-1 ${view === 'collab' ? 'bg-slate-700 text-white' : 'bg-slate-900 text-slate-400'}`}>
+            Collab Editor
+          </button>
+        </div>
+
         <div className="ml-auto flex gap-2 text-sm">
           {ws.status !== 'RUNNING' && (
             <button onClick={async () => { await startWorkspace(ws.id); refresh(); }}
@@ -81,16 +94,20 @@ export default function WorkspacePage() {
       </header>
 
       <section className="flex-1 min-h-0">
-        <CollabEditor
-          workspaceId={ws.id}
-          room={ws.yjs_room}
-          language={ws.language}
-          initialCode={undefined}
-          username={user.username}
-          isOwner={ws.owner_id === user.id}
-          status={ws.status}
-          sandbox={ws.sandbox_tier}
-        />
+        {view === 'files' ? (
+          <FileManager workspaceId={ws.id} />
+        ) : (
+          <CollabEditor
+            workspaceId={ws.id}
+            room={ws.yjs_room}
+            language={ws.language}
+            initialCode={undefined}
+            username={user.username}
+            isOwner={ws.owner_id === user.id}
+            status={ws.status}
+            sandbox={ws.sandbox_tier}
+          />
+        )}
       </section>
     </main>
   );
