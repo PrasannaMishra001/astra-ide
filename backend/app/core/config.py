@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 1 day
 
+    # ── Google OAuth (Sign in with Google) ───────────────────────────────────
+    # Create an OAuth 2.0 Client ID (type "Web application") in Google Cloud
+    # Console and set these in backend/.env. Authorized redirect URI to register:
+    #   http://localhost:3000/api/auth/google/callback   (dev, via Next proxy)
+    google_client_id:     Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri:  str = "http://localhost:3000/api/auth/google/callback"
+    frontend_url:         str = "http://localhost:3000"
+
     # ── Redis ────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
 

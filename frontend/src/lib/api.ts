@@ -100,6 +100,15 @@ export async function fetchMe(): Promise<User> {
   return data;
 }
 
+// Load the current user with an explicit token (used by the OAuth callback,
+// before the token has been persisted to localStorage for the interceptor).
+export async function fetchMeWithToken(token: string): Promise<User> {
+  const { data } = await api.get<User>('/auth/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data;
+}
+
 // ── Workspaces ──────────────────────────────────────────────────────────────
 
 export async function listWorkspaces(): Promise<Workspace[]> {

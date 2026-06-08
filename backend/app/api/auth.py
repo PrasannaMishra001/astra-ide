@@ -1,16 +1,34 @@
-"""Authentication endpoints: register, login, current user."""
+"""Authentication endpoints: register, login, current user, Google OAuth."""
+import secrets
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models import User
 from app.schemas.auth import Token, UserCreate, UserOut
+from app.services import oauth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+settings = get_settings()
+
+
+def _unique_username(db: Session, base: str) -> str:
+    """Derive a unique username from an email local-part (foo, foo1, foo2…)."""
+    base = "".join(c for c in base if c.isalnum() or c in "._-")[:48] or "user"
+    name = base
+    i = 0
+    while db.query(User).filter(User.username == name).first() is not None:
+        i += 1
+        name = f"{base}{i}"
+    return name
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -63,3 +81,54 @@ def login(
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut.model_validate(current_user)
+
+
+# ── Google OAuth (Sign in with Google) ──────────────────────────────────────
+
+@router.get("/google/login")
+def google_login() -> RedirectResponse:
+    """Kick off the OAuth flow — redirect the browser to Google's consent page."""
+    if not oauth_service.is_configured():
+        # Not configured: bounce back to the login page with a clear message.
+        return RedirectResponse(
+            f"{settings.frontend_url}/login?error=google_not_configured")
+    state = oauth_service.make_state()
+    resp = RedirectResponse(oauth_service.build_auth_url(state))
+    # Stash state in a short-lived cookie for CSRF protection on callback.
+    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return resp
+
+
+@router.get("/google/callback")
+def google_callback(code: str | None = None, state: str | None = None,
+                    error: str | None = None, db: Session = Depends(get_db)):
+    """Handle Google's redirect: exchange the code, find/create the user, mint a JWT."""
+    if error or not code:
+        return RedirectResponse(f"{settings.frontend_url}/login?error=google_denied")
+    if not oauth_service.is_configured():
+        return RedirectResponse(f"{settings.frontend_url}/login?error=google_not_configured")
+
+    try:
+        profile = oauth_service.exchange_code(code)
+    except httpx.HTTPError:
+        return RedirectResponse(f"{settings.frontend_url}/login?error=google_exchange_failed")
+
+    email = (profile.get("email") or "").lower()
+    if not email:
+        return RedirectResponse(f"{settings.frontend_url}/login?error=google_no_email")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        user = User(
+            email=email,
+            username=_unique_username(db, email.split("@")[0]),
+            # OAuth users have no usable password (random, never revealed).
+            hashed_password=hash_password(secrets.token_urlsafe(32)),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = create_access_token(subject=user.id)
+    # Hand the JWT to the SPA, which stores it and loads the session.
+    return RedirectResponse(f"{settings.frontend_url}/oauth/callback?token={token}")
