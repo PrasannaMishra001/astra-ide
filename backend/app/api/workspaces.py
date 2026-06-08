@@ -1,9 +1,13 @@
-"""Workspace CRUD endpoints + sharing + code execution."""
-from fastapi import APIRouter, Depends, HTTPException, status
+"""Workspace CRUD endpoints + sharing + code execution + terminal."""
+import asyncio
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.db.session import get_db
+from app.core.security import decode_access_token
+from app.db.session import SessionLocal, get_db
 from app.models import User, Workspace
 from app.schemas.workspace import (
     WorkspaceCreate, WorkspaceUpdate, WorkspaceOut, WorkspaceList,
@@ -14,6 +18,7 @@ from app.services import workspace_service
 from app.services import sharing_service
 from app.services import executor_service
 from app.services import workspace_files
+from app.services.terminal_service import TerminalProcess
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
@@ -257,3 +262,62 @@ def write_file(workspace_id: int, payload: WriteFileRequest,
         return {"ok": True, "path": payload.path, "size": size}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Interactive terminal (xterm.js over WebSocket) ──────────────────────────
+
+@router.websocket("/{workspace_id}/terminal")
+async def terminal_ws(websocket: WebSocket, workspace_id: int, token: str | None = None) -> None:
+    """
+    Bridge an xterm.js terminal to a real shell rooted in the workspace dir.
+    Auth is via the `token` query param (WebSocket can't carry the Bearer header
+    the way fetch does). Client frames are JSON: {"i": "<input>"} for keystrokes,
+    {"r": [rows, cols]} for resize. Server streams raw shell output as text.
+    """
+    await websocket.accept()
+
+    # Authenticate + authorize on a short-lived DB session (no Depends in ws).
+    user_id = decode_access_token(token) if token else None
+    if user_id is None:
+        await websocket.close(code=4401)
+        return
+    db = SessionLocal()
+    try:
+        if not sharing_service.user_can_access(db, workspace_id, int(user_id)):
+            await websocket.close(code=4403)
+            return
+    finally:
+        db.close()
+
+    cwd = workspace_files.workspace_dir(workspace_id)
+    term = TerminalProcess(cwd)
+    loop = asyncio.get_event_loop()
+
+    async def pump_output() -> None:
+        try:
+            while term.alive:
+                data = await loop.run_in_executor(None, term.read_blocking, 0.2)
+                if data:
+                    await websocket.send_text(data.decode(errors="replace"))
+            await websocket.send_text("\r\n[process exited]\r\n")
+        except Exception:
+            pass
+
+    out_task = asyncio.create_task(pump_output())
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                term.write(raw)            # tolerate a plain input frame
+                continue
+            if "i" in msg:
+                term.write(msg["i"])
+            elif "r" in msg and isinstance(msg["r"], list) and len(msg["r"]) == 2:
+                term.resize(int(msg["r"][0]), int(msg["r"][1]))
+    except WebSocketDisconnect:
+        pass
+    finally:
+        term.close()
+        out_task.cancel()

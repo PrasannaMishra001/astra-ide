@@ -29,6 +29,11 @@ def _ws_dir(workspace_id: int) -> Path:
     return d
 
 
+def workspace_dir(workspace_id: int) -> Path:
+    """Public accessor for the workspace's on-disk directory (used by the terminal)."""
+    return _ws_dir(workspace_id)
+
+
 def _safe_path(workspace_id: int, rel: str) -> Path:
     """Resolve `rel` inside the workspace dir; reject traversal outside it."""
     base = _ws_dir(workspace_id).resolve()
