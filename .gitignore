@@ -123,3 +123,6 @@ docker-data/
 tmp/
 *.tar.gz
 *.zip
+
+# Per-workspace file storage (cloned repos, user files)
+backend/workspace_data/

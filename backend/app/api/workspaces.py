@@ -13,8 +13,24 @@ from app.schemas.workspace import (
 from app.services import workspace_service
 from app.services import sharing_service
 from app.services import executor_service
+from app.services import workspace_files
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
+
+
+class ImportRepoRequest(BaseModel):
+    git_url: str = Field(min_length=8, max_length=300)
+
+
+class WriteFileRequest(BaseModel):
+    path:    str = Field(min_length=1, max_length=400)
+    content: str = Field(max_length=1_000_000)
+
+
+def _require_access(db: Session, workspace_id: int, user_id: int) -> None:
+    if not sharing_service.user_can_access(db, workspace_id, user_id):
+        raise HTTPException(status_code=404, detail="Workspace not found")
 
 
 # ── Core CRUD (now access-aware: owner OR member) ───────────────────────────
@@ -193,3 +209,51 @@ def execute_code(
         timeout=result.timeout,
         truncated=result.truncated,
     )
+
+
+# ── Files + GitHub import ───────────────────────────────────────────────────
+
+@router.post("/{workspace_id}/import-repo")
+def import_repo(workspace_id: int, payload: ImportRepoRequest,
+                db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)) -> dict:
+    """Bring a public GitHub/GitLab repo into the workspace (shallow clone)."""
+    _require_access(db, workspace_id, current_user.id)
+    res = workspace_files.import_repo(workspace_id, payload.git_url)
+    if not res.ok:
+        raise HTTPException(status_code=400, detail=res.detail)
+    return {"ok": True, "detail": res.detail, "file_count": res.file_count}
+
+
+@router.get("/{workspace_id}/files")
+def list_files(workspace_id: int, db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)) -> dict:
+    """File tree of the workspace (for the file-manager panel)."""
+    _require_access(db, workspace_id, current_user.id)
+    return {"files": workspace_files.list_tree(workspace_id)}
+
+
+@router.get("/{workspace_id}/file")
+def read_file(workspace_id: int, path: str, db: Session = Depends(get_db),
+              current_user: User = Depends(get_current_user)) -> dict:
+    """Read a single file's contents."""
+    _require_access(db, workspace_id, current_user.id)
+    try:
+        return {"path": path, "content": workspace_files.read_file(workspace_id, path)}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/{workspace_id}/file")
+def write_file(workspace_id: int, payload: WriteFileRequest,
+               db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)) -> dict:
+    """Create/overwrite a file (editor save)."""
+    _require_access(db, workspace_id, current_user.id)
+    try:
+        size = workspace_files.write_file(workspace_id, payload.path, payload.content)
+        return {"ok": True, "path": payload.path, "size": size}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
