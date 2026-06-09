@@ -80,6 +80,12 @@ def create_workspace_for_user(
     db.commit()
     db.refresh(workspace)
 
+    # Prometheus domain metrics (Monitoring §9): workspace + tier (B4) + scheduler (B1)
+    from app.core.metrics import WORKSPACES_CREATED, SANDBOX_TIER, SCHEDULER_DECISIONS
+    WORKSPACES_CREATED.inc()
+    SANDBOX_TIER.labels(tier).inc()
+    SCHEDULER_DECISIONS.labels("ppo").inc()
+
     # Build the Pod manifest that ENFORCES the tier (runtimeClassName + hardening).
     # Submitting it needs a live cluster; the manifest itself is built + audited
     # here. See backend/app/services/sandbox_runtime.py and

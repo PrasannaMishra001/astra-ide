@@ -18,6 +18,7 @@ from app.services import workspace_service
 from app.services import sharing_service
 from app.services import executor_service
 from app.services import workspace_files
+from app.services import object_store
 from app.services.terminal_service import TerminalProcess
 from pydantic import BaseModel, Field
 
@@ -262,6 +263,30 @@ def write_file(workspace_id: int, payload: WriteFileRequest,
         return {"ok": True, "path": payload.path, "size": size}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Snapshots (MinIO object storage) ────────────────────────────────────────
+
+@router.post("/{workspace_id}/snapshot")
+def snapshot_workspace(workspace_id: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_user)) -> dict:
+    """Archive the workspace files to object storage (MinIO)."""
+    _require_access(db, workspace_id, current_user.id)
+    res = object_store.snapshot_workspace(workspace_id)
+    if not res.ok:
+        raise HTTPException(status_code=503, detail=res.detail)
+    return {"ok": True, "detail": res.detail, "key": res.key, "size": res.size}
+
+
+@router.post("/{workspace_id}/restore")
+def restore_workspace(workspace_id: int, db: Session = Depends(get_db),
+                      current_user: User = Depends(get_current_user)) -> dict:
+    """Restore the workspace files from the latest object-storage snapshot."""
+    _require_access(db, workspace_id, current_user.id)
+    res = object_store.restore_workspace(workspace_id)
+    if not res.ok:
+        raise HTTPException(status_code=503, detail=res.detail)
+    return {"ok": True, "detail": res.detail, "key": res.key, "size": res.size}
 
 
 # ── Interactive terminal (xterm.js over WebSocket) ──────────────────────────
