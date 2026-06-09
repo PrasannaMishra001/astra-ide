@@ -24,8 +24,12 @@ kind create cluster --name $MB   --wait 120s
 echo "== init Karmada control plane on host =="
 kubectl config use-context kind-$HOST
 sudo karmadactl init --kubeconfig "$HOME/.kube/config" >/tmp/kinit.log 2>&1 || { tail -20 /tmp/kinit.log; exit 1; }
-KCFG=/etc/karmada/karmada-apiserver.config
-sudo chmod 644 $KCFG 2>/dev/null || true
+# karmadactl writes the apiserver config root-owned under /etc/karmada (dir is
+# 0700, so plain kubectl can't even traverse it). Copy to a user-owned path.
+KCFG=$HOME/karmada-apiserver.config
+sudo cp /etc/karmada/karmada-apiserver.config "$KCFG"
+sudo chown "$(id -u):$(id -g)" "$KCFG"
+chmod 600 "$KCFG"
 
 echo "== ensure Failover + GracefulEviction feature gates on controllers =="
 for d in karmada-controller-manager karmada-scheduler; do
