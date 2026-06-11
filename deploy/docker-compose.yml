@@ -11,6 +11,7 @@
 
 services:
   postgres:
+    restart: unless-stopped
     image: postgres:16-alpine
     environment:
       POSTGRES_USER:     astra
@@ -25,6 +26,7 @@ services:
       retries: 10
 
   redis:
+    restart: unless-stopped
     image: redis:7-alpine
     ports: ["6379:6379"]
     healthcheck:
@@ -33,6 +35,7 @@ services:
       retries: 10
 
   minio:
+    restart: unless-stopped
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
@@ -49,6 +52,7 @@ services:
       retries: 10
 
   backend:
+    restart: unless-stopped
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -73,19 +77,21 @@ services:
       minio:    { condition: service_healthy }
 
   collab:
+    restart: unless-stopped
     build:
       context: ../collab-server
       dockerfile: Dockerfile
     ports: ["1234:1234"]
 
   frontend:
+    restart: unless-stopped
     build:
       context: ../frontend
       dockerfile: Dockerfile
       # Next.js bakes rewrites + NEXT_PUBLIC_* into the production build, so
       # we MUST pass these as build-args (not just runtime env vars).
       # Set PUBLIC_HOST to the public IP/domain that users hit in their browser:
-      #   PUBLIC_HOST=34.47.224.18 docker compose up -d --build frontend
+      #   PUBLIC_HOST=34.14.181.224 docker compose up -d --build frontend
       args:
         BACKEND_URL:                http://backend:8000
         NEXT_PUBLIC_COLLAB_WS_URL:  ws://${PUBLIC_HOST:-localhost}:1234
