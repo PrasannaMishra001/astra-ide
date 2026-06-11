@@ -210,6 +210,17 @@ export async function readFile(workspaceId: number, path: string): Promise<strin
 export async function writeFile(workspaceId: number, path: string, content: string): Promise<void> {
   await api.put(`/workspaces/${workspaceId}/file`, { path, content });
 }
+export async function makeDir(workspaceId: number, path: string): Promise<void> {
+  await api.post(`/workspaces/${workspaceId}/mkdir`, { path });
+}
+export async function deletePath(workspaceId: number, path: string): Promise<void> {
+  await api.delete(`/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`);
+}
+export async function snapshotWorkspace(workspaceId: number):
+  Promise<{ ok: boolean; detail: string; key: string; size: number }> {
+  const { data } = await api.post(`/workspaces/${workspaceId}/snapshot`);
+  return data;
+}
 
 // ── Carbon ─────────────────────────────────────────────────────────────────
 

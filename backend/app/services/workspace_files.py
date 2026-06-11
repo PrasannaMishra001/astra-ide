@@ -119,5 +119,25 @@ def write_file(workspace_id: int, rel: str, content: str) -> int:
     return p.stat().st_size
 
 
+def make_dir(workspace_id: int, rel: str) -> None:
+    """Create a folder (and parents) inside the workspace."""
+    p = _safe_path(workspace_id, rel)
+    p.mkdir(parents=True, exist_ok=True)
+
+
+def delete_path(workspace_id: int, rel: str) -> None:
+    """Delete a file or folder (recursively) inside the workspace."""
+    p = _safe_path(workspace_id, rel)
+    base = _ws_dir(workspace_id).resolve()
+    if p == base:
+        raise ValueError("cannot delete the workspace root")
+    if p.is_dir():
+        shutil.rmtree(p, ignore_errors=True)
+    elif p.exists():
+        p.unlink()
+    else:
+        raise FileNotFoundError(rel)
+
+
 def delete_workspace_files(workspace_id: int) -> None:
     shutil.rmtree(_ws_dir(workspace_id), ignore_errors=True)

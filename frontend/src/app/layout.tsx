@@ -6,8 +6,8 @@ import CommandPalette from '../components/CommandPalette';
 export const metadata: Metadata = {
   metadataBase: new URL('https://astra-ide.local'),
   title: {
-    default:  'ASTRA-IDE — Cloud IDE that schedules itself',
-    template: '%s — ASTRA-IDE',
+    default:  'ASTRA-IDE | Cloud IDE that schedules itself',
+    template: '%s | ASTRA-IDE',
   },
   description:
     'Adaptive Scheduling & Telemetry-driven Resource-aware Cloud IDE. ' +

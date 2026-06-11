@@ -265,6 +265,38 @@ def write_file(workspace_id: int, payload: WriteFileRequest,
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class MkdirRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=400)
+
+
+@router.post("/{workspace_id}/mkdir")
+def make_dir(workspace_id: int, payload: MkdirRequest,
+             db: Session = Depends(get_db),
+             current_user: User = Depends(get_current_user)) -> dict:
+    """Create a folder inside the workspace."""
+    _require_access(db, workspace_id, current_user.id)
+    try:
+        workspace_files.make_dir(workspace_id, payload.path)
+        return {"ok": True, "path": payload.path}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/{workspace_id}/file")
+def delete_path(workspace_id: int, path: str,
+                db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)) -> dict:
+    """Delete a file or folder inside the workspace."""
+    _require_access(db, workspace_id, current_user.id)
+    try:
+        workspace_files.delete_path(workspace_id, path)
+        return {"ok": True, "path": path}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # ── Snapshots (MinIO object storage) ────────────────────────────────────────
 
 @router.post("/{workspace_id}/snapshot")

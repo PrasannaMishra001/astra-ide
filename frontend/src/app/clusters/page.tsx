@@ -93,7 +93,7 @@ export default function ClustersPage() {
             Cluster topology
           </motion.h1>
           <p className="text-sm text-slate-400 mt-1">
-            Hover over a node to inspect it. Nodes are magnetic — they're attracted to your cursor.
+            Hover over a node to inspect it. Nodes are magnetic and follow your cursor.
           </p>
         </div>
 
@@ -120,8 +120,8 @@ export default function ClustersPage() {
           <StatCard
             icon={<Leaf     size={20} className="text-lime-400"    />}
             label="Carbon (gCO₂/kWh)"
-            value={carbonA !== null ? carbonA.toFixed(0) : '—'}
-            sub={`cluster-b: ${carbonB !== null ? carbonB.toFixed(0) : '—'}`}
+            value={carbonA !== null ? carbonA.toFixed(0) : 'n/a'}
+            sub={`cluster-b: ${carbonB !== null ? carbonB.toFixed(0) : 'n/a'}`}
           />
         </div>
 
@@ -263,7 +263,7 @@ function ClusterDetailCard({
         <div>
           <div className="text-xs text-slate-500">Carbon intensity</div>
           <div className={cn('text-2xl font-bold tabular-nums', carbonClass(carbon))}>
-            {carbon !== null ? carbon.toFixed(0) : '—'}
+            {carbon !== null ? carbon.toFixed(0) : 'n/a'}
             <span className="text-xs ml-1 text-slate-500">gCO₂/kWh</span>
           </div>
         </div>

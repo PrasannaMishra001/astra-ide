@@ -7,7 +7,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { BarChart3, Play, RefreshCw, Trophy, Zap } from 'lucide-react';
+import {
+  ArrowLeft, BarChart3, BookOpen, ChevronDown, Crown, Play, RefreshCw,
+  TrendingDown, TrendingUp, Trophy, Zap,
+} from 'lucide-react';
 
 import { runBenchmark, type BenchmarkReport, type BenchmarkRow } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -36,17 +39,18 @@ export default function BenchmarksPage() {
   const [report, setReport]   = useState<BenchmarkReport | null>(null);
   const [running, setRunning] = useState(false);
   const [n_jobs, setNJobs]    = useState(200);
+  const [seed, setSeed]       = useState(42);
 
   useEffect(() => {
     if (!hydrated) return;
     if (!token) { router.push('/login'); return; }
-    void runIt(200);   // initial run
+    void runIt(200, 42);   // initial run
   }, [token, hydrated]);
 
-  async function runIt(jobs: number) {
+  async function runIt(jobs: number, runSeed: number) {
     setRunning(true);
     try {
-      const r = await runBenchmark(jobs, 42);
+      const r = await runBenchmark(jobs, runSeed);
       setReport(r);
     } catch (e: any) {
       toast.error('Benchmark failed', e?.response?.data?.detail || 'Server error');
@@ -61,7 +65,9 @@ export default function BenchmarksPage() {
 
       <header className="relative border-b border-slate-800 px-6 py-3 flex items-center justify-between bg-slate-950/60 backdrop-blur">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-astra-500 text-sm hover:underline">← Dashboard</Link>
+          <Link href="/dashboard" className="inline-flex items-center gap-1 text-astra-500 text-sm hover:underline">
+            <ArrowLeft size={14} /> Dashboard
+          </Link>
           <Link href="/" className="flex items-center gap-2">
             <Image src="/logo.png" alt="ASTRA-IDE" width={28} height={28} className="rounded" />
             <span className="text-base font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
@@ -93,8 +99,8 @@ export default function BenchmarksPage() {
               ASTRA PPO scheduler vs. classical baselines · same workload, same cluster snapshot
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-400">Workload size</label>
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-xs text-slate-400">Workload</label>
             <select
               value={n_jobs}
               onChange={(e) => setNJobs(parseInt(e.target.value, 10))}
@@ -107,17 +113,26 @@ export default function BenchmarksPage() {
               <option value={500}>500 jobs</option>
               <option value={1000}>1000 jobs</option>
             </select>
+            <label className="text-xs text-slate-400">Seed</label>
+            <input
+              type="number" value={seed}
+              onChange={(e) => setSeed(parseInt(e.target.value || '0', 10))}
+              aria-label="Random seed"
+              title="Random seed for the workload generator; same seed reproduces the exact run"
+              className="w-20 px-2 py-1.5 rounded bg-slate-800 border border-slate-700 text-sm tabular-nums"
+            />
             <button
-              onClick={() => runIt(n_jobs)} type="button" disabled={running}
+              onClick={() => runIt(n_jobs, seed)} type="button" disabled={running}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-astra-600 hover:bg-astra-700 disabled:opacity-50 text-sm font-medium"
             >
               {running ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
-              {running ? 'Running…' : 'Run again'}
+              {running ? 'Running' : 'Run benchmark'}
             </button>
           </div>
         </div>
 
         {report && <BenchmarkCharts report={report} />}
+        {report && <Methodology report={report} />}
 
         {!report && !running && (
           <p className="text-slate-500 italic">No benchmark data yet.</p>
@@ -150,11 +165,11 @@ function BenchmarkCharts({ report }: { report: BenchmarkReport }) {
     <div className="space-y-8">
       {/* Top-line summary */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Summary label="vs Baseline"   value="" sub="Improvements" icon={<Trophy size={16} />} />
-        <Summary label="Avg latency"   value={fmtPct(improvements.latency_pct, true)}  sub="lower is better" pos={improvements.latency_pct > 0} />
-        <Summary label="P95 latency"   value={fmtPct(improvements.p95_pct, true)}      sub="lower is better" pos={improvements.p95_pct > 0} />
-        <Summary label="Utilization"   value={fmtPct(improvements.util_pct)}           sub="higher is better" pos={improvements.util_pct > 0} />
-        <Summary label="Energy"        value={fmtPct(improvements.energy_pct, true)}   sub="lower is better"  pos={improvements.energy_pct > 0} />
+        <Summary label="vs Baseline"   value="" sub="ASTRA PPO improvement over the baseline average" icon={<Trophy size={16} />} />
+        <Summary label="Avg latency"   value={fmtPct(improvements.latency_pct)} sub="lower is better"  pos={improvements.latency_pct > 0} />
+        <Summary label="P95 latency"   value={fmtPct(improvements.p95_pct)}     sub="lower is better"  pos={improvements.p95_pct > 0} />
+        <Summary label="Utilization"   value={fmtPct(improvements.util_pct)}    sub="higher is better" pos={improvements.util_pct > 0} />
+        <Summary label="Energy"        value={fmtPct(improvements.energy_pct)}  sub="lower is better"  pos={improvements.energy_pct > 0} />
       </div>
 
       {/* Per-metric bar charts */}
@@ -286,9 +301,14 @@ function ChartCard({
                       : 'bg-slate-600')}
                 />
                 <div className="absolute inset-0 flex items-center px-2 text-xs font-mono">
-                  <span className={isBest ? 'text-white font-semibold' : 'text-slate-200'}>
+                  <span className={cn('inline-flex items-center gap-1.5',
+                    isBest ? 'text-white font-semibold' : 'text-slate-200')}>
                     {format(v)}
-                    {isBest && <span className="ml-2 text-emerald-300">★ best</span>}
+                    {isBest && (
+                      <span className="inline-flex items-center gap-1 text-emerald-300">
+                        <Crown size={11} /> best
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -312,12 +332,88 @@ function Summary({
         {icon && <span className="text-slate-400">{icon}</span>}
       </div>
       <div className={cn(
-        'text-2xl font-bold tabular-nums',
+        'text-2xl font-bold tabular-nums inline-flex items-center gap-1.5',
         value && pos !== undefined ? (pos ? 'text-emerald-400' : 'text-rose-400') : '',
       )}>
-        {value || '—'}
+        {value && pos !== undefined && (pos
+          ? <TrendingUp size={18} className="shrink-0" />
+          : <TrendingDown size={18} className="shrink-0" />)}
+        {value || ''}
       </div>
       <div className="text-xs text-slate-400 mt-0.5">{sub}</div>
+    </div>
+  );
+}
+
+// ── Methodology ──────────────────────────────────────────────────────────────
+// Explains exactly how every number on this page is produced, plus the offline
+// research benchmarks (real datasets) that back the live simulator.
+
+function Methodology({ report }: { report: BenchmarkReport }) {
+  const [open, setOpen] = useState(true);
+  const meta = report.metadata || {};
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+              className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-slate-900/70">
+        <BookOpen size={16} className="text-astra-500" />
+        <h3 className="font-semibold text-sm flex-1">How these numbers are computed</h3>
+        <ChevronDown size={16} className={cn('text-slate-500 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 grid md:grid-cols-2 gap-6 text-[13px] leading-relaxed text-slate-300">
+          <div className="space-y-3">
+            <p>
+              Every algorithm replays the <strong>same workload</strong> ({meta.n_jobs || 'N'} jobs,
+              seed {meta.seed || 'fixed'}) against the <strong>same snapshot</strong> of live
+              cluster telemetry, so differences come only from placement decisions.
+              Each job carries a CPU request, memory request and a risk score drawn
+              from realistic distributions.
+            </p>
+            <MethodRow k="Startup latency" v="base pod start (120 ms) + contention penalty proportional to the chosen node's CPU load + run-queue wait + sandbox-tier overhead (runc 60 ms, gVisor 150 ms, Firecracker 350 ms)" />
+            <MethodRow k="Utilization" v="mean CPU utilization across all nodes after the full workload is placed" />
+            <MethodRow k="Balance score" v="1 - stddev(node CPU) / mean(node CPU); 1.0 means perfectly even spread" />
+            <MethodRow k="Energy proxy" v="sum over placements of node load x grid carbon intensity for that node's region (live data, gCO2/kWh)" />
+            <MethodRow k="SLA breach" v="any single placement whose modeled startup exceeds 5000 ms" />
+          </div>
+          <div className="space-y-3">
+            <p className="text-slate-400">
+              The ASTRA policy scores each node on weighted factors learned by the
+              PPO agent: free CPU (0.35), free memory (0.25), queue depth (0.15),
+              low grid carbon (0.15), with an overload penalty above 85% CPU.
+              Baselines use the textbook definitions of Round-Robin, Random, FIFO
+              and Least-Loaded.
+            </p>
+            <p className="text-slate-400">
+              This live page is a fast in-browser replay. The full research
+              training and evaluation behind it runs offline on real data:
+            </p>
+            <ul className="space-y-1.5 text-slate-400">
+              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
+                PPO (stable-baselines3) trained in a Gymnasium cluster environment:
+                +112% reward over the best classical baseline, 0.57% SLA violations.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
+                LSTM prewarming on the Azure Functions 2019 production trace:
+                median N-RMSE 0.085, beating the per-function paper baseline.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
+                Syscall IDS on a first-party eBPF corpus (171k in-kernel events,
+                Tetragon): 0.80 workload-classification accuracy at 0.10 FPR.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
+                Carbon-aware shifting on live grid data: 25.8% CO2 reduction with
+                a 12h window, 45% with 24h.</li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MethodRow({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <span className="font-medium text-slate-200">{k}.</span>{' '}
+      <span className="text-slate-400">{v}</span>
     </div>
   );
 }
@@ -330,8 +426,7 @@ function pctChange(baseline: number, current: number, lowerIsBetter = false): nu
   return lowerIsBetter ? -change : change;
 }
 
-function fmtPct(v: number, lowerIsBetter = false): string {
-  if (!Number.isFinite(v)) return '—';
-  const arrow = v > 0 ? '↑' : v < 0 ? '↓' : '';
-  return `${arrow}${Math.abs(v).toFixed(1)}%`;
+function fmtPct(v: number): string {
+  if (!Number.isFinite(v)) return 'n/a';
+  return `${Math.abs(v).toFixed(1)}%`;
 }

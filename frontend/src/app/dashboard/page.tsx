@@ -5,6 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Plus, Play, Square, Trash2, Users } from 'lucide-react';
+import {
+  SiPython, SiCplusplus, SiJavascript, SiTypescript,
+  SiGo, SiRust, SiOpenjdk, SiGnubash,
+} from 'react-icons/si';
 
 import {
   listWorkspaces, createWorkspace, deleteWorkspace,
@@ -16,15 +20,16 @@ import ThreeDCard from '../../components/ui/ThreeDCard';
 import { cn } from '../../lib/utils';
 import { templatesForLanguage, defaultTemplateFor } from '../../lib/templates';
 
+// Official language marks (Simple Icons) with their brand colors.
 const LANGUAGES = [
-  { id: 'python',     emoji: '🐍' },
-  { id: 'cpp',        emoji: '⚡' },
-  { id: 'javascript', emoji: '🟨' },
-  { id: 'typescript', emoji: '🔷' },
-  { id: 'go',         emoji: '🐹' },
-  { id: 'rust',       emoji: '🦀' },
-  { id: 'java',       emoji: '☕' },
-  { id: 'bash',       emoji: '🐚' },
+  { id: 'python',     label: 'Python',     Icon: SiPython,     color: '#3776AB' },
+  { id: 'cpp',        label: 'C++',        Icon: SiCplusplus,  color: '#00599C' },
+  { id: 'javascript', label: 'JavaScript', Icon: SiJavascript, color: '#F7DF1E' },
+  { id: 'typescript', label: 'TypeScript', Icon: SiTypescript, color: '#3178C6' },
+  { id: 'go',         label: 'Go',         Icon: SiGo,         color: '#00ADD8' },
+  { id: 'rust',       label: 'Rust',       Icon: SiRust,       color: '#f97316' },
+  { id: 'java',       label: 'Java',       Icon: SiOpenjdk,    color: '#e76f51' },
+  { id: 'bash',       label: 'Bash',       Icon: SiGnubash,    color: '#4EAA25' },
 ];
 
 export default function DashboardPage() {
@@ -209,14 +214,15 @@ export default function DashboardPage() {
                     setTemplateId(defaultTemplateFor(l.id)?.id ?? '');
                   }}
                   className={cn(
-                    'flex flex-col items-center gap-1 px-2 py-2 rounded text-xs border transition-all',
+                    'flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg text-xs border transition-all',
                     language === l.id
                       ? 'bg-astra-600/20 border-astra-500 text-white'
                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600',
                   )}
                 >
-                  <span className="text-base leading-none">{l.emoji}</span>
-                  <span>{l.id}</span>
+                  <l.Icon size={18} style={{ color: language === l.id ? l.color : undefined }}
+                          className={language === l.id ? '' : 'text-slate-400'} />
+                  <span>{l.label}</span>
                 </button>
               ))}
             </div>
@@ -266,7 +272,7 @@ export default function DashboardPage() {
             <label className="flex items-center gap-2 mb-2 text-sm text-slate-300">
               <input type="checkbox" checked={networkAccess}
                      onChange={(e) => setNetworkAccess(e.target.checked)} />
-              Network access (raises risk → gvisor or firecracker)
+              Network access (raises risk, may select gVisor or Firecracker)
             </label>
             <label className="flex items-center gap-2 mb-6 text-sm text-slate-300">
               <input type="checkbox" checked={filesystemWrite}

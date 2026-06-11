@@ -122,13 +122,13 @@ export default function HomePage() {
               <span className="text-purple-400 font-semibold">eBPF</span> telemetry,{' '}
               <span className="text-pink-400 font-semibold">adaptive sandboxing</span>,{' '}
               <span className="text-amber-400 font-semibold">LSTM prewarming</span>, multi-cluster
-              federation, and conflict-free collaboration — one open research platform.
+              federation, and conflict-free collaboration, in one open research platform.
             </p>
 
             <div className="flex flex-wrap gap-3">
               <Link href="/register">
                 <HoverBorderGradient containerClassName="text-base">
-                  Get started — it&apos;s free →
+                  Get started for free
                 </HoverBorderGradient>
               </Link>
               <a
@@ -185,7 +185,7 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Live demo</p>
-            <h2 className="text-3xl md:text-4xl font-bold">Adaptive sandboxing — in real time</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">Adaptive sandboxing, in real time</h2>
             <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
               When a user submits code, the risk scorer routes it to the right isolation tier:
               <span className="text-emerald-400"> runc </span>(low overhead),
@@ -209,7 +209,7 @@ export default function HomePage() {
             <BentoCard accent="astra" span="col-2"
               icon={<Brain size={28} />}
               title="DRL-PPO Scheduler"
-              description="40-dim state vector. Multi-discrete action space. Proximal Policy Optimization replaces Kubernetes' default scheduler — learns optimal pod placement from live telemetry."
+              description="40-dim state vector. Multi-discrete action space. Proximal Policy Optimization replaces Kubernetes' default scheduler and learns optimal pod placement from live telemetry."
             />
             <BentoCard accent="cyan"
               icon={<Eye size={28} />}
@@ -283,7 +283,7 @@ export default function HomePage() {
           </p>
           <Link href="/register">
             <HoverBorderGradient containerClassName="text-base">
-              Create your free account →
+              Create your free account
             </HoverBorderGradient>
           </Link>
         </div>

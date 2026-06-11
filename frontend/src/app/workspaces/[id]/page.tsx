@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { ArrowLeft } from 'lucide-react';
 import {
   getWorkspace,
   startWorkspace,
@@ -46,7 +47,9 @@ export default function WorkspacePage() {
     return (
       <main className="p-8">
         <p className="text-red-400">{error}</p>
-        <Link href="/dashboard" className="text-astra-500">← Back</Link>
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-astra-500">
+          <ArrowLeft size={14} /> Back
+        </Link>
       </main>
     );
   }
@@ -57,7 +60,9 @@ export default function WorkspacePage() {
   return (
     <main className="h-screen flex flex-col">
       <header className="border-b border-slate-800 px-6 py-3 flex items-center gap-4 bg-slate-900">
-        <Link href="/dashboard" className="text-astra-500 text-sm hover:underline">← Dashboard</Link>
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-astra-500 text-sm hover:underline">
+          <ArrowLeft size={14} /> Dashboard
+        </Link>
         <h1 className="font-semibold">{ws.name}</h1>
         <span className="text-xs text-slate-500">{ws.language}</span>
 
@@ -88,11 +93,11 @@ export default function WorkspacePage() {
 
         <div className="ml-auto flex gap-2 text-sm">
           {ws.status !== 'RUNNING' && (
-            <button onClick={async () => { await startWorkspace(ws.id); refresh(); }}
+            <button type="button" onClick={async () => { await startWorkspace(ws.id); refresh(); }}
                     className="px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600">Start</button>
           )}
           {ws.status === 'RUNNING' && (
-            <button onClick={async () => { await stopWorkspace(ws.id); refresh(); }}
+            <button type="button" onClick={async () => { await stopWorkspace(ws.id); refresh(); }}
                     className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Stop</button>
           )}
         </div>
