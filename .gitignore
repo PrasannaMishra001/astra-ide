@@ -126,3 +126,10 @@ tmp/
 
 # Per-workspace file storage (cloned repos, user files)
 backend/workspace_data/
+
+# Personal presentation / planning guides (keep local, never commit)
+docs/PRESENTATION.md
+docs/PRESENTATION-SCRIPT.md
+docs/ARCHITECTURE-DIAGRAMS.md
+docs/OAUTH-SETUP.md
+docs/TECH-STACK-STATUS.md
