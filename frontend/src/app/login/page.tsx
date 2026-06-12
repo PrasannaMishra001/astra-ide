@@ -6,10 +6,8 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { LogIn, Loader2, AlertCircle } from 'lucide-react';
 
-import AuroraBackground from '../../components/ui/AuroraBackground';
-import Spotlight        from '../../components/ui/Spotlight';
-import { login }        from '../../lib/api';
-import { useAuth }      from '../../lib/auth';
+import { login }   from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,16 +17,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Surface OAuth round-trip errors (?error=…) handed back by the backend.
+  // Surface OAuth round-trip errors (?error=...) handed back by the backend.
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('error');
     if (!code) return;
     setError({
-      google_not_configured: 'Google sign-in is not configured on this server yet.',
-      google_denied:         'Google sign-in was cancelled.',
-      google_exchange_failed:'Could not complete Google sign-in. Please try again.',
-      google_no_email:       'Your Google account did not return an email.',
-      oauth_failed:          'Sign-in failed. Please try again.',
+      google_not_configured:  'Google sign-in is not configured on this server yet.',
+      google_denied:          'Google sign-in was cancelled.',
+      google_exchange_failed: 'Could not complete Google sign-in. Please try again.',
+      google_no_email:        'Your Google account did not return an email.',
+      oauth_failed:           'Sign-in failed. Please try again.',
     }[code] || 'Sign-in failed. Please try again.');
   }, []);
 
@@ -48,73 +46,69 @@ export default function LoginPage() {
   };
 
   return (
-    <AuroraBackground className="relative min-h-screen flex items-center justify-center px-4">
-      <Spotlight className="left-0 top-0" fill="rgba(59,130,246,0.6)" />
+    <main className="relative min-h-screen flex items-center justify-center px-4">
+      <div className="ambient" aria-hidden="true" />
 
       <motion.form
         onSubmit={onSubmit}
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-sm p-8 rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl shadow-2xl"
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative z-10 w-full max-w-sm card p-8 shadow-pop"
       >
         <div className="flex flex-col items-center mb-6">
           <Link href="/" className="mb-3">
-            <Image src="/logo.png" alt="ASTRA-IDE" width={56} height={56} className="rounded-xl" priority />
+            <Image src="/logo.png" alt="ASTRA-IDE home" width={56} height={56} className="rounded-xl" priority />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-sm text-slate-400 mt-1">Log in to your ASTRA-IDE account.</p>
+          <p className="text-sm text-muted mt-1">Log in to your ASTRA-IDE account.</p>
         </div>
 
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 px-3 py-2 rounded-lg bg-rose-950/60 border border-rose-900 text-rose-300 text-sm flex items-start gap-2"
-          >
-            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <div role="alert"
+               className="mb-4 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30
+                          text-rose-700 dark:text-rose-300 text-sm flex items-start gap-2">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>{error}</span>
-          </motion.div>
+          </div>
         )}
 
-        <label htmlFor="username" className="block text-xs text-slate-400 mb-1">
+        <label htmlFor="username" className="block text-xs font-medium text-muted mb-1">
           Username or email
         </label>
         <input
-          id="username" type="text" required autoFocus
+          id="username" type="text" required autoFocus autoComplete="username"
           value={usernameOrEmail}
           onChange={(e) => setUsernameOrEmail(e.target.value)}
           placeholder="jane.doe"
-          className="w-full mb-4 px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 focus:border-astra-500 focus:ring-2 focus:ring-astra-500/30 outline-none text-sm"
+          className="input-base mb-4"
         />
 
-        <label htmlFor="password" className="block text-xs text-slate-400 mb-1">Password</label>
+        <label htmlFor="password" className="block text-xs font-medium text-muted mb-1">Password</label>
         <input
-          id="password" type="password" required
+          id="password" type="password" required autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          className="w-full mb-6 px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 focus:border-astra-500 focus:ring-2 focus:ring-astra-500/30 outline-none text-sm"
+          placeholder="Your password"
+          className="input-base mb-6"
         />
 
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          type="submit" disabled={loading}
-          className="w-full py-2.5 rounded-lg bg-gradient-to-r from-astra-600 to-astra-500 hover:from-astra-500 hover:to-astra-400 disabled:opacity-50 font-medium flex items-center justify-center gap-2 text-sm shadow-lg shadow-astra-600/30"
-        >
+        <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
           {loading
-            ? <><Loader2 size={16} className="animate-spin" /> Logging in…</>
+            ? <><Loader2 size={16} className="animate-spin" /> Logging in</>
             : <><LogIn size={16} /> Log in</>}
-        </motion.button>
+        </button>
 
-        <div className="flex items-center gap-3 my-5">
-          <span className="h-px flex-1 bg-slate-800" />
-          <span className="text-[11px] uppercase tracking-wider text-slate-500">or</span>
-          <span className="h-px flex-1 bg-slate-800" />
+        <div className="flex items-center gap-3 my-5" aria-hidden="true">
+          <span className="h-px flex-1 bg-edge" />
+          <span className="text-[11px] uppercase tracking-wider text-faint">or</span>
+          <span className="h-px flex-1 bg-edge" />
         </div>
 
         {/* Full-page navigation: OAuth requires a top-level redirect to Google. */}
         <a
           href="/api/auth/google/login"
-          className="w-full py-2.5 rounded-lg bg-white text-slate-800 hover:bg-slate-100 font-medium flex items-center justify-center gap-2 text-sm shadow-lg"
+          className="w-full py-2.5 rounded-lg border border-edge-strong bg-surface hover:bg-raised
+                     font-medium flex items-center justify-center gap-2 text-sm transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -125,13 +119,13 @@ export default function LoginPage() {
           Sign in with Google
         </a>
 
-        <p className="mt-6 text-sm text-slate-400 text-center">
+        <p className="mt-6 text-sm text-muted text-center">
           New here?{' '}
-          <Link href="/register" className="text-astra-400 hover:text-astra-300 hover:underline">
+          <Link href="/register" className="text-astra-600 dark:text-astra-400 hover:underline">
             Create an account
           </Link>
         </p>
       </motion.form>
-    </AuroraBackground>
+    </main>
   );
 }

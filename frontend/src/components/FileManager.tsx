@@ -10,6 +10,7 @@ import {
   listFiles, readFile, writeFile, importRepo, makeDir, deletePath, type WsFile,
 } from '../lib/api';
 import { toast } from '../lib/toast';
+import { useTheme } from '../lib/theme';
 import { cn } from '../lib/utils';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -53,6 +54,7 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
   const [busy, setBusy] = useState(false);
   const [prompt, setPrompt] = useState<Prompt>(null);
   const [promptValue, setPromptValue] = useState('');
+  const [theme] = useTheme();
 
   async function refresh() {
     try { setFiles(await listFiles(workspaceId)); } catch { /* not fatal */ }
@@ -190,7 +192,7 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
           {sel ? (
             <MonacoEditor
               height="100%"
-              theme="vs-dark"
+              theme={theme === 'dark' ? 'vs-dark' : 'vs'}
               path={sel}
               language={langFor(sel)}
               value={content}

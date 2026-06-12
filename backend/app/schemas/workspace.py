@@ -1,7 +1,10 @@
 """Pydantic schemas for workspace endpoints."""
-from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from typing import Literal, Optional, List
+from pydantic import BaseModel, Field, field_serializer
+
+# Manual sandbox-tier pin. None = adaptive (risk-scored) selection.
+SandboxOverride = Optional[Literal["runc", "gvisor", "firecracker"]]
 
 
 class WorkspaceCreate(BaseModel):
@@ -12,11 +15,15 @@ class WorkspaceCreate(BaseModel):
     cpu_request:      float = Field(default=0.5, gt=0, le=8)
     memory_request:   int   = Field(default=512, gt=0, le=16384)
     initial_code:     str   = ""
+    # None = "Auto" (adaptive risk scoring); otherwise pin the tier explicitly.
+    sandbox_override: SandboxOverride = None
 
 
 class WorkspaceUpdate(BaseModel):
     name:   Optional[str] = None
     status: Optional[str] = None
+    # Re-pin the sandbox tier after creation (owner action).
+    sandbox_override: SandboxOverride = None
 
 
 class WorkspaceOut(BaseModel):
@@ -38,6 +45,14 @@ class WorkspaceOut(BaseModel):
     created_at:       datetime
     updated_at:       datetime
     last_active_at:   datetime
+
+    # DB stores naive UTC; serialize timezone-aware so browsers in any locale
+    # compute correct relative times (was showing "+5h30m" in IST).
+    @field_serializer("created_at", "updated_at", "last_active_at")
+    def _utc(self, v: datetime) -> str:
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        return v.isoformat()
 
     class Config:
         from_attributes = True

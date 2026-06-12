@@ -48,7 +48,10 @@ def create_workspace_for_user(
 ) -> Workspace:
     breakdown = score_workload(req, user)
     risk = breakdown.total
-    tier = breakdown.tier
+    # Adaptive (risk-scored) tier by default; honor an explicit manual pin.
+    # The risk score is still recorded either way so the UI can show what the
+    # adaptive policy WOULD have chosen next to the user's pin.
+    tier = req.sandbox_override or breakdown.tier
 
     workspace = Workspace(
         name=req.name,

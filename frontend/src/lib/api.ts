@@ -67,6 +67,8 @@ export interface Workspace {
   last_active_at: string;
 }
 
+export type SandboxTier = 'runc' | 'gvisor' | 'firecracker';
+
 export interface WorkspaceCreate {
   name: string;
   language: string;
@@ -75,6 +77,8 @@ export interface WorkspaceCreate {
   cpu_request?: number;
   memory_request?: number;
   initial_code?: string;
+  /** null/undefined = Auto (adaptive risk-scored tier); or pin explicitly. */
+  sandbox_override?: SandboxTier | null;
 }
 
 // ── Auth ────────────────────────────────────────────────────────────────────
@@ -138,6 +142,14 @@ export async function stopWorkspace(id: number): Promise<Workspace> {
 
 export async function deleteWorkspace(id: number): Promise<void> {
   await api.delete(`/workspaces/${id}`);
+}
+
+export async function updateWorkspace(
+  id: number,
+  payload: { name?: string; sandbox_override?: SandboxTier },
+): Promise<Workspace> {
+  const { data } = await api.patch<Workspace>(`/workspaces/${id}`, payload);
+  return data;
 }
 
 // ── Sharing ────────────────────────────────────────────────────────────────
@@ -219,6 +231,23 @@ export async function deletePath(workspaceId: number, path: string): Promise<voi
 export async function snapshotWorkspace(workspaceId: number):
   Promise<{ ok: boolean; detail: string; key: string; size: number }> {
   const { data } = await api.post(`/workspaces/${workspaceId}/snapshot`);
+  return data;
+}
+
+// ── System status (live infra backends) ────────────────────────────────────
+
+export interface SystemStatus {
+  environment:   string;
+  database:      string;
+  cache_backend: string;
+  object_store:  string;
+  metrics:       string;
+  carbon_api:    string;
+  google_oauth:  string;
+}
+
+export async function getSystemStatus(): Promise<SystemStatus> {
+  const { data } = await api.get<SystemStatus>('/system/status');
   return data;
 }
 

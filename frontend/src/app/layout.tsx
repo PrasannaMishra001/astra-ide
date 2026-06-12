@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Toaster from '../components/Toaster';
 import CommandPalette from '../components/CommandPalette';
+import { THEME_BOOT_SCRIPT } from '../lib/theme';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://astra-ide.local'),
@@ -56,7 +57,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-astra-600/40">
+      <head>
+        {/* Apply the saved theme before first paint (prevents light/dark flash). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
+      <body className="bg-bg text-ink min-h-screen font-sans antialiased selection:bg-astra-600/30">
         {children}
         <Toaster />
         <CommandPalette />

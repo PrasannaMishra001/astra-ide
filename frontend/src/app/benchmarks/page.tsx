@@ -1,17 +1,17 @@
 'use client';
-// Benchmarks page — runs the synthetic workload comparison via /benchmarks/run
-// and visualizes PPO vs Round-Robin vs Random vs FIFO vs Least-Loaded.
+// Benchmarks: replays the same synthetic workload against the live cluster
+// snapshot for every algorithm (via /benchmarks/run) and visualizes ASTRA PPO
+// against Round-Robin / Random / FIFO / Least-Loaded, with a full methodology
+// panel explaining how every number is produced.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
 import {
-  ArrowLeft, BarChart3, BookOpen, ChevronDown, Crown, Play, RefreshCw,
+  BarChart3, BookOpen, ChevronDown, Crown, Play, RefreshCw,
   TrendingDown, TrendingUp, Trophy, Zap,
 } from 'lucide-react';
 
+import AppShell from '../../components/AppShell';
 import { runBenchmark, type BenchmarkReport, type BenchmarkRow } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { toast } from '../../lib/toast';
@@ -25,17 +25,17 @@ const ALGO_LABEL: Record<string, string> = {
   fifo:         'FIFO',
 };
 
-const ALGO_COLOR: Record<string, string> = {
-  ppo:          'bg-astra-500 text-astra-100',
-  least_loaded: 'bg-emerald-600 text-emerald-50',
-  round_robin:  'bg-amber-600 text-amber-50',
-  random:       'bg-purple-600 text-purple-50',
-  fifo:         'bg-rose-600 text-rose-50',
+const ALGO_DOT: Record<string, string> = {
+  ppo:          'bg-astra-500',
+  least_loaded: 'bg-emerald-500',
+  round_robin:  'bg-amber-500',
+  random:       'bg-purple-500',
+  fifo:         'bg-rose-500',
 };
 
 export default function BenchmarksPage() {
   const router = useRouter();
-  const { token, user, hydrated, clearSession } = useAuth();
+  const { token, hydrated } = useAuth();
   const [report, setReport]   = useState<BenchmarkReport | null>(null);
   const [running, setRunning] = useState(false);
   const [n_jobs, setNJobs]    = useState(200);
@@ -44,14 +44,13 @@ export default function BenchmarksPage() {
   useEffect(() => {
     if (!hydrated) return;
     if (!token) { router.push('/login'); return; }
-    void runIt(200, 42);   // initial run
+    void runIt(200, 42);
   }, [token, hydrated]);
 
   async function runIt(jobs: number, runSeed: number) {
     setRunning(true);
     try {
-      const r = await runBenchmark(jobs, runSeed);
-      setReport(r);
+      setReport(await runBenchmark(jobs, runSeed));
     } catch (e: any) {
       toast.error('Benchmark failed', e?.response?.data?.detail || 'Server error');
     } finally {
@@ -60,71 +59,33 @@ export default function BenchmarksPage() {
   }
 
   return (
-    <main className="min-h-screen relative">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.08),_transparent_50%)]" />
-
-      <header className="relative border-b border-slate-800 px-6 py-3 flex items-center justify-between bg-slate-950/60 backdrop-blur">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-astra-500 text-sm hover:underline">
-            <ArrowLeft size={14} /> Dashboard
-          </Link>
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="ASTRA-IDE" width={28} height={28} className="rounded" />
-            <span className="text-base font-bold tracking-tight">ASTRA<span className="text-astra-500">-IDE</span></span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-1 text-sm ml-4">
-            <Link href="/dashboard" className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Workspaces</Link>
-            <Link href="/clusters"  className="px-3 py-1.5 rounded text-slate-300 hover:bg-slate-800/40">Clusters</Link>
-            <Link href="/benchmarks" className="px-3 py-1.5 rounded text-astra-300 bg-slate-800/60">Benchmarks</Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-slate-400">@{user?.username}</span>
-          <button onClick={() => { clearSession(); router.push('/'); }} type="button"
-                  className="px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-900">Log out</button>
-        </div>
-      </header>
-
-      <section className="relative max-w-6xl mx-auto px-6 py-8 space-y-8">
+    <AppShell>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
-            <motion.h1
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-bold flex items-center gap-3"
-            >
-              <BarChart3 className="text-astra-500" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2.5">
+              <BarChart3 className="text-astra-600 dark:text-astra-400" size={26} aria-hidden="true" />
               Scheduler benchmarks
-            </motion.h1>
-            <p className="text-sm text-slate-400 mt-1">
-              ASTRA PPO scheduler vs. classical baselines · same workload, same cluster snapshot
+            </h1>
+            <p className="text-sm text-muted mt-1">
+              ASTRA PPO vs classical baselines: same workload, same live cluster snapshot, only the policy differs.
             </p>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
-            <label className="text-xs text-slate-400">Workload</label>
-            <select
-              value={n_jobs}
-              onChange={(e) => setNJobs(parseInt(e.target.value, 10))}
-              aria-label="Workload size"
-              className="px-2 py-1.5 rounded bg-slate-800 border border-slate-700 text-sm"
-            >
-              <option value={50}>50 jobs</option>
-              <option value={100}>100 jobs</option>
-              <option value={200}>200 jobs</option>
-              <option value={500}>500 jobs</option>
-              <option value={1000}>1000 jobs</option>
+            <label htmlFor="bm-jobs" className="text-xs text-muted">Workload</label>
+            <select id="bm-jobs" value={n_jobs}
+                    onChange={(e) => setNJobs(parseInt(e.target.value, 10))}
+                    className="rounded-lg border border-edge bg-surface px-2 py-1.5 text-sm">
+              {[50, 100, 200, 500, 1000].map((v) => <option key={v} value={v}>{v} jobs</option>)}
             </select>
-            <label className="text-xs text-slate-400">Seed</label>
-            <input
-              type="number" value={seed}
-              onChange={(e) => setSeed(parseInt(e.target.value || '0', 10))}
-              aria-label="Random seed"
-              title="Random seed for the workload generator; same seed reproduces the exact run"
-              className="w-20 px-2 py-1.5 rounded bg-slate-800 border border-slate-700 text-sm tabular-nums"
-            />
-            <button
-              onClick={() => runIt(n_jobs, seed)} type="button" disabled={running}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-astra-600 hover:bg-astra-700 disabled:opacity-50 text-sm font-medium"
-            >
+            <label htmlFor="bm-seed" className="text-xs text-muted">Seed</label>
+            <input id="bm-seed" type="number" value={seed}
+                   onChange={(e) => setSeed(parseInt(e.target.value || '0', 10))}
+                   title="Same seed reproduces the exact run"
+                   className="w-20 rounded-lg border border-edge bg-surface px-2 py-1.5 text-sm tabular-nums" />
+            <button type="button" onClick={() => runIt(n_jobs, seed)} disabled={running}
+                    className="btn-primary px-3 py-1.5">
               {running ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
               {running ? 'Running' : 'Run benchmark'}
             </button>
@@ -133,12 +94,9 @@ export default function BenchmarksPage() {
 
         {report && <BenchmarkCharts report={report} />}
         {report && <Methodology report={report} />}
-
-        {!report && !running && (
-          <p className="text-slate-500 italic">No benchmark data yet.</p>
-        )}
+        {!report && running && <p className="text-faint text-sm">Running the first benchmark…</p>}
       </section>
-    </main>
+    </AppShell>
   );
 }
 
@@ -147,165 +105,130 @@ export default function BenchmarksPage() {
 function BenchmarkCharts({ report }: { report: BenchmarkReport }) {
   const rows = report.rows;
   const ppoRow = rows.find((r) => r.algorithm === 'ppo')!;
-
-  // Compute improvements vs the average of all baselines
   const baselines = rows.filter((r) => r.algorithm !== 'ppo');
   const avgBaseline = (key: keyof BenchmarkRow) =>
     baselines.reduce((sum, r) => sum + (r[key] as number), 0) / baselines.length;
 
   const improvements = {
-    latency_pct:     pctChange(avgBaseline('avg_latency_ms'),  ppoRow.avg_latency_ms,  /*lowerIsBetter*/ true),
-    p95_pct:         pctChange(avgBaseline('p95_latency_ms'),  ppoRow.p95_latency_ms,   true),
-    util_pct:        pctChange(avgBaseline('utilization_pct'), ppoRow.utilization_pct,  false),
-    balance_pct:     pctChange(avgBaseline('balance_score'),   ppoRow.balance_score,    false),
-    energy_pct:      pctChange(avgBaseline('energy_kwh'),      ppoRow.energy_kwh,       true),
+    latency_pct: pctChange(avgBaseline('avg_latency_ms'),  ppoRow.avg_latency_ms,  true),
+    p95_pct:     pctChange(avgBaseline('p95_latency_ms'),  ppoRow.p95_latency_ms,  true),
+    util_pct:    pctChange(avgBaseline('utilization_pct'), ppoRow.utilization_pct, false),
+    energy_pct:  pctChange(avgBaseline('energy_kwh'),      ppoRow.energy_kwh,      true),
   };
 
   return (
-    <div className="space-y-8">
-      {/* Top-line summary */}
+    <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Summary label="vs Baseline"   value="" sub="ASTRA PPO improvement over the baseline average" icon={<Trophy size={16} />} />
-        <Summary label="Avg latency"   value={fmtPct(improvements.latency_pct)} sub="lower is better"  pos={improvements.latency_pct > 0} />
-        <Summary label="P95 latency"   value={fmtPct(improvements.p95_pct)}     sub="lower is better"  pos={improvements.p95_pct > 0} />
-        <Summary label="Utilization"   value={fmtPct(improvements.util_pct)}    sub="higher is better" pos={improvements.util_pct > 0} />
-        <Summary label="Energy"        value={fmtPct(improvements.energy_pct)}  sub="lower is better"  pos={improvements.energy_pct > 0} />
+        <Summary label="vs Baseline" value="" sub="ASTRA PPO improvement over the baseline average"
+                 icon={<Trophy size={16} />} />
+        <Summary label="Avg latency" value={fmtPct(improvements.latency_pct)} sub="lower is better"
+                 pos={improvements.latency_pct > 0} />
+        <Summary label="P95 latency" value={fmtPct(improvements.p95_pct)} sub="lower is better"
+                 pos={improvements.p95_pct > 0} />
+        <Summary label="Utilization" value={fmtPct(improvements.util_pct)} sub="higher is better"
+                 pos={improvements.util_pct > 0} />
+        <Summary label="Energy" value={fmtPct(improvements.energy_pct)} sub="lower is better"
+                 pos={improvements.energy_pct > 0} />
       </div>
 
-      {/* Per-metric bar charts */}
-      <ChartCard
-        title="Average startup latency (ms)"
-        subtitle="lower is better"
-        rows={rows}
-        valueOf={(r) => r.avg_latency_ms}
-        format={(v) => `${v.toFixed(0)} ms`}
-        lowerIsBetter
-      />
-      <ChartCard
-        title="P95 startup latency (ms)"
-        subtitle="lower is better"
-        rows={rows}
-        valueOf={(r) => r.p95_latency_ms}
-        format={(v) => `${v.toFixed(0)} ms`}
-        lowerIsBetter
-      />
-      <ChartCard
-        title="Resource utilization (%)"
-        subtitle="higher is better"
-        rows={rows}
-        valueOf={(r) => r.utilization_pct}
-        format={(v) => `${v.toFixed(1)}%`}
-      />
-      <ChartCard
-        title="Cluster balance score"
-        subtitle="1.0 = perfectly balanced, higher is better"
-        rows={rows}
-        valueOf={(r) => r.balance_score}
-        format={(v) => v.toFixed(3)}
-      />
-      <ChartCard
-        title="Energy proxy (load × carbon intensity)"
-        subtitle="lower is better"
-        rows={rows}
-        valueOf={(r) => r.energy_kwh}
-        format={(v) => v.toFixed(3)}
-        lowerIsBetter
-      />
+      <ChartCard title="Average startup latency (ms)" subtitle="lower is better" rows={rows}
+                 valueOf={(r) => r.avg_latency_ms} format={(v) => `${v.toFixed(0)} ms`} lowerIsBetter />
+      <ChartCard title="P95 startup latency (ms)" subtitle="lower is better" rows={rows}
+                 valueOf={(r) => r.p95_latency_ms} format={(v) => `${v.toFixed(0)} ms`} lowerIsBetter />
+      <ChartCard title="Resource utilization (%)" subtitle="higher is better" rows={rows}
+                 valueOf={(r) => r.utilization_pct} format={(v) => `${v.toFixed(1)}%`} />
+      <ChartCard title="Cluster balance score" subtitle="1.0 = perfectly even spread" rows={rows}
+                 valueOf={(r) => r.balance_score} format={(v) => v.toFixed(3)} />
+      <ChartCard title="Energy proxy (load x carbon intensity)" subtitle="lower is better" rows={rows}
+                 valueOf={(r) => r.energy_kwh} format={(v) => v.toFixed(3)} lowerIsBetter />
 
       {/* Full table */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
-          <Zap size={16} className="text-astra-500" />
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-edge flex items-center gap-2">
+          <Zap size={15} className="text-astra-600 dark:text-astra-400" aria-hidden="true" />
           <h3 className="font-semibold text-sm">Full results</h3>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-slate-900/60 text-xs uppercase text-slate-400">
-            <tr>
-              <th className="px-4 py-2 text-left">Algorithm</th>
-              <th className="px-4 py-2 text-right">Avg latency</th>
-              <th className="px-4 py-2 text-right">P95</th>
-              <th className="px-4 py-2 text-right">Utilization</th>
-              <th className="px-4 py-2 text-right">Balance</th>
-              <th className="px-4 py-2 text-right">Energy</th>
-              <th className="px-4 py-2 text-right">SLA breaches</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.algorithm}
-                  className={cn('border-t border-slate-800/50',
-                    r.algorithm === 'ppo' && 'bg-astra-600/5')}>
-                <td className="px-4 py-2">
-                  <span className={cn('text-[10px] px-2 py-0.5 rounded font-semibold mr-2',
-                                       ALGO_COLOR[r.algorithm])}>
-                    {ALGO_LABEL[r.algorithm]}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.avg_latency_ms.toFixed(0)} ms</td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.p95_latency_ms.toFixed(0)} ms</td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.utilization_pct.toFixed(1)}%</td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.balance_score.toFixed(3)}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.energy_kwh.toFixed(3)}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{r.sla_violations}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-raised/70 text-xs uppercase text-faint">
+              <tr>
+                <th scope="col" className="px-4 py-2 text-left">Algorithm</th>
+                <th scope="col" className="px-4 py-2 text-right">Avg latency</th>
+                <th scope="col" className="px-4 py-2 text-right">P95</th>
+                <th scope="col" className="px-4 py-2 text-right">Utilization</th>
+                <th scope="col" className="px-4 py-2 text-right">Balance</th>
+                <th scope="col" className="px-4 py-2 text-right">Energy</th>
+                <th scope="col" className="px-4 py-2 text-right">SLA breaches</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
-          {report.description}
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.algorithm}
+                    className={cn('border-t border-edge', r.algorithm === 'ppo' && 'bg-astra-500/5')}>
+                  <td className="px-4 py-2">
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <span className={cn('w-2 h-2 rounded-full', ALGO_DOT[r.algorithm])} aria-hidden="true" />
+                      {ALGO_LABEL[r.algorithm]}
+                      {r.algorithm === 'ppo' && (
+                        <span className="chip border-astra-500/40 text-astra-600 dark:text-astra-300">ours</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.avg_latency_ms.toFixed(0)} ms</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.p95_latency_ms.toFixed(0)} ms</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.utilization_pct.toFixed(1)}%</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.balance_score.toFixed(3)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.energy_kwh.toFixed(3)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{r.sla_violations}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+        <div className="px-4 py-3 border-t border-edge text-xs text-faint">{report.description}</div>
       </div>
     </div>
   );
 }
 
-function ChartCard({
-  title, subtitle, rows, valueOf, format, lowerIsBetter,
-}: {
-  title:    string;
-  subtitle: string;
-  rows:     BenchmarkRow[];
-  valueOf:  (r: BenchmarkRow) => number;
-  format:   (v: number) => string;
-  lowerIsBetter?: boolean;
+function ChartCard({ title, subtitle, rows, valueOf, format, lowerIsBetter }: {
+  title: string; subtitle: string; rows: BenchmarkRow[];
+  valueOf: (r: BenchmarkRow) => number; format: (v: number) => string; lowerIsBetter?: boolean;
 }) {
   const values = rows.map(valueOf);
-  const max    = Math.max(...values);
-  const min    = Math.min(...values);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <div className="card p-4">
       <div className="flex items-baseline justify-between mb-3">
         <h3 className="font-semibold text-sm">{title}</h3>
-        <span className="text-xs text-slate-500">{subtitle}</span>
+        <span className="text-xs text-faint">{subtitle}</span>
       </div>
       <div className="space-y-2">
         {rows.map((r) => {
-          const v       = valueOf(r);
-          const width   = max > 0 ? (v / max) * 100 : 0;
-          const isBest  = lowerIsBetter ? v === min : v === max;
+          const v = valueOf(r);
+          const width = max > 0 ? (v / max) * 100 : 0;
+          const isBest = lowerIsBetter ? v === min : v === max;
           return (
             <div key={r.algorithm} className="flex items-center gap-3">
-              <div className="w-28 text-xs text-slate-300 flex items-center gap-1.5">
-                <span className={cn('w-2 h-2 rounded-full', ALGO_COLOR[r.algorithm].split(' ')[0])} />
+              <div className="w-28 text-xs text-muted flex items-center gap-1.5 shrink-0">
+                <span className={cn('w-2 h-2 rounded-full', ALGO_DOT[r.algorithm])} aria-hidden="true" />
                 {ALGO_LABEL[r.algorithm]}
               </div>
-              <div className="flex-1 h-6 bg-slate-800/60 rounded-md overflow-hidden relative">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${width}%` }}
-                  transition={{ duration: 0.7, ease: 'easeOut' }}
-                  className={cn('h-full rounded-md',
-                    isBest
-                      ? 'bg-gradient-to-r from-astra-500 to-purple-500'
-                      : 'bg-slate-600')}
+              <div className="flex-1 h-6 bg-raised rounded-md overflow-hidden relative"
+                   role="img" aria-label={`${ALGO_LABEL[r.algorithm]}: ${format(v)}`}>
+                <div
+                  className={cn('h-full rounded-md transition-[width] duration-700 ease-out',
+                    isBest ? 'bg-gradient-to-r from-astra-500 to-purple-500' : 'bg-edge-strong')}
+                  style={{ width: `${width}%` }}
                 />
                 <div className="absolute inset-0 flex items-center px-2 text-xs font-mono">
                   <span className={cn('inline-flex items-center gap-1.5',
-                    isBest ? 'text-white font-semibold' : 'text-slate-200')}>
+                    isBest ? 'font-semibold text-white drop-shadow-sm' : 'text-ink')}>
                     {format(v)}
                     {isBest && (
-                      <span className="inline-flex items-center gap-1 text-emerald-300">
+                      <span className="inline-flex items-center gap-1 text-emerald-100 dark:text-emerald-300">
                         <Crown size={11} /> best
                       </span>
                     )}
@@ -320,55 +243,52 @@ function ChartCard({
   );
 }
 
-function Summary({
-  label, value, sub, icon, pos,
-}: {
+function Summary({ label, value, sub, icon, pos }: {
   label: string; value: string; sub: string; icon?: React.ReactNode; pos?: boolean;
 }) {
   return (
-    <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 backdrop-blur">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs uppercase tracking-wider text-slate-500">{label}</span>
-        {icon && <span className="text-slate-400">{icon}</span>}
+        <span className="text-[11px] uppercase tracking-wider text-faint">{label}</span>
+        {icon && <span className="text-muted" aria-hidden="true">{icon}</span>}
       </div>
-      <div className={cn(
-        'text-2xl font-bold tabular-nums inline-flex items-center gap-1.5',
-        value && pos !== undefined ? (pos ? 'text-emerald-400' : 'text-rose-400') : '',
-      )}>
+      <div className={cn('text-2xl font-bold tabular-nums inline-flex items-center gap-1.5',
+        value && pos !== undefined
+          ? (pos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')
+          : '')}>
         {value && pos !== undefined && (pos
-          ? <TrendingUp size={18} className="shrink-0" />
-          : <TrendingDown size={18} className="shrink-0" />)}
+          ? <TrendingUp size={18} className="shrink-0" aria-label="improved" />
+          : <TrendingDown size={18} className="shrink-0" aria-label="regressed" />)}
         {value || ''}
       </div>
-      <div className="text-xs text-slate-400 mt-0.5">{sub}</div>
+      <div className="text-xs text-faint mt-0.5">{sub}</div>
     </div>
   );
 }
 
 // ── Methodology ──────────────────────────────────────────────────────────────
-// Explains exactly how every number on this page is produced, plus the offline
-// research benchmarks (real datasets) that back the live simulator.
 
 function Methodology({ report }: { report: BenchmarkReport }) {
   const [open, setOpen] = useState(true);
   const meta = report.metadata || {};
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+    <div className="card overflow-hidden">
       <button type="button" onClick={() => setOpen((v) => !v)}
-              className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-slate-900/70">
-        <BookOpen size={16} className="text-astra-500" />
+              aria-expanded={open ? 'true' : 'false'}
+              className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-raised/60 transition-colors">
+        <BookOpen size={16} className="text-astra-600 dark:text-astra-400" aria-hidden="true" />
         <h3 className="font-semibold text-sm flex-1">How these numbers are computed</h3>
-        <ChevronDown size={16} className={cn('text-slate-500 transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={16} className={cn('text-faint transition-transform', open && 'rotate-180')}
+                     aria-hidden="true" />
       </button>
       {open && (
-        <div className="px-4 pb-4 grid md:grid-cols-2 gap-6 text-[13px] leading-relaxed text-slate-300">
+        <div className="px-4 pb-4 grid md:grid-cols-2 gap-6 text-[13px] leading-relaxed text-muted">
           <div className="space-y-3">
             <p>
-              Every algorithm replays the <strong>same workload</strong> ({meta.n_jobs || 'N'} jobs,
-              seed {meta.seed || 'fixed'}) against the <strong>same snapshot</strong> of live
-              cluster telemetry, so differences come only from placement decisions.
-              Each job carries a CPU request, memory request and a risk score drawn
-              from realistic distributions.
+              Every algorithm replays the <strong className="text-ink">same workload</strong> ({meta.n_jobs || 'N'} jobs,
+              seed {meta.seed || 'fixed'}) against the <strong className="text-ink">same snapshot</strong> of live
+              cluster telemetry, so differences come only from placement decisions. Each job
+              carries a CPU request, memory request and a risk score drawn from realistic distributions.
             </p>
             <MethodRow k="Startup latency" v="base pod start (120 ms) + contention penalty proportional to the chosen node's CPU load + run-queue wait + sandbox-tier overhead (runc 60 ms, gVisor 150 ms, Firecracker 350 ms)" />
             <MethodRow k="Utilization" v="mean CPU utilization across all nodes after the full workload is placed" />
@@ -377,30 +297,28 @@ function Methodology({ report }: { report: BenchmarkReport }) {
             <MethodRow k="SLA breach" v="any single placement whose modeled startup exceeds 5000 ms" />
           </div>
           <div className="space-y-3">
-            <p className="text-slate-400">
-              The ASTRA policy scores each node on weighted factors learned by the
-              PPO agent: free CPU (0.35), free memory (0.25), queue depth (0.15),
-              low grid carbon (0.15), with an overload penalty above 85% CPU.
-              Baselines use the textbook definitions of Round-Robin, Random, FIFO
-              and Least-Loaded.
+            <p>
+              The ASTRA policy scores each node on weighted factors learned by the PPO agent:
+              free CPU (0.35), free memory (0.25), queue depth (0.15), low grid carbon (0.15),
+              with an overload penalty above 85% CPU. Baselines use the textbook definitions.
             </p>
-            <p className="text-slate-400">
-              This live page is a fast in-browser replay. The full research
-              training and evaluation behind it runs offline on real data:
+            <p>
+              This page is a fast in-browser replay. The full research training and evaluation
+              behind it runs offline on real data:
             </p>
-            <ul className="space-y-1.5 text-slate-400">
-              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
-                PPO (stable-baselines3) trained in a Gymnasium cluster environment:
-                +112% reward over the best classical baseline, 0.57% SLA violations.</li>
-              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
-                LSTM prewarming on the Azure Functions 2019 production trace:
-                median N-RMSE 0.085, beating the per-function paper baseline.</li>
-              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
-                Syscall IDS on a first-party eBPF corpus (171k in-kernel events,
-                Tetragon): 0.80 workload-classification accuracy at 0.10 FPR.</li>
-              <li className="flex gap-2"><Zap size={13} className="text-astra-400 mt-0.5 shrink-0" />
-                Carbon-aware shifting on live grid data: 25.8% CO2 reduction with
-                a 12h window, 45% with 24h.</li>
+            <ul className="space-y-1.5">
+              <li className="flex gap-2"><Zap size={13} className="text-astra-500 mt-0.5 shrink-0" aria-hidden="true" />
+                PPO (stable-baselines3) trained in a Gymnasium cluster environment: +112% reward
+                over the best classical baseline, 0.57% SLA violations.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-500 mt-0.5 shrink-0" aria-hidden="true" />
+                LSTM prewarming on the Azure Functions 2019 production trace: median N-RMSE 0.085,
+                beating the per-function paper baseline.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-500 mt-0.5 shrink-0" aria-hidden="true" />
+                Syscall IDS on a first-party eBPF corpus (171k in-kernel events, Tetragon):
+                0.80 workload-classification accuracy at 0.10 FPR.</li>
+              <li className="flex gap-2"><Zap size={13} className="text-astra-500 mt-0.5 shrink-0" aria-hidden="true" />
+                Carbon-aware shifting on live grid data: 25.8% CO2 reduction with a 12h window,
+                45% with 24h.</li>
             </ul>
           </div>
         </div>
@@ -412,8 +330,8 @@ function Methodology({ report }: { report: BenchmarkReport }) {
 function MethodRow({ k, v }: { k: string; v: string }) {
   return (
     <div>
-      <span className="font-medium text-slate-200">{k}.</span>{' '}
-      <span className="text-slate-400">{v}</span>
+      <span className="font-medium text-ink">{k}.</span>{' '}
+      <span>{v}</span>
     </div>
   );
 }

@@ -88,6 +88,9 @@ def update_workspace(
         workspace.name = payload.name
     if payload.status is not None:
         workspace.status = payload.status
+    if payload.sandbox_override is not None:
+        # Owner-pinned tier (validated by the schema's Literal).
+        workspace.sandbox_tier = payload.sandbox_override
 
     db.commit()
     db.refresh(workspace)

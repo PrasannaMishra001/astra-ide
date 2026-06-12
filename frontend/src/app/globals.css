@@ -2,86 +2,161 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { height: 100%; background: #020617; }
+/* ── Theme tokens ─────────────────────────────────────────────────────────
+   Light is the default; `.dark` on <html> flips the palette. Values are RGB
+   triplets so Tailwind alpha modifiers work (bg-surface/60 etc).            */
+:root {
+  --c-bg:          248 250 252;   /* slate-50  */
+  --c-surface:     255 255 255;
+  --c-raised:      241 245 249;   /* slate-100 */
+  --c-edge:        226 232 240;   /* slate-200 */
+  --c-edge-strong: 203 213 225;   /* slate-300 */
+  --c-ink:         15  23  42;    /* slate-900 */
+  --c-muted:       71  85  105;   /* slate-600 */
+  --c-faint:       148 163 184;   /* slate-400 */
+  --scroll-track:  241 245 249;
+  --scroll-thumb:  203 213 225;
+}
+.dark {
+  --c-bg:          2   6   23;    /* slate-950 */
+  --c-surface:     11  18  32;
+  --c-raised:      30  41  59;    /* slate-800 */
+  --c-edge:        30  41  59;
+  --c-edge-strong: 51  65  85;    /* slate-700 */
+  --c-ink:         226 232 240;   /* slate-200 */
+  --c-muted:       148 163 184;   /* slate-400 */
+  --c-faint:       100 116 139;   /* slate-500 */
+  --scroll-track:  15  23  42;
+  --scroll-thumb:  51  65  85;
+}
 
-.monaco-host { height: 100%; width:  100%; }
+html, body {
+  height: 100%;
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-ink));
+}
 
-/* ── Aurora background ──────────────────────────────────────────────────── */
-.aurora-layer {
-  position: absolute;
-  inset: -10%;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.6;
-  pointer-events: none;
+/* ── Accessibility (HCI) ────────────────────────────────────────────────── */
+/* Visible keyboard focus everywhere, without rings on mouse clicks. */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Skip-to-content link (revealed on keyboard focus). */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  padding: 8px 14px; border-radius: 0 0 8px 0;
+  background: #2563eb; color: white; font-size: 13px;
+}
+.skip-link:focus { left: 0; }
+
+/* ── Shared component classes ───────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply rounded-xl border border-edge bg-surface shadow-card;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-astra-600 px-4 py-2
+           text-sm font-medium text-white transition-colors hover:bg-astra-700
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-edge-strong
+           px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-raised
+           disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm
+           text-muted transition-colors hover:bg-raised hover:text-ink;
+  }
+  .input-base {
+    @apply w-full rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink
+           placeholder:text-faint outline-none transition-colors
+           focus:border-astra-500 focus:ring-2 focus:ring-astra-500/25;
+  }
+  .nav-pill {
+    @apply rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-raised hover:text-ink;
+  }
+  .nav-pill-active {
+    @apply rounded-lg px-3 py-1.5 text-sm font-medium text-astra-600 bg-astra-500/10
+           dark:text-astra-300;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-md border border-edge bg-raised px-1.5 py-0.5
+           text-[11px] text-muted;
+  }
+}
+
+/* ── Ambient background blobs (subtle, GPU-cheap, both themes) ──────────── */
+.ambient {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+}
+.ambient::before, .ambient::after {
+  content: ''; position: absolute; border-radius: 9999px; filter: blur(90px);
   will-change: transform;
 }
-.aurora-1 {
-  background: radial-gradient(circle at 30% 30%, #3b82f6, transparent 60%);
-  animation: aurora-drift-1 18s ease-in-out infinite alternate;
+.ambient::before {
+  width: 560px; height: 560px; left: -120px; top: -160px;
+  background: radial-gradient(circle, rgb(59 130 246 / 0.16), transparent 65%);
+  animation: blob-a 26s ease-in-out infinite alternate;
 }
-.aurora-2 {
-  background: radial-gradient(circle at 70% 60%, #a855f7, transparent 60%);
-  animation: aurora-drift-2 22s ease-in-out infinite alternate;
+.ambient::after {
+  width: 640px; height: 640px; right: -180px; bottom: -220px;
+  background: radial-gradient(circle, rgb(168 85 247 / 0.12), transparent 65%);
+  animation: blob-b 32s ease-in-out infinite alternate;
 }
-.aurora-3 {
-  background: radial-gradient(circle at 50% 80%, #ec4899, transparent 55%);
-  animation: aurora-drift-3 26s ease-in-out infinite alternate;
-  opacity: 0.4;
+.dark .ambient::before { background: radial-gradient(circle, rgb(59 130 246 / 0.10), transparent 65%); }
+.dark .ambient::after  { background: radial-gradient(circle, rgb(168 85 247 / 0.08), transparent 65%); }
+@keyframes blob-a { to { transform: translate(70px, 50px) scale(1.12); } }
+@keyframes blob-b { to { transform: translate(-60px, -50px) scale(0.94); } }
+
+.monaco-host { height: 100%; width: 100%; }
+
+/* ── Aurora background (landing page, dark hero) ────────────────────────── */
+.aurora-layer {
+  position: absolute; inset: -10%; border-radius: 50%;
+  filter: blur(80px); opacity: 0.6; pointer-events: none; will-change: transform;
 }
+.aurora-1 { background: radial-gradient(circle at 30% 30%, #3b82f6, transparent 60%); animation: aurora-drift-1 18s ease-in-out infinite alternate; }
+.aurora-2 { background: radial-gradient(circle at 70% 60%, #a855f7, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
+.aurora-3 { background: radial-gradient(circle at 50% 80%, #ec4899, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.4; }
 .aurora-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
   background-image:
     radial-gradient(circle at 25% 25%, rgba(255,255,255,0.15) 1px, transparent 1px),
     radial-gradient(circle at 75% 75%, rgba(255,255,255,0.10) 1px, transparent 1px);
   background-size: 50px 50px;
 }
+@keyframes aurora-drift-1 { 0% { transform: translate(0,0) scale(1.0);} 100% { transform: translate(8%,-6%) scale(1.15);} }
+@keyframes aurora-drift-2 { 0% { transform: translate(0,0) scale(1.1);} 100% { transform: translate(-10%,8%) scale(0.95);} }
+@keyframes aurora-drift-3 { 0% { transform: translate(0,0) scale(0.9);} 100% { transform: translate(6%,-12%) scale(1.2);} }
 
-@keyframes aurora-drift-1 {
-  0%   { transform: translate(0,    0)    scale(1.0); }
-  100% { transform: translate(8%, -6%)    scale(1.15); }
-}
-@keyframes aurora-drift-2 {
-  0%   { transform: translate(0,    0)    scale(1.1); }
-  100% { transform: translate(-10%, 8%)   scale(0.95); }
-}
-@keyframes aurora-drift-3 {
-  0%   { transform: translate(0,    0)    scale(0.9); }
-  100% { transform: translate(6%, -12%)   scale(1.2); }
-}
+/* ── Conic gradient spin (HoverBorderGradient) ──────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Conic gradient spin (used in HoverBorderGradient) ──────────────────── */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Yjs cursor names ───────────────────────────────────────────────────── */
-.yRemoteSelection {
-  background-color: rgba(80, 80, 80, 0.25);
-}
+/* ── Yjs remote cursors ─────────────────────────────────────────────────── */
+.yRemoteSelection { background-color: rgba(80, 80, 80, 0.25); }
 .yRemoteSelectionHead {
-  position: absolute;
-  border-left: 2px solid;
-  border-top: 2px solid;
-  border-bottom: 2px solid;
-  height: 100%;
-  box-sizing: border-box;
+  position: absolute; border-left: 2px solid; border-top: 2px solid; border-bottom: 2px solid;
+  height: 100%; box-sizing: border-box;
 }
 .yRemoteSelectionHead::after {
-  position: absolute;
-  content: ' ';
-  border: 3px solid currentColor;
-  border-radius: 4px;
-  left: -4px;
-  top: -5px;
+  position: absolute; content: ' '; border: 3px solid currentColor; border-radius: 4px;
+  left: -4px; top: -5px;
 }
 
-/* ── Scrollbar styling ──────────────────────────────────────────────────── */
+/* ── Scrollbars (theme-aware) ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #0f172a; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-track { background: rgb(var(--scroll-track)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--scroll-thumb)); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-faint)); }
