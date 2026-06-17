@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # ── Auth / JWT ───────────────────────────────────────────────────────────
     jwt_secret: str = "change-me-in-production-please"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24  # 1 day
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
     # ── Google OAuth (Sign in with Google) ───────────────────────────────────
     # Create an OAuth 2.0 Client ID (type "Web application") in Google Cloud

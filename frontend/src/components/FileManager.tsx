@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { Monaco } from '@monaco-editor/react';
 import {
-  Folder, FolderPlus, FilePlus, FileCode2, FileText, FileJson, FileTerminal,
+  ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, FilePlus,
+  FileCode2, FileText, FileJson, FileTerminal,
   GitBranch, RefreshCw, Save, Trash2, Loader2, X, Check, Palette,
 } from 'lucide-react';
 
@@ -93,6 +94,20 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
   const [prompt, setPrompt] = useState<Prompt>(null);
   const [promptValue, setPromptValue] = useState('');
 
+  // Folder expand/collapse: collapsed paths tracked in a Set.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleFolder = (path: string) =>
+    setCollapsed((prev) => { const n = new Set(prev); n.has(path) ? n.delete(path) : n.add(path); return n; });
+  const collapseAll = () => setCollapsed(new Set(files.filter((f) => f.type === 'dir').map((f) => f.path)));
+  const isHiddenByCollapse = (path: string): boolean => {
+    const parts = path.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const ancestor = parts.slice(0, i).join('/');
+      if (collapsed.has(ancestor)) return true;
+    }
+    return false;
+  };
+
   // Editor theme (shared with the Collab editor via localStorage).
   const [themeId, setThemeId] = useState<string>(getSavedTheme);
   const [monacoTheme, setMonacoTheme] = useState<string>(() => resolveMonacoName(getSavedTheme()));
@@ -163,6 +178,7 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
           <IconBtn title="New file"   onClick={() => { setPrompt({ kind: 'file' }); setPromptValue(''); }}><FilePlus size={14} /></IconBtn>
           <IconBtn title="New folder" onClick={() => { setPrompt({ kind: 'folder' }); setPromptValue(''); }}><FolderPlus size={14} /></IconBtn>
           <IconBtn title="Import Git repository" onClick={() => { setPrompt({ kind: 'import' }); setPromptValue(''); }}><GitBranch size={14} /></IconBtn>
+          <IconBtn title="Collapse all folders" onClick={collapseAll}><ChevronsDownUp size={13} /></IconBtn>
           <IconBtn title="Refresh" onClick={refresh}><RefreshCw size={13} /></IconBtn>
         </div>
 
@@ -173,23 +189,42 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
             </div>
           )}
           {files.map((f) => {
+            if (isHiddenByCollapse(f.path)) return null;
             const selected = sel === f.path;
             const c = colorOf(f.path);
+            const isDir = f.type === 'dir';
+            const isOpen = isDir && !collapsed.has(f.path);
             return (
               <div key={f.path}
-                   className={cn('group flex items-center gap-1.5 pr-1 border-l-2 transition-colors',
+                   className={cn('group flex items-center gap-0.5 pr-1 border-l-2 transition-colors',
                      selected ? cn(c.selBg, c.border) : 'border-transparent hover:bg-raised')}
-                   style={{ paddingLeft: 8 + (f.path.split('/').length - 1) * 14 }}>
+                   style={{ paddingLeft: 4 + (f.path.split('/').length - 1) * 14 }}>
+                {/* Folder chevron toggle */}
+                {isDir ? (
+                  <button type="button" onClick={() => toggleFolder(f.path)}
+                          title={isOpen ? 'Collapse' : 'Expand'}
+                          className="p-0.5 rounded text-faint hover:text-muted shrink-0">
+                    <ChevronRight size={12} className={cn('transition-transform', isOpen && 'rotate-90')} />
+                  </button>
+                ) : (
+                  <span className="w-4 shrink-0" />
+                )}
                 <button type="button"
-                        onClick={() => f.type === 'file' && open(f.path)}
+                        onClick={() => isDir ? toggleFolder(f.path) : open(f.path)}
                         title={f.path}
                         className="flex items-center gap-1.5 flex-1 min-w-0 py-1 text-left">
-                  {f.type === 'dir'
-                    ? <Folder size={13} className="text-faint shrink-0" />
+                  {isDir
+                    ? (isOpen
+                        ? <FolderOpen size={13} className="text-astra-500 shrink-0" />
+                        : <Folder size={13} className="text-faint shrink-0" />)
                     : <FileIcon path={f.path} />}
-                  {f.type === 'dir'
-                    ? <span className="truncate text-muted">{f.path.split('/').pop()}</span>
-                    : <span className={cn(selected ? 'text-ink font-medium' : 'text-muted')}><FileName path={f.path} /></span>}
+                  {isDir
+                    ? <span className={cn('truncate', isOpen ? 'text-ink font-medium' : 'text-muted')}>
+                        {f.path.split('/').pop()}
+                      </span>
+                    : <span className={cn(selected ? 'text-ink font-medium' : 'text-muted')}>
+                        <FileName path={f.path} />
+                      </span>}
                 </button>
                 <button type="button" title={`Delete ${f.path}`} onClick={() => remove(f.path)}
                         className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-faint hover:text-rose-400">

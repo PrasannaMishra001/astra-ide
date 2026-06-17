@@ -1,11 +1,14 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
-  Brain, Cpu, Eye, Shield, Network, Leaf, Users, Github,
+  Brain, ChevronDown, Cpu, Eye, LogOut, Shield, Network, Leaf, Users, Github,
 } from 'lucide-react';
+import { useState } from 'react';
 
 import ThemeToggle       from '../components/ThemeToggle';
+import { useAuth }       from '../lib/auth';
 import AuroraBackground   from '../components/ui/AuroraBackground';
 import Spotlight          from '../components/ui/Spotlight';
 import Sparkles           from '../components/ui/Sparkles';
@@ -79,24 +82,8 @@ export default function HomePage() {
         <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(168,85,247,0.7)" />
         <Sparkles density={0.4} color="#a5b4fc" />
 
-        {/* Navbar */}
-        <nav className="relative z-20 max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="ASTRA-IDE" width={36} height={36} className="rounded" />
-            <span className="text-xl font-bold tracking-tight">
-              ASTRA-<span className="text-astra-500">IDE</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle className="!text-slate-200 hover:!bg-white/10" />
-            <Link href="/login" className="px-3 py-1.5 text-sm rounded hover:bg-slate-800/70 text-slate-200">
-              Log in
-            </Link>
-            <Link href="/register">
-              <HoverBorderGradient containerClassName="text-sm">Sign up</HoverBorderGradient>
-            </Link>
-          </div>
-        </nav>
+        {/* Glassy navbar — consistent with AppShell, auth-aware */}
+        <HomeNav />
 
         {/* Hero content */}
         <section className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-24 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
@@ -150,16 +137,7 @@ export default function HomePage() {
 
           {/* Logo card with improved 3D tilt */}
           <div className="lg:col-span-2 flex justify-center">
-            <ThreeDCard intensity={18} className="w-full max-w-sm">
-              <div className="rounded-2xl bg-slate-900/70 backdrop-blur p-8 border border-slate-800 shadow-2xl">
-                <div className="relative w-full aspect-square">
-                  <Image src="/logo.png" alt="ASTRA-IDE Logo" fill className="object-contain" priority />
-                </div>
-                <div className="text-center mt-4">
-                  <div className="text-xs text-slate-400 font-mono">v0.1 · 2026</div>
-                </div>
-              </div>
-            </ThreeDCard>
+            <AnimatedTerminal lines={DEMO_TERMINAL} className="w-full max-w-md" />
           </div>
         </section>
       </AuroraBackground>
@@ -305,5 +283,81 @@ function Stat({ value, label }: { value: string; label: string }) {
       <div className="text-2xl font-bold text-astra-400">{value}</div>
       <div className="text-xs text-faint mt-1">{label}</div>
     </div>
+  );
+}
+
+function HomeNav() {
+  const router = useRouter();
+  const { token, user, hydrated, clearSession } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const loggedIn = hydrated && !!token && !!user;
+
+  return (
+    <nav className="sticky top-0 z-30 mx-auto max-w-7xl px-4 sm:px-6 py-3">
+      <div className="flex items-center gap-4 rounded-2xl border border-white/10
+                      bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl px-5 py-2.5 shadow-lg">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Image src="/logo.png" alt="ASTRA-IDE" width={30} height={30} priority className="rounded" />
+          <span className="text-[15px] font-bold tracking-tight text-white">
+            ASTRA-<span className="text-astra-400">IDE</span>
+          </span>
+        </Link>
+
+        {loggedIn && (
+          <Link href="/dashboard"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+            Dashboard
+          </Link>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle className="!text-white/70 hover:!text-white hover:!bg-white/10" />
+
+          {!loggedIn ? (
+            <>
+              <Link href="/login"
+                    className="px-3 py-1.5 text-sm rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                Log in
+              </Link>
+              <Link href="/register">
+                <HoverBorderGradient containerClassName="text-sm">Sign up</HoverBorderGradient>
+              </Link>
+            </>
+          ) : (
+            <div className="relative">
+              <button type="button" onClick={() => setMenuOpen((v) => !v)}
+                      aria-haspopup="menu" aria-expanded={menuOpen}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm">
+                <span className="w-6 h-6 rounded-full bg-astra-600 text-white text-[11px] font-semibold
+                                 flex items-center justify-center">
+                  {(user.username?.[0] ?? '?').toUpperCase()}
+                </span>
+                <span className="hidden sm:inline max-w-[8rem] truncate">{user.username}</span>
+                <ChevronDown size={14} />
+              </button>
+              {menuOpen && (
+                <>
+                  <button type="button" tabIndex={-1} aria-label="Close menu"
+                          className="fixed inset-0 z-40 cursor-default"
+                          onClick={() => setMenuOpen(false)} />
+                  <div role="menu"
+                       className="absolute right-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-white/10
+                                  bg-slate-900/90 backdrop-blur-xl p-1.5 shadow-xl text-white">
+                    <Link href="/dashboard" role="menuitem"
+                          className="block rounded-lg px-3 py-2 text-sm hover:bg-white/10">Dashboard</Link>
+                    <button type="button" role="menuitem"
+                            onClick={() => { clearSession(); router.push('/'); setMenuOpen(false); }}
+                            className="w-full text-left rounded-lg px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/10
+                                       flex items-center gap-2">
+                      <LogOut size={14} /> Log out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </nav>
   );
 }
