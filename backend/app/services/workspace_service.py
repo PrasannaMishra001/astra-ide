@@ -139,6 +139,40 @@ def fork_workspace_for_user(db: Session, user: User, src: Workspace) -> Workspac
     return fork
 
 
+def record_edit(db: Session, workspace_id: int, user: User, path: str,
+                old: str, new: str) -> None:
+    """Log a file save to the change-history (line diff via difflib)."""
+    import difflib
+    from app.models import WorkspaceEdit
+    added = removed = 0
+    for line in difflib.ndiff(old.splitlines(), new.splitlines()):
+        if line.startswith("+ "):
+            added += 1
+        elif line.startswith("- "):
+            removed += 1
+    if added == 0 and removed == 0:
+        return
+    db.add(WorkspaceEdit(
+        workspace_id=workspace_id, user_id=user.id, username=user.username,
+        path=path, lines_added=added, lines_removed=removed,
+    ))
+    db.commit()
+
+
+def get_excludes(ws: Workspace) -> list[str]:
+    import json
+    try:
+        return json.loads(ws.shared_excludes or "[]")
+    except (ValueError, TypeError):
+        return []
+
+
+def set_excludes(db: Session, ws: Workspace, paths: list[str]) -> None:
+    import json
+    ws.shared_excludes = json.dumps(sorted(set(paths)))
+    db.commit()
+
+
 def transition_status(db: Session, workspace: Workspace, new_status: str) -> Workspace:
     previous = workspace.status
     workspace.status = new_status

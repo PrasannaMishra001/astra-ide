@@ -5,8 +5,10 @@ import type { Monaco } from '@monaco-editor/react';
 import {
   ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, FilePlus,
   FileCode2, FileText, FileJson, FileTerminal, FileImage, Image as ImageIcon,
-  GitBranch, RefreshCw, Save, Search, Trash2, Loader2, X, Check, Palette,
+  GitBranch, RefreshCw, Save, Search, TerminalSquare, Trash2, Loader2, X, Check, Palette,
 } from 'lucide-react';
+
+const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
 import {
   listFiles, readFile, writeFile, importRepo, makeDir, deletePath,
@@ -90,7 +92,16 @@ function FileName({ path }: { path: string }) {
 
 type Prompt = { kind: 'file' | 'folder' | 'import' } | null;
 
-export default function FileManager({ workspaceId }: { workspaceId: number }) {
+interface FMProps {
+  workspaceId: number;
+  frozen?: boolean;
+  onActiveFile?: (path: string | null) => void;
+  /** Bump `.n` to request opening `.path` from outside (e.g. settings config). */
+  openSignal?: { path: string; n: number };
+}
+
+export default function FileManager({ workspaceId, frozen = false, onActiveFile, openSignal }: FMProps) {
+  const [showTerminal, setShowTerminal] = useState(false);
   const [files, setFiles] = useState<WsFile[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -140,10 +151,17 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
 
   async function open(path: string) {
     setSel(path); setDirty(false); setSaveState('idle');
+    onActiveFile?.(path);
     if (isImage(path)) { setContent(''); return; }   // images render from the raw URL
     try { setContent(await readFile(workspaceId, path)); }
     catch { setContent(''); toast.error('Cannot open file', path); }
   }
+
+  // External open request (e.g. "open config file" from Settings).
+  useEffect(() => {
+    if (openSignal && openSignal.path) { refresh(); open(openSignal.path); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal?.n]);
   async function save(silent = false) {
     if (!sel || isImage(sel)) return;
     setSaveState('saving');
@@ -329,14 +347,20 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
           ) : (
             <span className="text-faint">Select a file from the explorer</span>
           )}
+          {frozen && <span className="chip border-amber-500/40 text-amber-600 dark:text-amber-400">read-only</span>}
           <div className="ml-auto flex items-center gap-1.5">
             <span className="text-[10px] text-faint hidden md:inline">auto-save on</span>
+            <button type="button" onClick={() => setShowTerminal((v) => !v)}
+                    title="Toggle terminal"
+                    className={cn('btn-ghost px-2 py-1 text-xs', showTerminal && 'text-astra-500')}>
+              <TerminalSquare size={13} /> <span className="hidden lg:inline">Terminal</span>
+            </button>
             <button type="button" onClick={() => setShowThemePicker(true)} title="Editor theme (VS Code themes)"
                     className="btn-ghost px-2 py-1 text-xs">
               <Palette size={13} /> <span className="hidden lg:inline">{themeById(themeId).label}</span>
             </button>
             {sel && !isImage(sel) && (
-              <button type="button" onClick={() => save(false)} disabled={saveState === 'saving' || !dirty}
+              <button type="button" onClick={() => save(false)} disabled={saveState === 'saving' || !dirty || frozen}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-medium">
                 {saveState === 'saving' ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
               </button>
@@ -344,6 +368,7 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
           </div>
         </div>
 
+        {/* Editor area (shrinks when the terminal panel is open) */}
         <div className="flex-1 min-h-0">
           {sel && isImage(sel) ? (
             <div className="h-full overflow-auto grid place-items-center p-6 bg-[repeating-conic-gradient(theme(colors.slate.500/10%)_0%_25%,transparent_0%_50%)] bg-[length:24px_24px]">
@@ -362,6 +387,7 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
               onMount={(_e, m) => { setMonaco(m); applyEditorTheme(m, themeId).then(setMonacoTheme).catch(() => {}); }}
               onChange={(v) => { setContent(v ?? ''); setDirty(true); setSaveState('idle'); }}
               options={{
+                readOnly: frozen,
                 fontSize: 13.5, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on',
                 bracketPairColorization: { enabled: true },
                 guides: { bracketPairs: true, indentation: true, highlightActiveIndentation: true },
@@ -383,6 +409,13 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
             </div>
           )}
         </div>
+
+        {/* Integrated terminal (toggle from the toolbar) */}
+        {showTerminal && (
+          <div className="h-56 border-t border-edge shrink-0">
+            <Terminal workspaceId={workspaceId} />
+          </div>
+        )}
       </div>
 
       {/* Inline prompt dialog */}

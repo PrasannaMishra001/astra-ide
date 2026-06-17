@@ -24,6 +24,7 @@ class WorkspaceUpdate(BaseModel):
     status: Optional[str] = None
     # Re-pin the sandbox tier after creation (owner action).
     sandbox_override: SandboxOverride = None
+    frozen: Optional[bool] = None          # read-only lock (settings panel)
 
 
 class WorkspaceOut(BaseModel):
@@ -43,6 +44,7 @@ class WorkspaceOut(BaseModel):
     yjs_room:         str
     owner_id:         int
     forked_from_id:   Optional[int] = None
+    frozen:           bool = False
     created_at:       datetime
     updated_at:       datetime
     last_active_at:   datetime
@@ -72,10 +74,12 @@ class ShareRequest(BaseModel):
 
 
 class MemberOut(BaseModel):
-    user_id:  int
-    username: str
-    role:     str
-    added_at: datetime
+    user_id:    int
+    username:   str
+    email:      Optional[str] = None
+    avatar_url: Optional[str] = None
+    role:       str
+    added_at:   datetime
 
     class Config:
         from_attributes = True
@@ -84,6 +88,30 @@ class MemberOut(BaseModel):
 class MemberList(BaseModel):
     total: int
     items: List[MemberOut]
+
+
+# ── Sharing exclusions + edit history ────────────────────────────────────────
+
+class ExcludesUpdate(BaseModel):
+    excludes: List[str] = Field(default_factory=list)
+
+
+class EditOut(BaseModel):
+    username:      str
+    path:          str
+    lines_added:   int
+    lines_removed: int
+    created_at:    datetime
+
+    @field_serializer("created_at")
+    def _utc(self, v: datetime) -> str:
+        from datetime import timezone
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        return v.isoformat()
+
+    class Config:
+        from_attributes = True
 
 
 # ── Execution ────────────────────────────────────────────────────────────────

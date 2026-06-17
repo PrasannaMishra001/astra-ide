@@ -64,6 +64,7 @@ export interface Workspace {
   yjs_room: string;
   owner_id: number;
   forked_from_id?: number | null;
+  frozen?: boolean;
   created_at: string;
   updated_at: string;
   last_active_at: string;
@@ -159,6 +160,8 @@ export async function updateWorkspace(
 export interface WorkspaceMember {
   user_id:  number;
   username: string;
+  email?:   string | null;
+  avatar_url?: string | null;
   role:     'owner' | 'editor' | 'viewer';
   added_at: string;
 }
@@ -249,13 +252,41 @@ export async function forkWorkspace(workspaceId: number): Promise<Workspace> {
 }
 
 /** Raw-file URL for <img> previews (token in query since img can't set headers). */
-export function rawFileUrl(workspaceId: number, path: string): string {
-  let token = '';
+function authToken(): string {
   try {
     const raw = window.localStorage.getItem('astra-auth');
-    token = raw ? (JSON.parse(raw)?.state?.token ?? '') : '';
-  } catch { /* ignore */ }
-  return `/api/workspaces/${workspaceId}/raw?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+    return raw ? (JSON.parse(raw)?.state?.token ?? '') : '';
+  } catch { return ''; }
+}
+
+export function rawFileUrl(workspaceId: number, path: string): string {
+  return `/api/workspaces/${workspaceId}/raw?path=${encodeURIComponent(path)}&token=${encodeURIComponent(authToken())}`;
+}
+
+/** Static-preview URL for an in-iframe live preview. */
+export function previewUrl(workspaceId: number, path = 'index.html'): string {
+  return `/api/workspaces/${workspaceId}/preview/${path}?token=${encodeURIComponent(authToken())}`;
+}
+
+// ── Change history / exclusions / freeze ─────────────────────────────────────
+
+export interface EditEntry {
+  username: string; path: string; lines_added: number; lines_removed: number; created_at: string;
+}
+export async function getHistory(workspaceId: number): Promise<EditEntry[]> {
+  const { data } = await api.get<EditEntry[]>(`/workspaces/${workspaceId}/history`);
+  return data;
+}
+export async function getExcludes(workspaceId: number): Promise<string[]> {
+  const { data } = await api.get<{ excludes: string[] }>(`/workspaces/${workspaceId}/excludes`);
+  return data.excludes;
+}
+export async function setExcludes(workspaceId: number, excludes: string[]): Promise<void> {
+  await api.put(`/workspaces/${workspaceId}/excludes`, { excludes });
+}
+export async function setFrozen(workspaceId: number, frozen: boolean): Promise<Workspace> {
+  const { data } = await api.patch<Workspace>(`/workspaces/${workspaceId}`, { frozen });
+  return data;
 }
 
 // ── Profile (avatar via imgbb) ───────────────────────────────────────────────

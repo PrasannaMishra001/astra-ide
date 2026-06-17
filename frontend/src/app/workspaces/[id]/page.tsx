@@ -4,8 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-  ArrowLeft, Box, ChevronDown, FileCode2, FolderTree, Loader2, Play,
-  ShieldCheck, Square, TerminalSquare,
+  ArrowLeft, Box, ChevronDown, FileCode2, FolderTree, Globe, History,
+  Loader2, Play, Settings2, Share2, ShieldCheck, Square,
 } from 'lucide-react';
 import {
   getWorkspace, startWorkspace, stopWorkspace, updateWorkspace,
@@ -14,17 +14,21 @@ import {
 import { useAuth } from '../../../lib/auth';
 import { toast } from '../../../lib/toast';
 import ThemeToggle from '../../../components/ThemeToggle';
+import PresenceBar, { usePresence } from '../../../components/Presence';
 import { cn } from '../../../lib/utils';
 
-const CollabEditor = dynamic(() => import('../../../components/CollabEditor'), { ssr: false });
-const FileManager  = dynamic(() => import('../../../components/FileManager'),  { ssr: false });
-const Terminal     = dynamic(() => import('../../../components/Terminal'),     { ssr: false });
+const CollabEditor  = dynamic(() => import('../../../components/CollabEditor'),  { ssr: false });
+const FileManager   = dynamic(() => import('../../../components/FileManager'),   { ssr: false });
+const PreviewPanel  = dynamic(() => import('../../../components/PreviewPanel'),  { ssr: false });
+const ShareModal    = dynamic(() => import('../../../components/ShareModal'),    { ssr: false });
+const HistoryModal  = dynamic(() => import('../../../components/HistoryModal'),  { ssr: false });
+const SettingsModal = dynamic(() => import('../../../components/SettingsModal'), { ssr: false });
 
-type View = 'files' | 'collab' | 'terminal';
+type View = 'files' | 'collab' | 'preview';
 const TABS: { id: View; label: string; icon: React.ReactNode }[] = [
-  { id: 'files',    label: 'Files',    icon: <FolderTree size={14} /> },
-  { id: 'collab',   label: 'Editor',   icon: <FileCode2 size={14} /> },
-  { id: 'terminal', label: 'Terminal', icon: <TerminalSquare size={14} /> },
+  { id: 'files',   label: 'Files',   icon: <FolderTree size={14} /> },
+  { id: 'collab',  label: 'Editor',  icon: <FileCode2 size={14} /> },
+  { id: 'preview', label: 'Preview', icon: <Globe size={14} /> },
 ];
 
 const TIER_BADGE: Record<string, string> = {
@@ -45,6 +49,19 @@ export default function WorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('files');
   const [busy, setBusy] = useState(false);
+
+  // Modals + active-file tracking (for presence + settings "open config").
+  const [modal, setModal] = useState<'share' | 'history' | 'settings' | null>(null);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [openSignal, setOpenSignal] = useState<{ path: string; n: number }>({ path: '', n: 0 });
+
+  // Live presence across the workspace (who's here + which file).
+  const peers = usePresence(
+    ws?.yjs_room || `ws-${params.id}`,
+    user?.username || 'guest',
+    activeFile || `(${view})`,
+    user?.avatar_url,
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -89,11 +106,11 @@ export default function WorkspacePage() {
 
   return (
     <div className="h-screen flex flex-col bg-bg">
-      <header className="border-b border-edge bg-surface px-3 sm:px-4 h-13 py-2 flex items-center gap-3 flex-wrap">
+      <header className="border-b border-edge bg-surface px-3 sm:px-4 py-2 flex items-center gap-3 flex-wrap">
         <Link href="/dashboard" className="btn-ghost px-2"><ArrowLeft size={15} /></Link>
 
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="font-semibold truncate max-w-[10rem] sm:max-w-xs">{ws.name}</h1>
+          <h1 className="font-semibold truncate max-w-[9rem] sm:max-w-xs">{ws.name}</h1>
           <span className="hidden sm:inline text-xs text-faint font-mono">{ws.language}</span>
         </div>
 
@@ -103,10 +120,8 @@ export default function WorkspacePage() {
           {ws.status.toLowerCase()}
         </span>
 
-        {/* Sandbox tier control */}
         {isOwner ? (
-          <TierMenu tier={ws.sandbox_tier as SandboxTier} risk={ws.risk_score}
-                    busy={busy} onChange={changeTier} />
+          <TierMenu tier={ws.sandbox_tier as SandboxTier} risk={ws.risk_score} busy={busy} onChange={changeTier} />
         ) : (
           <span className={cn('text-[11px] px-2 py-1 rounded-md border font-medium', TIER_BADGE[ws.sandbox_tier])}>
             {ws.sandbox_tier}
@@ -116,7 +131,7 @@ export default function WorkspacePage() {
         {/* Tabs */}
         <div className="ml-1 inline-flex rounded-lg border border-edge bg-raised/60 p-0.5" role="tablist">
           {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={view === t.id ? 'true' : 'false'}
+            <button key={t.id} type="button" role="tab" aria-selected={view === t.id}
                     onClick={() => setView(t.id)}
                     className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
                       view === t.id ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink')}>
@@ -126,6 +141,18 @@ export default function WorkspacePage() {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <PresenceBar peers={peers} />
+          <button type="button" onClick={() => setModal('share')} title="Share" className="btn-ghost px-2 py-1.5">
+            <Share2 size={15} /> <span className="hidden lg:inline text-xs">Share</span>
+          </button>
+          {isOwner && (
+            <button type="button" onClick={() => setModal('history')} title="Change history (owner only)" className="btn-ghost px-2 py-1.5">
+              <History size={15} />
+            </button>
+          )}
+          <button type="button" onClick={() => setModal('settings')} title="Settings" className="btn-ghost px-2 py-1.5">
+            <Settings2 size={15} />
+          </button>
           <ThemeToggle />
           {ws.status !== 'RUNNING' ? (
             <button type="button" onClick={async () => { await startWorkspace(ws.id); refresh(); }}
@@ -142,9 +169,12 @@ export default function WorkspacePage() {
       </header>
 
       <section className="flex-1 min-h-0" role="tabpanel">
-        {view === 'files'    && <FileManager workspaceId={ws.id} />}
-        {view === 'terminal' && <Terminal workspaceId={ws.id} />}
-        {view === 'collab'   && (
+        {view === 'files' && (
+          <FileManager workspaceId={ws.id} frozen={!!ws.frozen}
+                       onActiveFile={setActiveFile} openSignal={openSignal} />
+        )}
+        {view === 'preview' && <PreviewPanel workspaceId={ws.id} onClose={() => setView('files')} />}
+        {view === 'collab' && (
           <CollabEditor
             workspaceId={ws.id} room={ws.yjs_room} language={ws.language}
             initialCode={undefined} username={user.username}
@@ -152,6 +182,14 @@ export default function WorkspacePage() {
           />
         )}
       </section>
+
+      {modal === 'share' && <ShareModal workspaceId={ws.id} isOwner={isOwner} onClose={() => setModal(null)} />}
+      {modal === 'history' && <HistoryModal workspaceId={ws.id} onClose={() => setModal(null)} />}
+      {modal === 'settings' && (
+        <SettingsModal ws={ws} isOwner={isOwner} onChanged={setWs}
+                       onClose={() => setModal(null)}
+                       onOpenFile={(p) => { setView('files'); setOpenSignal((s) => ({ path: p, n: s.n + 1 })); }} />
+      )}
     </div>
   );
 }
@@ -161,44 +199,34 @@ function TierMenu({ tier, risk, busy, onChange }: {
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
-
   const OPTS: { id: SandboxTier; label: string; sub: string; icon: React.ReactNode }[] = [
-    { id: 'runc',        label: 'runc',        sub: 'fastest, shared kernel',  icon: <Box size={14} /> },
-    { id: 'gvisor',      label: 'gVisor',      sub: 'user-space kernel',       icon: <ShieldCheck size={14} /> },
-    { id: 'firecracker', label: 'Firecracker', sub: 'dedicated microVM',       icon: <ShieldCheck size={14} /> },
+    { id: 'runc',        label: 'runc',        sub: 'fastest, shared kernel', icon: <Box size={14} /> },
+    { id: 'gvisor',      label: 'gVisor',      sub: 'user-space kernel',      icon: <ShieldCheck size={14} /> },
+    { id: 'firecracker', label: 'Firecracker', sub: 'dedicated microVM',      icon: <ShieldCheck size={14} /> },
   ];
-
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen((v) => !v)} disabled={busy}
-              aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'}
+              aria-haspopup="menu" aria-expanded={open}
               title={`Sandbox tier (risk ${risk.toFixed(2)}). Click to re-pin.`}
-              className={cn('inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border font-medium',
-                            TIER_BADGE[tier])}>
+              className={cn('inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border font-medium', TIER_BADGE[tier])}>
         {busy ? <Loader2 size={11} className="animate-spin" /> : <ShieldCheck size={11} />}
-        {tier}
-        <ChevronDown size={12} />
+        {tier}<ChevronDown size={12} />
       </button>
       {open && (
-        <div role="menu"
-             className="absolute left-0 top-full mt-1.5 z-50 w-56 card p-1.5 shadow-pop">
+        <div role="menu" className="absolute left-0 top-full mt-1.5 z-50 w-56 card p-1.5 shadow-pop">
           <div className="px-2.5 py-1.5 text-[11px] text-faint border-b border-edge mb-1">
-            Adaptive policy scored risk <span className="font-mono text-ink">{risk.toFixed(2)}</span>.
-            Pin a tier to override:
+            Adaptive policy scored risk <span className="font-mono text-ink">{risk.toFixed(2)}</span>. Pin a tier to override:
           </div>
           {OPTS.map((o) => (
-            <button key={o.id} type="button" role="menuitem"
-                    onClick={() => { onChange(o.id); setOpen(false); }}
+            <button key={o.id} type="button" role="menuitem" onClick={() => { onChange(o.id); setOpen(false); }}
                     className={cn('w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-raised',
-                                  tier === o.id && 'bg-astra-500/10')}>
+                      tier === o.id && 'bg-astra-500/10')}>
               <span className="text-muted">{o.icon}</span>
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-ink">{o.label}</span>

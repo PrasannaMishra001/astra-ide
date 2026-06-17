@@ -25,7 +25,9 @@ def _ensure_columns() -> None:
     insp = inspect(engine)
     wanted = {
         "users":      [("avatar_url", "VARCHAR(512)")],
-        "workspaces": [("forked_from_id", "INTEGER")],
+        "workspaces": [("forked_from_id", "INTEGER"),
+                       ("frozen", "BOOLEAN DEFAULT FALSE"),
+                       ("shared_excludes", "TEXT DEFAULT ''")],
     }
     with engine.begin() as conn:
         for table, cols in wanted.items():

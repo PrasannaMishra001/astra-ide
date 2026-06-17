@@ -13,7 +13,9 @@ from app.schemas.workspace import (
     WorkspaceCreate, WorkspaceUpdate, WorkspaceOut, WorkspaceList,
     ShareRequest, MemberOut, MemberList,
     ExecuteRequest, ExecuteResponse,
+    ExcludesUpdate, EditOut,
 )
+from app.models import WorkspaceEdit
 from app.services import workspace_service
 from app.services import sharing_service
 from app.services import executor_service
@@ -37,6 +39,31 @@ class WriteFileRequest(BaseModel):
 def _require_access(db: Session, workspace_id: int, user_id: int) -> None:
     if not sharing_service.user_can_access(db, workspace_id, user_id):
         raise HTTPException(status_code=404, detail="Workspace not found")
+
+
+def _ws_or_404(db: Session, workspace_id: int, user_id: int) -> Workspace:
+    ws = sharing_service.get_workspace_for_user(db, workspace_id, user_id)
+    if ws is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return ws
+
+
+def _guard_frozen(ws: Workspace) -> None:
+    if getattr(ws, "frozen", False):
+        raise HTTPException(status_code=423, detail="Workspace is frozen (read-only)")
+
+
+def _filter_excluded(ws: Workspace, user_id: int, paths: list[str]) -> set[str]:
+    """Paths hidden from non-owner members (owner-set shared exclusions)."""
+    if ws.owner_id == user_id:
+        return set()
+    excl = set(workspace_service.get_excludes(ws))
+    hidden = set()
+    for p in paths:
+        # hide an excluded path and anything under an excluded folder
+        if p in excl or any(p == e or p.startswith(e + "/") for e in excl):
+            hidden.add(p)
+    return hidden
 
 
 # ── Core CRUD (now access-aware: owner OR member) ───────────────────────────
@@ -91,6 +118,11 @@ def update_workspace(
     if payload.sandbox_override is not None:
         # Owner-pinned tier (validated by the schema's Literal).
         workspace.sandbox_tier = payload.sandbox_override
+    if payload.frozen is not None:
+        # Freeze/unfreeze is an owner-only action (settings panel).
+        if not sharing_service.user_owns(db, workspace_id, current_user.id):
+            raise HTTPException(status_code=403, detail="Only the owner can freeze the workspace")
+        workspace.frozen = payload.frozen
 
     db.commit()
     db.refresh(workspace)
@@ -237,16 +269,20 @@ def import_repo(workspace_id: int, payload: ImportRepoRequest,
 @router.get("/{workspace_id}/files")
 def list_files(workspace_id: int, db: Session = Depends(get_db),
                current_user: User = Depends(get_current_user)) -> dict:
-    """File tree of the workspace (for the file-manager panel)."""
-    _require_access(db, workspace_id, current_user.id)
-    return {"files": workspace_files.list_tree(workspace_id)}
+    """File tree of the workspace (owner-excluded paths hidden from members)."""
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    tree = workspace_files.list_tree(workspace_id)
+    hidden = _filter_excluded(ws, current_user.id, [e["path"] for e in tree])
+    return {"files": [e for e in tree if e["path"] not in hidden]}
 
 
 @router.get("/{workspace_id}/file")
 def read_file(workspace_id: int, path: str, db: Session = Depends(get_db),
               current_user: User = Depends(get_current_user)) -> dict:
     """Read a single file's contents."""
-    _require_access(db, workspace_id, current_user.id)
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    if _filter_excluded(ws, current_user.id, [path]):
+        raise HTTPException(status_code=403, detail="File not shared")
     try:
         return {"path": path, "content": workspace_files.read_file(workspace_id, path)}
     except FileNotFoundError:
@@ -259,10 +295,18 @@ def read_file(workspace_id: int, path: str, db: Session = Depends(get_db),
 def write_file(workspace_id: int, payload: WriteFileRequest,
                db: Session = Depends(get_db),
                current_user: User = Depends(get_current_user)) -> dict:
-    """Create/overwrite a file (editor save)."""
-    _require_access(db, workspace_id, current_user.id)
+    """Create/overwrite a file (editor save) — logs the change to history."""
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    _guard_frozen(ws)
+    try:
+        old = workspace_files.read_file(workspace_id, payload.path)
+    except Exception:
+        old = ""
     try:
         size = workspace_files.write_file(workspace_id, payload.path, payload.content)
+        # Record the edit on the SOURCE workspace's history (forks are separate).
+        workspace_service.record_edit(db, workspace_id, current_user, payload.path,
+                                      old, payload.content)
         return {"ok": True, "path": payload.path, "size": size}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -277,7 +321,8 @@ def make_dir(workspace_id: int, payload: MkdirRequest,
              db: Session = Depends(get_db),
              current_user: User = Depends(get_current_user)) -> dict:
     """Create a folder inside the workspace."""
-    _require_access(db, workspace_id, current_user.id)
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    _guard_frozen(ws)
     try:
         workspace_files.make_dir(workspace_id, payload.path)
         return {"ok": True, "path": payload.path}
@@ -290,12 +335,77 @@ def delete_path(workspace_id: int, path: str,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)) -> dict:
     """Delete a file or folder inside the workspace."""
-    _require_access(db, workspace_id, current_user.id)
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    _guard_frozen(ws)
     try:
         workspace_files.delete_path(workspace_id, path)
         return {"ok": True, "path": path}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Change history (owner-only) ─────────────────────────────────────────────
+
+@router.get("/{workspace_id}/history", response_model=list[EditOut])
+def workspace_history(workspace_id: int, limit: int = 200,
+                      db: Session = Depends(get_db),
+                      current_user: User = Depends(get_current_user)) -> list[EditOut]:
+    """Edit log — visible only to the workspace owner (the original creator)."""
+    if not sharing_service.user_owns(db, workspace_id, current_user.id):
+        raise HTTPException(status_code=403, detail="Only the owner can view history")
+    rows = (db.query(WorkspaceEdit)
+              .filter(WorkspaceEdit.workspace_id == workspace_id)
+              .order_by(WorkspaceEdit.created_at.desc())
+              .limit(min(limit, 500)).all())
+    return [EditOut.model_validate(r) for r in rows]
+
+
+# ── Shared-file exclusions (owner-only) ─────────────────────────────────────
+
+@router.get("/{workspace_id}/excludes")
+def get_excludes(workspace_id: int, db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)) -> dict:
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    return {"excludes": workspace_service.get_excludes(ws)}
+
+
+@router.put("/{workspace_id}/excludes")
+def set_excludes(workspace_id: int, payload: ExcludesUpdate,
+                 db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)) -> dict:
+    if not sharing_service.user_owns(db, workspace_id, current_user.id):
+        raise HTTPException(status_code=403, detail="Only the owner can set exclusions")
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    workspace_service.set_excludes(db, ws, payload.excludes)
+    return {"ok": True, "excludes": workspace_service.get_excludes(ws)}
+
+
+# ── Static live preview (sandboxed) ─────────────────────────────────────────
+
+@router.get("/{workspace_id}/preview/{path:path}")
+def preview(workspace_id: int, path: str, token: str | None = None,
+            db: Session = Depends(get_db)):
+    """
+    Serve workspace files for an in-iframe live preview (static sites). Auth via
+    query token. The frontend sandboxes the iframe so previewed code cannot
+    touch our origin. Defaults to index.html for directory/empty paths.
+    """
+    from fastapi.responses import Response
+    user_id = decode_access_token(token) if token else None
+    if user_id is None or not sharing_service.user_can_access(db, workspace_id, int(user_id)):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    rel = path or "index.html"
+    if rel.endswith("/") or rel == "":
+        rel = rel + "index.html"
+    try:
+        data, ctype = workspace_files.read_bytes(workspace_id, rel)
+        return Response(content=data, media_type=ctype,
+                        headers={"Cache-Control": "no-cache",
+                                 "X-Content-Type-Options": "nosniff"})
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"{rel} not found")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
