@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models import User
-from app.schemas.auth import Token, UserCreate, UserOut
+from app.schemas.auth import Token, UserCreate, UserOut, UpdateProfile
 from app.services import oauth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -80,6 +80,17 @@ def login(
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
+    return UserOut.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(payload: UpdateProfile, db: Session = Depends(get_db),
+              current_user: User = Depends(get_current_user)) -> UserOut:
+    """Update the current user's profile (e.g. avatar_url after an imgbb upload)."""
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url or None
+    db.commit()
+    db.refresh(current_user)
     return UserOut.model_validate(current_user)
 
 

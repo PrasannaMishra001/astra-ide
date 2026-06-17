@@ -15,10 +15,34 @@ from app.services import telemetry_loop
 settings = get_settings()
 
 
+def _ensure_columns() -> None:
+    """
+    Lightweight additive migration: add columns introduced after the tables were
+    first created (create_all only creates missing TABLES, not columns). Safe to
+    run every startup; works on both SQLite (dev) and PostgreSQL (prod).
+    """
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    wanted = {
+        "users":      [("avatar_url", "VARCHAR(512)")],
+        "workspaces": [("forked_from_id", "INTEGER")],
+    }
+    with engine.begin() as conn:
+        for table, cols in wanted.items():
+            try:
+                existing = {c["name"] for c in insp.get_columns(table)}
+            except Exception:
+                continue
+            for name, ddl in cols:
+                if name not in existing:
+                    conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {ddl}'))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables on startup (for dev — use Alembic in production)
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
     # Kick off the background telemetry/event simulator
     await telemetry_loop.start()
     try:

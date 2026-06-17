@@ -16,6 +16,7 @@ class User(Base):
     is_active:       Mapped[bool]     = mapped_column(Boolean, default=True)
     trust_score:     Mapped[float]    = mapped_column(Float, default=0.5)  # Used by risk scorer
     preferred_lang:  Mapped[str]      = mapped_column(String(32), default="python")
+    avatar_url:      Mapped[str]      = mapped_column(String(512), nullable=True)  # imgbb-hosted profile image
     created_at:      Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     workspaces = relationship("Workspace", back_populates="owner", cascade="all, delete-orphan")

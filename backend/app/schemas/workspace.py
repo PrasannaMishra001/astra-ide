@@ -42,6 +42,7 @@ class WorkspaceOut(BaseModel):
     pod_name:         str
     yjs_room:         str
     owner_id:         int
+    forked_from_id:   Optional[int] = None
     created_at:       datetime
     updated_at:       datetime
     last_active_at:   datetime

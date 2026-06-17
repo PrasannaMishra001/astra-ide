@@ -1,15 +1,16 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { Monaco } from '@monaco-editor/react';
 import {
   ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, FilePlus,
-  FileCode2, FileText, FileJson, FileTerminal,
-  GitBranch, RefreshCw, Save, Trash2, Loader2, X, Check, Palette,
+  FileCode2, FileText, FileJson, FileTerminal, FileImage, Image as ImageIcon,
+  GitBranch, RefreshCw, Save, Search, Trash2, Loader2, X, Check, Palette,
 } from 'lucide-react';
 
 import {
-  listFiles, readFile, writeFile, importRepo, makeDir, deletePath, type WsFile,
+  listFiles, readFile, writeFile, importRepo, makeDir, deletePath,
+  searchWorkspace, rawFileUrl, type WsFile, type SearchHit,
 } from '../lib/api';
 import { toast } from '../lib/toast';
 import { cn } from '../lib/utils';
@@ -61,9 +62,13 @@ function extOf(path: string): string {
 function colorOf(path: string) { return COLORS[EXT_COLOR[extOf(path)] ?? 'slate']; }
 function langFor(path: string): string { return EXT_LANG[extOf(path)] ?? 'plaintext'; }
 
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'avif']);
+function isImage(path: string): boolean { return IMAGE_EXTS.has(extOf(path)); }
+
 function FileIcon({ path }: { path: string }) {
   const e = extOf(path);
   const c = colorOf(path).text;
+  if (isImage(path)) return <FileImage size={13} className="shrink-0 text-fuchsia-400" />;
   if (e === 'json') return <FileJson size={13} className={cn('shrink-0', c)} />;
   if (e === 'md' || e === 'txt') return <FileText size={13} className={cn('shrink-0', c)} />;
   if (e === 'sh' || e === 'bash') return <FileTerminal size={13} className={cn('shrink-0', c)} />;
@@ -93,6 +98,13 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
   const [busy, setBusy] = useState(false);
   const [prompt, setPrompt] = useState<Prompt>(null);
   const [promptValue, setPromptValue] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Project search (VS Code-style).
+  const [showSearch, setShowSearch] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
 
   // Folder expand/collapse: collapsed paths tracked in a Set.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -127,17 +139,47 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
   }
 
   async function open(path: string) {
-    setSel(path); setDirty(false);
+    setSel(path); setDirty(false); setSaveState('idle');
+    if (isImage(path)) { setContent(''); return; }   // images render from the raw URL
     try { setContent(await readFile(workspaceId, path)); }
     catch { setContent(''); toast.error('Cannot open file', path); }
   }
-  async function save() {
-    if (!sel) return;
-    setBusy(true);
-    try { await writeFile(workspaceId, sel, content); setDirty(false); toast.success('Saved', sel); }
-    catch (e: any) { toast.error('Save failed', e?.response?.data?.detail || 'Server error'); }
-    setBusy(false);
+  async function save(silent = false) {
+    if (!sel || isImage(sel)) return;
+    setSaveState('saving');
+    try {
+      await writeFile(workspaceId, sel, content);
+      setDirty(false); setSaveState('saved');
+      if (!silent) toast.success('Saved', sel);
+    } catch (e: any) {
+      setSaveState('idle');
+      toast.error('Save failed', e?.response?.data?.detail || 'Server error');
+    }
   }
+
+  // Auto-save: debounced write 1.2s after the last keystroke (no manual Save needed).
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!dirty || !sel || isImage(sel)) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { save(true); }, 1200);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, dirty, sel]);
+
+  // Project search (debounced).
+  useEffect(() => {
+    if (!showSearch) return;
+    const q = query.trim();
+    if (q.length < 2) { setResults([]); return; }
+    const id = setTimeout(async () => {
+      setSearching(true);
+      try { setResults(await searchWorkspace(workspaceId, q)); }
+      catch { setResults([]); }
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [query, showSearch, workspaceId]);
   async function confirmPrompt() {
     const v = promptValue.trim();
     if (!v) return;
@@ -174,7 +216,10 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
       {/* Explorer sidebar */}
       <aside className="w-64 border-r border-edge bg-raised/40 flex flex-col">
         <div className="px-3 py-2 border-b border-edge flex items-center gap-1">
-          <span className="t-overline text-faint flex-1">Explorer</span>
+          <span className="t-overline text-faint flex-1">{showSearch ? 'Search' : 'Explorer'}</span>
+          <IconBtn title="Search in project" onClick={() => setShowSearch((v) => !v)}>
+            <Search size={13} className={showSearch ? 'text-astra-500' : ''} />
+          </IconBtn>
           <IconBtn title="New file"   onClick={() => { setPrompt({ kind: 'file' }); setPromptValue(''); }}><FilePlus size={14} /></IconBtn>
           <IconBtn title="New folder" onClick={() => { setPrompt({ kind: 'folder' }); setPromptValue(''); }}><FolderPlus size={14} /></IconBtn>
           <IconBtn title="Import Git repository" onClick={() => { setPrompt({ kind: 'import' }); setPromptValue(''); }}><GitBranch size={14} /></IconBtn>
@@ -182,7 +227,36 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
           <IconBtn title="Refresh" onClick={refresh}><RefreshCw size={13} /></IconBtn>
         </div>
 
-        <div className="flex-1 overflow-auto py-1 text-[13px]">
+        {/* Search panel */}
+        {showSearch && (
+          <div className="border-b border-edge p-2 space-y-2">
+            <div className="relative">
+              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
+              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
+                     placeholder="Search across files" aria-label="Search across files"
+                     className="input-base pl-7 py-1.5 text-xs" />
+            </div>
+            <div className="max-h-[40vh] overflow-auto -mx-2">
+              {searching && <p className="px-3 py-2 text-[11px] text-faint">Searching…</p>}
+              {!searching && query.trim().length >= 2 && results.length === 0 &&
+                <p className="px-3 py-2 text-[11px] text-faint">No matches.</p>}
+              {results.map((r, i) => (
+                <button key={`${r.path}:${r.line}:${i}`} type="button"
+                        onClick={() => { setShowSearch(false); open(r.path); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-raised border-l-2 border-transparent hover:border-astra-500">
+                  <span className="flex items-center gap-1.5 text-[12px]">
+                    <FileIcon path={r.path} />
+                    <span className="truncate text-muted"><FileName path={r.path} /></span>
+                    <span className="text-faint">:{r.line}</span>
+                  </span>
+                  <span className="block pl-5 text-[11px] font-mono text-faint truncate">{r.text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={cn('flex-1 overflow-auto py-1 text-[13px]', showSearch && 'hidden')}>
           {files.length === 0 && (
             <div className="px-4 py-8 text-center">
               <p className="text-faint text-xs leading-relaxed">No files yet.<br />Create a file or import a Git repository.</p>
@@ -243,31 +317,50 @@ export default function FileManager({ workspaceId }: { workspaceId: number }) {
             <>
               <FileIcon path={sel} />
               <span className="text-muted truncate"><FileName path={sel} /></span>
-              {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Unsaved changes" />}
+              {!isImage(sel) && (
+                <span className="text-[11px] text-faint inline-flex items-center gap-1">
+                  {saveState === 'saving'
+                    ? <><Loader2 size={10} className="animate-spin" /> saving</>
+                    : dirty ? <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Unsaved" />
+                    : saveState === 'saved' ? <><Check size={11} className="text-emerald-500" /> saved</> : null}
+                </span>
+              )}
             </>
           ) : (
             <span className="text-faint">Select a file from the explorer</span>
           )}
           <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-[10px] text-faint hidden md:inline">auto-save on</span>
             <button type="button" onClick={() => setShowThemePicker(true)} title="Editor theme (VS Code themes)"
                     className="btn-ghost px-2 py-1 text-xs">
               <Palette size={13} /> <span className="hidden lg:inline">{themeById(themeId).label}</span>
             </button>
-            {sel && (
-              <button type="button" onClick={save} disabled={busy || !dirty}
+            {sel && !isImage(sel) && (
+              <button type="button" onClick={() => save(false)} disabled={saveState === 'saving' || !dirty}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-medium">
-                {busy ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
+                {saveState === 'saving' ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
               </button>
             )}
           </div>
         </div>
 
         <div className="flex-1 min-h-0">
-          {sel ? (
+          {sel && isImage(sel) ? (
+            <div className="h-full overflow-auto grid place-items-center p-6 bg-[repeating-conic-gradient(theme(colors.slate.500/10%)_0%_25%,transparent_0%_50%)] bg-[length:24px_24px]">
+              <div className="text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={rawFileUrl(workspaceId, sel)} alt={sel}
+                     className="max-w-full max-h-[70vh] rounded-lg shadow-pop border border-edge bg-surface" />
+                <p className="mt-3 text-xs text-faint inline-flex items-center gap-1.5">
+                  <ImageIcon size={12} /> {sel.split('/').pop()}
+                </p>
+              </div>
+            </div>
+          ) : sel ? (
             <MonacoEditor
               height="100%" theme={monacoTheme} path={sel} language={langFor(sel)} value={content}
               onMount={(_e, m) => { setMonaco(m); applyEditorTheme(m, themeId).then(setMonacoTheme).catch(() => {}); }}
-              onChange={(v) => { setContent(v ?? ''); setDirty(true); }}
+              onChange={(v) => { setContent(v ?? ''); setDirty(true); setSaveState('idle'); }}
               options={{
                 fontSize: 13.5, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on',
                 bracketPairColorization: { enabled: true },

@@ -1,4 +1,5 @@
 """Pydantic schemas for auth endpoints."""
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -19,9 +20,14 @@ class UserOut(BaseModel):
     username:       str
     trust_score:    float
     preferred_lang: str
+    avatar_url:     Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class UpdateProfile(BaseModel):
+    avatar_url: Optional[str] = Field(default=None, max_length=512)
 
 
 class Token(BaseModel):

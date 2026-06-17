@@ -142,5 +142,61 @@ def delete_path(workspace_id: int, rel: str) -> None:
         raise FileNotFoundError(rel)
 
 
+def read_bytes(workspace_id: int, rel: str) -> tuple[bytes, str]:
+    """Return (raw bytes, guessed content-type) for a file — used to serve images."""
+    import mimetypes
+    p = _safe_path(workspace_id, rel)
+    if not p.is_file():
+        raise FileNotFoundError(rel)
+    if p.stat().st_size > 8 * 1024 * 1024:        # 8 MB cap for raw serving
+        raise ValueError("file too large")
+    ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+    return p.read_bytes(), ctype
+
+
+def search(workspace_id: int, query: str, max_results: int = 200) -> list[dict]:
+    """Plain-text search across workspace files (VS Code-style results)."""
+    if not query:
+        return []
+    base = _ws_dir(workspace_id)
+    q = query.lower()
+    out: list[dict] = []
+    for root, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+        for f in sorted(files):
+            fp = Path(root) / f
+            try:
+                if fp.stat().st_size > MAX_FILE_BYTES:
+                    continue
+                text = fp.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            rel = str(fp.relative_to(base)).replace("\\", "/")
+            for i, line in enumerate(text.splitlines(), 1):
+                if q in line.lower():
+                    out.append({"path": rel, "line": i, "text": line.strip()[:240]})
+                    if len(out) >= max_results:
+                        return out
+    return out
+
+
+def copy_workspace_files(src_id: int, dst_id: int) -> int:
+    """Copy all files from one workspace dir into another (used by fork)."""
+    src = _ws_dir(src_id)
+    dst = _ws_dir(dst_id)
+    n = 0
+    for item in src.rglob("*"):
+        if any(part in _SKIP_DIRS for part in item.relative_to(src).parts):
+            continue
+        target = dst / item.relative_to(src)
+        if item.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        elif item.is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, target)
+            n += 1
+    return n
+
+
 def delete_workspace_files(workspace_id: int) -> None:
     shutil.rmtree(_ws_dir(workspace_id), ignore_errors=True)

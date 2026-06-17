@@ -38,6 +38,7 @@ export interface User {
   username: string;
   trust_score: number;
   preferred_lang: string;
+  avatar_url?: string | null;
 }
 
 export interface TokenResponse {
@@ -62,6 +63,7 @@ export interface Workspace {
   pod_name: string;
   yjs_room: string;
   owner_id: number;
+  forked_from_id?: number | null;
   created_at: string;
   updated_at: string;
   last_active_at: string;
@@ -232,6 +234,48 @@ export async function snapshotWorkspace(workspaceId: number):
   Promise<{ ok: boolean; detail: string; key: string; size: number }> {
   const { data } = await api.post(`/workspaces/${workspaceId}/snapshot`);
   return data;
+}
+
+export interface SearchHit { path: string; line: number; text: string; }
+export async function searchWorkspace(workspaceId: number, q: string): Promise<SearchHit[]> {
+  const { data } = await api.get<{ results: SearchHit[] }>(
+    `/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`);
+  return data.results;
+}
+
+export async function forkWorkspace(workspaceId: number): Promise<Workspace> {
+  const { data } = await api.post<Workspace>(`/workspaces/${workspaceId}/fork`);
+  return data;
+}
+
+/** Raw-file URL for <img> previews (token in query since img can't set headers). */
+export function rawFileUrl(workspaceId: number, path: string): string {
+  let token = '';
+  try {
+    const raw = window.localStorage.getItem('astra-auth');
+    token = raw ? (JSON.parse(raw)?.state?.token ?? '') : '';
+  } catch { /* ignore */ }
+  return `/api/workspaces/${workspaceId}/raw?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+}
+
+// ── Profile (avatar via imgbb) ───────────────────────────────────────────────
+
+export async function updateProfile(avatar_url: string): Promise<User> {
+  const { data } = await api.patch<User>('/auth/me', { avatar_url });
+  return data;
+}
+
+const IMGBB_KEY = '867d7e2c0a3447bae67174900d476c9f';
+/** Upload an image to imgbb and return the hosted URL. */
+export async function uploadToImgbb(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+    method: 'POST', body: form,
+  });
+  const json = await res.json();
+  if (!json?.data?.url) throw new Error(json?.error?.message || 'Upload failed');
+  return json.data.url as string;
 }
 
 // ── System status (live infra backends) ────────────────────────────────────

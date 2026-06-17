@@ -300,6 +300,48 @@ def delete_path(workspace_id: int, path: str,
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/{workspace_id}/raw")
+def raw_file(workspace_id: int, path: str, token: str | None = None,
+             db: Session = Depends(get_db)):
+    """
+    Serve a file's raw bytes (for image preview etc). Auth via query `token`
+    because <img src> can't send the Authorization header.
+    """
+    from fastapi.responses import Response
+    user_id = decode_access_token(token) if token else None
+    if user_id is None or not sharing_service.user_can_access(db, workspace_id, int(user_id)):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        data, ctype = workspace_files.read_bytes(workspace_id, path)
+        return Response(content=data, media_type=ctype,
+                        headers={"Cache-Control": "no-cache"})
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{workspace_id}/search")
+def search_files(workspace_id: int, q: str, db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)) -> dict:
+    """Plain-text search across the workspace's files."""
+    _require_access(db, workspace_id, current_user.id)
+    return {"query": q, "results": workspace_files.search(workspace_id, q)}
+
+
+@router.post("/{workspace_id}/fork", response_model=WorkspaceOut, status_code=status.HTTP_201_CREATED)
+def fork_workspace(workspace_id: int, db: Session = Depends(get_db),
+                   current_user: User = Depends(get_current_user)) -> WorkspaceOut:
+    """Create a personal copy of a workspace (files + config), owned by the caller."""
+    _require_access(db, workspace_id, current_user.id)
+    src = sharing_service.get_workspace_for_user(db, workspace_id, current_user.id)
+    if src is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    fork = workspace_service.fork_workspace_for_user(db, current_user, src)
+    workspace_files.copy_workspace_files(src.id, fork.id)
+    return WorkspaceOut.model_validate(fork)
+
+
 # ── Snapshots (MinIO object storage) ────────────────────────────────────────
 
 @router.post("/{workspace_id}/snapshot")

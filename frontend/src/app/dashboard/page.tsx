@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  Box, Flame, Play, Plus, Shield, Sparkles, Square, Trash2, Users, X, Zap,
+  Box, Flame, GitFork, Play, Plus, Shield, Sparkles, Square, Trash2, Users, X, Zap,
 } from 'lucide-react';
 import {
   SiPython, SiCplusplus, SiJavascript, SiTypescript,
@@ -12,7 +12,7 @@ import {
 } from 'react-icons/si';
 
 import {
-  listWorkspaces, createWorkspace, deleteWorkspace,
+  listWorkspaces, createWorkspace, deleteWorkspace, forkWorkspace,
   startWorkspace, stopWorkspace, type Workspace, type SandboxTier,
 } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -337,12 +337,18 @@ function WorkspaceCard({ ws, onChange, isOwner }:
         </span>
       </div>
 
-      <p className="text-xs text-faint mb-3 flex items-center gap-1.5">
+      <p className="text-xs text-faint mb-3 flex items-center gap-1.5 flex-wrap">
         {lang && <lang.Icon size={12} style={{ color: lang.color }} aria-hidden="true" />}
         <span>{lang?.label ?? ws.language}</span>
         {!isOwner && (
           <span className="inline-flex items-center gap-1 text-astra-600 dark:text-astra-400">
             <Users size={11} /> shared
+          </span>
+        )}
+        {ws.forked_from_id && (
+          <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400"
+                title={`Forked from workspace #${ws.forked_from_id}`}>
+            <GitFork size={11} /> forked from #{ws.forked_from_id}
           </span>
         )}
       </p>
@@ -377,6 +383,18 @@ function WorkspaceCard({ ws, onChange, isOwner }:
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-astra-600/10 text-astra-700 dark:text-astra-300 hover:bg-astra-600/20 font-medium">
           <Zap size={11} /> Open
         </Link>
+        <button type="button"
+                onClick={async () => {
+                  try {
+                    const f = await forkWorkspace(ws.id);
+                    toast.success('Forked', `Created "${f.name}" as your own copy`);
+                    onChange();
+                  } catch (e: any) { toast.error('Fork failed', e?.response?.data?.detail || 'Server error'); }
+                }}
+                title="Fork this workspace into your own copy"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-muted hover:bg-raised hover:text-ink font-medium">
+          <GitFork size={11} /> Fork
+        </button>
         {isOwner && (
           <button type="button"
                   onClick={async () => {

@@ -113,6 +113,32 @@ def create_workspace_for_user(
     return workspace
 
 
+def fork_workspace_for_user(db: Session, user: User, src: Workspace) -> Workspace:
+    """Create a personal copy of `src` owned by `user` (GitHub-style fork)."""
+    fork = Workspace(
+        name=f"{src.name}-fork",
+        language=src.language,
+        status="PENDING",
+        sandbox_tier=src.sandbox_tier,
+        risk_score=src.risk_score,
+        network_access=src.network_access,
+        filesystem_write=src.filesystem_write,
+        cpu_request=src.cpu_request,
+        memory_request=src.memory_request,
+        initial_code=src.initial_code,
+        forked_from_id=src.id,
+        yjs_room=f"ws-{uuid.uuid4().hex[:12]}",          # fresh collab room (independent)
+        owner_id=user.id,
+        cluster_id=src.cluster_id,
+        node_name="",
+        pod_name=f"ws-{user.id}-{uuid.uuid4().hex[:8]}",
+    )
+    db.add(fork)
+    db.commit()
+    db.refresh(fork)
+    return fork
+
+
 def transition_status(db: Session, workspace: Workspace, new_status: str) -> Workspace:
     previous = workspace.status
     workspace.status = new_status

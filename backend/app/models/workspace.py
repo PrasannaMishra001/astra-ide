@@ -34,6 +34,7 @@ class Workspace(Base):
     pod_name:        Mapped[str]      = mapped_column(String(128), default="")
     yjs_room:        Mapped[str]      = mapped_column(String(64), default="")
     initial_code:    Mapped[str]      = mapped_column(Text, default="")
+    forked_from_id:  Mapped[int]      = mapped_column(Integer, nullable=True)  # source workspace if forked
     owner_id:        Mapped[int]      = mapped_column(ForeignKey("users.id"))
     created_at:      Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at:      Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
