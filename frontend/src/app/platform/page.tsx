@@ -83,7 +83,7 @@ export default function PlatformPage() {
     <AppShell>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform</h1>
+          <h1 className="t-h1">Platform</h1>
           <p className="text-sm text-muted mt-1">
             Live infrastructure, the seven research systems behind the product, and how they are measured.
           </p>

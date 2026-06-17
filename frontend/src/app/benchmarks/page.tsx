@@ -63,7 +63,7 @@ export default function BenchmarksPage() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2.5">
+            <h1 className="t-h1 flex items-center gap-2.5">
               <BarChart3 className="text-astra-600 dark:text-astra-400" size={26} aria-hidden="true" />
               Scheduler benchmarks
             </h1>

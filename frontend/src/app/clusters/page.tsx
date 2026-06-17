@@ -61,7 +61,7 @@ export default function ClustersPage() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Clusters</h1>
+            <h1 className="t-h1">Clusters</h1>
             <p className="text-sm text-muted mt-1">
               Live federation telemetry, the exact input the PPO scheduler learns from (refreshed every {METRICS_POLL_MS / 1000}s).
             </p>

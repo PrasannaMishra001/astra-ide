@@ -14,16 +14,20 @@ import type { editor } from 'monaco-editor';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { MonacoBinding } from 'y-monaco';
-import { Play, Download, Share2, Loader2, Settings2, Check } from 'lucide-react';
+import { Play, Download, Share2, Loader2, Settings2, Check, Palette } from 'lucide-react';
+import type { Monaco } from '@monaco-editor/react';
 
 import { executeCode, type ExecuteResponse } from '../lib/api';
 import { cn } from '../lib/utils';
 import { toast } from '../lib/toast';
-import { useTheme } from '../lib/theme';
 import BottomPanel from './BottomPanel';
 import ShareModal from './ShareModal';
 import EditorStatusBar from './EditorStatusBar';
 import KeybindingsHelp from './KeybindingsHelp';
+import ThemePicker from './ThemePicker';
+import {
+  applyEditorTheme, getSavedTheme, saveTheme, themeById, resolveMonacoName,
+} from '../lib/editorThemes';
 
 // Editor preferences, persisted across sessions.
 interface EditorPrefs { fontSize: number; minimap: boolean; wordWrap: boolean; }
@@ -101,8 +105,20 @@ export default function CollabEditor({
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [prefs, setPrefs] = useState<EditorPrefs>(loadPrefs);
-  const [theme] = useTheme();
-  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
+  // Editor color theme (VS Code themes via monaco-themes), independent of the
+  // app light/dark chrome. Kept in sync with the <Editor theme> prop.
+  const [themeId, setThemeId] = useState<string>(getSavedTheme);
+  const [monacoTheme, setMonacoTheme] = useState<string>(
+    () => resolveMonacoName(getSavedTheme()));
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const monacoRef = useRef<Monaco | null>(null);
+
+  async function pickTheme(id: string) {
+    setThemeId(id); saveTheme(id);
+    if (monacoRef.current) setMonacoTheme(await applyEditorTheme(monacoRef.current, id));
+    setShowThemePicker(false);
+    toast.success('Theme applied', themeById(id).label);
+  }
 
   function updatePref<K extends keyof EditorPrefs>(k: K, v: EditorPrefs[K]) {
     const next = { ...prefs, [k]: v };
@@ -147,8 +163,11 @@ export default function CollabEditor({
     };
   }, [room, username]);
 
-  const onMount = (instance: editor.IStandaloneCodeEditor) => {
+  const onMount = (instance: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = instance;
+    monacoRef.current = monaco;
+    // Register + apply the saved VS Code theme, then sync the prop.
+    applyEditorTheme(monaco, themeId).then(setMonacoTheme).catch(() => {});
     const ydoc     = ydocRef.current!;
     const provider = providerRef.current!;
     const ytext    = ydoc.getText('monaco');
@@ -334,11 +353,21 @@ export default function CollabEditor({
                     {prefs.wordWrap && <Check size={11} className="text-white" />}
                   </span>
                 </button>
-                <div className="px-1 pt-1 text-[10px] text-slate-500">Theme follows the app toggle.</div>
+                <div className="px-1 pt-1 text-[10px] text-slate-500">Use the Theme button for editor colors.</div>
               </div>
             </>
           )}
         </div>
+
+        {/* Theme picker (VS Code themes) */}
+        <button
+          type="button"
+          onClick={() => setShowThemePicker(true)}
+          title="Editor theme (VS Code themes)"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
+        >
+          <Palette size={13} /> <span className="hidden lg:inline">{themeById(themeId).label}</span>
+        </button>
 
         <span className="text-slate-500 ml-2 hidden md:inline">room: <span className="font-mono">{room}</span></span>
 
@@ -427,6 +456,11 @@ export default function CollabEditor({
 
       {/* Keybindings cheatsheet (opens via Ctrl/Cmd+K or status bar "?") */}
       <KeybindingsHelp open={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* VS Code theme picker */}
+      {showThemePicker && (
+        <ThemePicker current={themeId} onPick={pickTheme} onClose={() => setShowThemePicker(false)} />
+      )}
     </div>
   );
 }

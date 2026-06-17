@@ -29,7 +29,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans:  ['var(--font-sans)',  'Inter', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Source Serif 4', 'Georgia', 'serif'],
+        mono:  ['var(--font-mono)',  'Source Code Pro', 'JetBrains Mono', 'monospace'],
       },
       boxShadow: {
         card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.06)',

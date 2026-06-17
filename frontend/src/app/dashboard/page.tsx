@@ -119,7 +119,7 @@ export default function DashboardPage() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Workspaces</h1>
+            <h1 className="t-h1">Workspaces</h1>
             <p className="text-sm text-muted mt-1">
               {owned.length} owned, {shared.length} shared with you
             </p>
