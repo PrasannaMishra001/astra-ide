@@ -75,6 +75,9 @@ def import_repo(workspace_id: int, git_url: str) -> ImportResult:
         return ImportResult(True, f"imported {git_url}", n)
     except subprocess.TimeoutExpired:
         return ImportResult(False, "clone timed out (repo too large?)")
+    except FileNotFoundError:
+        # `git` binary not present on the host/container.
+        return ImportResult(False, "git is not available on the server")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

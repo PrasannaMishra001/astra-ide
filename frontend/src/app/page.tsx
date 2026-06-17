@@ -5,6 +5,7 @@ import {
   Brain, Cpu, Eye, Shield, Network, Leaf, Users, Github,
 } from 'lucide-react';
 
+import ThemeToggle       from '../components/ThemeToggle';
 import AuroraBackground   from '../components/ui/AuroraBackground';
 import Spotlight          from '../components/ui/Spotlight';
 import Sparkles           from '../components/ui/Sparkles';
@@ -86,7 +87,8 @@ export default function HomePage() {
               ASTRA-<span className="text-astra-500">IDE</span>
             </span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="!text-slate-200 hover:!bg-white/10" />
             <Link href="/login" className="px-3 py-1.5 text-sm rounded hover:bg-slate-800/70 text-slate-200">
               Log in
             </Link>
@@ -163,12 +165,12 @@ export default function HomePage() {
       </AuroraBackground>
 
       {/* ─────────── INTERACTIVE GLOBE ─────────── */}
-      <section className="bg-slate-950 py-24 border-t border-slate-900">
+      <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Live globe</p>
             <h2 className="text-3xl md:text-4xl font-bold">Workspaces around the world</h2>
-            <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
+            <p className="text-muted mt-4 max-w-2xl mx-auto">
               Every user connects to the nearest cluster. The PPO scheduler watches global state and
               routes workspaces across <span className="text-astra-400">cluster-a (Denmark)</span>,{' '}
               <span className="text-purple-400">cluster-b (India)</span>, and{' '}
@@ -181,12 +183,12 @@ export default function HomePage() {
       </section>
 
       {/* ─────────── DEMO TERMINAL ─────────── */}
-      <section className="bg-slate-950 py-24 border-t border-slate-900">
+      <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Live demo</p>
             <h2 className="text-3xl md:text-4xl font-bold">Adaptive sandboxing, in real time</h2>
-            <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
+            <p className="text-muted mt-4 max-w-2xl mx-auto">
               When a user submits code, the risk scorer routes it to the right isolation tier:
               <span className="text-emerald-400"> runc </span>(low overhead),
               <span className="text-amber-400"> gVisor </span>(user-space kernel), or
@@ -198,7 +200,7 @@ export default function HomePage() {
       </section>
 
       {/* ─────────── BENTO GRID ─────────── */}
-      <section className="bg-slate-950 py-24 border-t border-slate-900">
+      <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Seven breakthroughs</p>
@@ -246,7 +248,7 @@ export default function HomePage() {
       </section>
 
       {/* ─────────── TEXT HOVER + TEAM ─────────── */}
-      <section className="bg-slate-950 py-24 border-t border-slate-900">
+      <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-6xl mx-auto px-6">
           <div className="h-52 md:h-72">
             <TextHoverEffect text="ASTRA-IDE" />
@@ -257,12 +259,12 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {TEAM.map((m) => (
                 <ThreeDCard key={m.roll} intensity={10}>
-                  <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/60 backdrop-blur text-center">
+                  <div className="p-5 card text-center">
                     <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-astra-500 to-purple-600 flex items-center justify-center text-xl font-bold mb-3">
                       {m.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                     </div>
                     <div className="font-semibold">{m.name}</div>
-                    <div className="text-xs text-slate-400 mt-0.5 font-mono">{m.roll}</div>
+                    <div className="text-xs text-faint mt-0.5 font-mono">{m.roll}</div>
                   </div>
                 </ThreeDCard>
               ))}
@@ -272,12 +274,12 @@ export default function HomePage() {
       </section>
 
       {/* ─────────── CTA ─────────── */}
-      <section className="bg-slate-950 py-24 border-t border-slate-900">
+      <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to try the future of cloud IDEs?
           </h2>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+          <p className="text-muted mb-8 max-w-xl mx-auto">
             Spin up a workspace in seconds. Get a private Monaco editor with collaborative editing,
             real-time risk-tier assignment, and one-click code execution.
           </p>
@@ -289,9 +291,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-900 px-6 py-6 text-xs text-slate-500 text-center">
+      <footer className="border-t border-edge px-6 py-6 text-xs text-faint text-center">
         ASTRA-IDE · 2026 · <a href="https://github.com/PrasannaMishra001/astra-ide"
-                              className="text-slate-400 hover:text-slate-200">GitHub</a>
+                              className="text-muted hover:text-ink">GitHub</a>
       </footer>
     </main>
   );
@@ -301,7 +303,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <div className="text-2xl font-bold text-astra-400">{value}</div>
-      <div className="text-xs text-slate-400 mt-1">{label}</div>
+      <div className="text-xs text-faint mt-1">{label}</div>
     </div>
   );
 }
