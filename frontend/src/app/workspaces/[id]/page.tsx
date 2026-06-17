@@ -15,6 +15,7 @@ import { useAuth } from '../../../lib/auth';
 import { toast } from '../../../lib/toast';
 import ThemeToggle from '../../../components/ThemeToggle';
 import PresenceBar, { usePresence } from '../../../components/Presence';
+import Tooltip from '../../../components/ui/Tooltip';
 import { cn } from '../../../lib/utils';
 
 const CollabEditor  = dynamic(() => import('../../../components/CollabEditor'),  { ssr: false });
@@ -142,17 +143,23 @@ export default function WorkspacePage() {
 
         <div className="ml-auto flex items-center gap-1.5">
           <PresenceBar peers={peers} />
-          <button type="button" onClick={() => setModal('share')} title="Share" className="btn-ghost px-2 py-1.5">
-            <Share2 size={15} /> <span className="hidden lg:inline text-xs">Share</span>
-          </button>
-          {isOwner && (
-            <button type="button" onClick={() => setModal('history')} title="Change history (owner only)" className="btn-ghost px-2 py-1.5">
-              <History size={15} />
+          <Tooltip content="Share workspace">
+            <button type="button" onClick={() => setModal('share')} className="btn-ghost px-2 py-1.5">
+              <Share2 size={15} /> <span className="hidden lg:inline text-xs">Share</span>
             </button>
+          </Tooltip>
+          {isOwner && (
+            <Tooltip content="Change history">
+              <button type="button" onClick={() => setModal('history')} aria-label="Change history" className="btn-ghost px-2 py-1.5">
+                <History size={15} />
+              </button>
+            </Tooltip>
           )}
-          <button type="button" onClick={() => setModal('settings')} title="Settings" className="btn-ghost px-2 py-1.5">
-            <Settings2 size={15} />
-          </button>
+          <Tooltip content="Settings">
+            <button type="button" onClick={() => setModal('settings')} aria-label="Settings" className="btn-ghost px-2 py-1.5">
+              <Settings2 size={15} />
+            </button>
+          </Tooltip>
           <ThemeToggle />
           {ws.status !== 'RUNNING' ? (
             <button type="button" onClick={async () => { await startWorkspace(ws.id); refresh(); }}

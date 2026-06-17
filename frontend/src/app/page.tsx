@@ -1,42 +1,36 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import {
-  Brain, ChevronDown, Cpu, Eye, LogOut, Shield, Network, Leaf, Users, Github,
-} from 'lucide-react';
-import { useState } from 'react';
+import { Github } from 'lucide-react';
 
-import ThemeToggle       from '../components/ThemeToggle';
-import { useAuth }       from '../lib/auth';
-import AuroraBackground   from '../components/ui/AuroraBackground';
-import Spotlight          from '../components/ui/Spotlight';
-import Sparkles           from '../components/ui/Sparkles';
-import ThreeDCard         from '../components/ui/ThreeDCard';
+import Navbar              from '../components/Navbar';
+import AuroraBackground    from '../components/ui/AuroraBackground';
+import Spotlight           from '../components/ui/Spotlight';
+import Sparkles            from '../components/ui/Sparkles';
+import ThreeDCard          from '../components/ui/ThreeDCard';
 import HoverBorderGradient from '../components/ui/HoverBorderGradient';
-import CanvasText         from '../components/ui/CanvasText';
-import TextHoverEffect    from '../components/ui/TextHoverEffect';
+import CanvasText          from '../components/ui/CanvasText';
+import TextHoverEffect     from '../components/ui/TextHoverEffect';
 import AnimatedTerminal, { type TerminalLine } from '../components/ui/AnimatedTerminal';
 import InteractiveGlobe, { type GlobeMarker, type GlobeArc } from '../components/ui/InteractiveGlobe';
 import { BentoGrid, BentoCard } from '../components/ui/BentoGrid';
+import DottedGlowBackground from '../components/ui/DottedGlowBackground';
+import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
 
 const DEMO_TERMINAL: TerminalLine[] = [
-  { kind: 'comment', text: '# user requests a workspace' },
-  { kind: 'cmd', prompt: '$', text: 'POST /api/v1/workspaces  language=bash network=true' },
+  { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'POST /api/v1/workspaces  language=bash network=true' },
   { kind: 'out', text: '-> risk scorer evaluating...' },
   { kind: 'ok',  text: 'x language=bash         +0.30' },
   { kind: 'ok',  text: 'x network_access=true   +0.20' },
   { kind: 'ok',  text: 'x filesystem_write=true +0.20' },
   { kind: 'warn', text: '! suspicious "subprocess" in code  +0.10' },
   { kind: 'out', text: '-> final risk = 0.80 -> sandbox = firecracker' },
-  { kind: 'cmd', prompt: '$', text: 'kubectl apply -f workspace.yaml  runtimeClassName=firecracker' },
+  { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'kubectl apply -f workspace.yaml' },
+  { kind: 'out', text: 'runtimeClassName=firecracker' },
   { kind: 'ok',  text: 'x pod ws-7-a2c3 scheduled on node-eu-2 (lowest carbon)' },
-  { kind: 'comment', text: '# eBPF telemetry feeds PPO scheduler state in real-time' },
-  { kind: 'cmd', prompt: '$', text: 'tetragon trace --pod ws-7-a2c3' },
+  { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'tetragon trace --pod ws-7-a2c3' },
   { kind: 'out', text: 'sched_switch  cpu=2  run_q=3   net=124KiB/s' },
 ];
 
-// Simulated live users + clusters around the world
 const GLOBE_MARKERS: GlobeMarker[] = [
   { id: 'cluster-a', label: 'cluster-a (DK)',   lat: 55.5,  lng: 9.5,    kind: 'cluster' },
   { id: 'cluster-b', label: 'cluster-b (IN)',   lat: 28.6,  lng: 77.2,   kind: 'cluster' },
@@ -67,7 +61,6 @@ const GLOBE_ARCS: GlobeArc[] = [
   { fromId: 'cluster-b', toId: 'cluster-c', flow: 0.3, color: 'rgba(168,85,247,0.5)' },
 ];
 
-// Team — sorted by roll number ascending
 const TEAM = [
   { name: 'Prasanna Mishra',   roll: '2023IMT-059' },
   { name: 'Udit Srivastava',   roll: '2023IMT-084' },
@@ -77,15 +70,13 @@ const TEAM = [
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      {/* ─────────── HERO ─────────── */}
+      {/* HERO */}
       <AuroraBackground className="relative min-h-screen overflow-hidden">
         <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(168,85,247,0.7)" />
         <Sparkles density={0.4} color="#a5b4fc" />
 
-        {/* Glassy navbar — consistent with AppShell, auth-aware */}
-        <HomeNav />
+        <Navbar variant="hero" />
 
-        {/* Hero content */}
         <section className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-24 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
           <div className="lg:col-span-3 space-y-7">
             <div>
@@ -135,32 +126,43 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Logo card with improved 3D tilt */}
           <div className="lg:col-span-2 flex justify-center">
-            <AnimatedTerminal lines={DEMO_TERMINAL} className="w-full max-w-md" />
+            <AnimatedTerminal lines={DEMO_TERMINAL} title="astra-ide@cloud" className="w-full max-w-md" />
           </div>
         </section>
       </AuroraBackground>
 
-      {/* ─────────── INTERACTIVE GLOBE ─────────── */}
-      <section className="bg-bg py-24 border-t border-edge">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-10 text-center">
-            <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Live globe</p>
-            <h2 className="text-3xl md:text-4xl font-bold">Workspaces around the world</h2>
-            <p className="text-muted mt-4 max-w-2xl mx-auto">
-              Every user connects to the nearest cluster. The PPO scheduler watches global state and
-              routes workspaces across <span className="text-astra-400">cluster-a (Denmark)</span>,{' '}
-              <span className="text-purple-400">cluster-b (India)</span>, and{' '}
-              <span className="text-pink-400">cluster-c (US)</span>.
-              Drag the globe to rotate it.
-            </p>
+      {/* GLOBE - text left, globe right (partially clipped) */}
+      <section className="bg-bg py-24 border-t border-edge overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div className="space-y-6">
+              <p className="text-xs uppercase tracking-widest text-astra-400">Live globe</p>
+              <h2 className="text-3xl md:text-4xl font-bold leading-tight">
+                Workspaces around the world
+              </h2>
+              <p className="text-muted leading-relaxed max-w-lg">
+                Every user connects to the nearest cluster. The PPO scheduler watches global state and
+                routes workspaces across{' '}
+                <span className="text-astra-600 dark:text-astra-400 font-medium">cluster-a (Denmark)</span>,{' '}
+                <span className="text-purple-600 dark:text-purple-400 font-medium">cluster-b (India)</span>, and{' '}
+                <span className="text-pink-600 dark:text-pink-400 font-medium">cluster-c (US)</span>.
+                Drag the globe to rotate it.
+              </p>
+              <div className="grid grid-cols-3 gap-4 pt-2">
+                <MiniStat label="Clusters" value="3" />
+                <MiniStat label="Regions" value="EU / IN / US" />
+                <MiniStat label="Failover" value="< 10s" />
+              </div>
+            </div>
+            <div className="relative lg:-mr-24 xl:-mr-32">
+              <InteractiveGlobe markers={GLOBE_MARKERS} arcs={GLOBE_ARCS} height={520} />
+            </div>
           </div>
-          <InteractiveGlobe markers={GLOBE_MARKERS} arcs={GLOBE_ARCS} height={520} />
         </div>
       </section>
 
-      {/* ─────────── DEMO TERMINAL ─────────── */}
+      {/* DEMO TERMINAL */}
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
@@ -168,16 +170,16 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold">Adaptive sandboxing, in real time</h2>
             <p className="text-muted mt-4 max-w-2xl mx-auto">
               When a user submits code, the risk scorer routes it to the right isolation tier:
-              <span className="text-emerald-400"> runc </span>(low overhead),
-              <span className="text-amber-400"> gVisor </span>(user-space kernel), or
-              <span className="text-rose-400"> Firecracker </span>(hardware microVM).
+              <span className="text-emerald-600 dark:text-emerald-400"> runc </span>(low overhead),
+              <span className="text-amber-600 dark:text-amber-400"> gVisor </span>(user-space kernel), or
+              <span className="text-rose-600 dark:text-rose-400"> Firecracker </span>(hardware microVM).
             </p>
           </div>
           <AnimatedTerminal lines={DEMO_TERMINAL} title="astra-ide@scheduler" />
         </div>
       </section>
 
-      {/* ─────────── BENTO GRID ─────────── */}
+      {/* BENTO GRID */}
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
@@ -225,7 +227,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─────────── TEXT HOVER + TEAM ─────────── */}
+      {/* TEXT HOVER + TEAM */}
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-6xl mx-auto px-6">
           <div className="h-52 md:h-72">
@@ -251,26 +253,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─────────── CTA ─────────── */}
-      <section className="bg-bg py-24 border-t border-edge">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to try the future of cloud IDEs?
-          </h2>
-          <p className="text-muted mb-8 max-w-xl mx-auto">
-            Spin up a workspace in seconds. Get a private Monaco editor with collaborative editing,
-            real-time risk-tier assignment, and one-click code execution.
-          </p>
-          <Link href="/register">
-            <HoverBorderGradient containerClassName="text-base">
-              Create your free account
-            </HoverBorderGradient>
-          </Link>
-        </div>
+      {/* CTA with dotted glow background */}
+      <section className="border-t border-edge">
+        <DottedGlowBackground
+          className="bg-bg py-28"
+          dotColor="rgba(99,102,241,0.18)"
+          glowColor="rgba(168,85,247,0.12)"
+        >
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to try the future of cloud IDEs?
+            </h2>
+            <p className="text-muted mb-8 max-w-xl mx-auto">
+              Spin up a workspace in seconds. Get a private Monaco editor with collaborative editing,
+              real-time risk-tier assignment, and one-click code execution.
+            </p>
+            <Link href="/register">
+              <HoverBorderGradient containerClassName="text-base">
+                Create your free account
+              </HoverBorderGradient>
+            </Link>
+          </div>
+        </DottedGlowBackground>
       </section>
 
-      <footer className="border-t border-edge px-6 py-6 text-xs text-faint text-center">
-        ASTRA-IDE · 2026 · <a href="https://github.com/PrasannaMishra001/astra-ide"
+      <footer className="border-t border-edge px-6 py-6 text-xs text-faint text-center bg-bg">
+        ASTRA-IDE &middot; 2026 &middot; <a href="https://github.com/PrasannaMishra001/astra-ide"
                               className="text-muted hover:text-ink">GitHub</a>
       </footer>
     </main>
@@ -286,78 +294,11 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function HomeNav() {
-  const router = useRouter();
-  const { token, user, hydrated, clearSession } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const loggedIn = hydrated && !!token && !!user;
-
+function MiniStat({ value, label }: { value: string; label: string }) {
   return (
-    <nav className="sticky top-0 z-30 mx-auto max-w-7xl px-4 sm:px-6 py-3">
-      <div className="flex items-center gap-4 rounded-2xl border border-white/10
-                      bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl px-5 py-2.5 shadow-lg">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image src="/logo.png" alt="ASTRA-IDE" width={30} height={30} priority className="rounded" />
-          <span className="text-[15px] font-bold tracking-tight text-white">
-            ASTRA-<span className="text-astra-400">IDE</span>
-          </span>
-        </Link>
-
-        {loggedIn && (
-          <Link href="/dashboard"
-                className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-            Dashboard
-          </Link>
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle className="!text-white/70 hover:!text-white hover:!bg-white/10" />
-
-          {!loggedIn ? (
-            <>
-              <Link href="/login"
-                    className="px-3 py-1.5 text-sm rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-                Log in
-              </Link>
-              <Link href="/register">
-                <HoverBorderGradient containerClassName="text-sm">Sign up</HoverBorderGradient>
-              </Link>
-            </>
-          ) : (
-            <div className="relative">
-              <button type="button" onClick={() => setMenuOpen((v) => !v)}
-                      aria-haspopup="menu" aria-expanded={menuOpen}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm">
-                <span className="w-6 h-6 rounded-full bg-astra-600 text-white text-[11px] font-semibold
-                                 flex items-center justify-center">
-                  {(user.username?.[0] ?? '?').toUpperCase()}
-                </span>
-                <span className="hidden sm:inline max-w-[8rem] truncate">{user.username}</span>
-                <ChevronDown size={14} />
-              </button>
-              {menuOpen && (
-                <>
-                  <button type="button" tabIndex={-1} aria-label="Close menu"
-                          className="fixed inset-0 z-40 cursor-default"
-                          onClick={() => setMenuOpen(false)} />
-                  <div role="menu"
-                       className="absolute right-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-white/10
-                                  bg-slate-900/90 backdrop-blur-xl p-1.5 shadow-xl text-white">
-                    <Link href="/dashboard" role="menuitem"
-                          className="block rounded-lg px-3 py-2 text-sm hover:bg-white/10">Dashboard</Link>
-                    <button type="button" role="menuitem"
-                            onClick={() => { clearSession(); router.push('/'); setMenuOpen(false); }}
-                            className="w-full text-left rounded-lg px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/10
-                                       flex items-center gap-2">
-                      <LogOut size={14} /> Log out
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </nav>
+    <div className="text-center">
+      <div className="text-lg font-bold text-ink">{value}</div>
+      <div className="text-[11px] text-faint">{label}</div>
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from '../lib/api';
 import { toast } from '../lib/toast';
 import { cn } from '../lib/utils';
+import Tooltip from './ui/Tooltip';
 import ThemePicker from './ThemePicker';
 import {
   applyEditorTheme, getSavedTheme, saveTheme, themeById, resolveMonacoName,
@@ -350,15 +351,20 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
           {frozen && <span className="chip border-amber-500/40 text-amber-600 dark:text-amber-400">read-only</span>}
           <div className="ml-auto flex items-center gap-1.5">
             <span className="text-[10px] text-faint hidden md:inline">auto-save on</span>
-            <button type="button" onClick={() => setShowTerminal((v) => !v)}
-                    title="Toggle terminal"
-                    className={cn('btn-ghost px-2 py-1 text-xs', showTerminal && 'text-astra-500')}>
-              <TerminalSquare size={13} /> <span className="hidden lg:inline">Terminal</span>
-            </button>
-            <button type="button" onClick={() => setShowThemePicker(true)} title="Editor theme (VS Code themes)"
-                    className="btn-ghost px-2 py-1 text-xs">
-              <Palette size={13} /> <span className="hidden lg:inline">{themeById(themeId).label}</span>
-            </button>
+            <Tooltip content="Toggle terminal">
+              <button type="button" onClick={() => setShowTerminal((v) => !v)}
+                      aria-label="Toggle terminal"
+                      className={cn('btn-ghost px-2 py-1 text-xs', showTerminal && 'text-astra-500')}>
+                <TerminalSquare size={13} /> <span className="hidden lg:inline">Terminal</span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Editor theme">
+              <button type="button" onClick={() => setShowThemePicker(true)}
+                      aria-label="Editor theme"
+                      className="btn-ghost px-2 py-1 text-xs">
+                <Palette size={13} /> <span className="hidden lg:inline">{themeById(themeId).label}</span>
+              </button>
+            </Tooltip>
             {sel && !isImage(sel) && (
               <button type="button" onClick={() => save(false)} disabled={saveState === 'saving' || !dirty || frozen}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-medium">
@@ -450,6 +456,8 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
 
 function IconBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" title={title} onClick={onClick} className="btn-ghost p-1.5">{children}</button>
+    <Tooltip content={title}>
+      <button type="button" aria-label={title} onClick={onClick} className="btn-ghost p-1.5">{children}</button>
+    </Tooltip>
   );
 }
