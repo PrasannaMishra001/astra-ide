@@ -8,6 +8,8 @@ import { UserPlus, Loader2, AlertCircle } from 'lucide-react';
 
 import { register as registerApi } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import BackgroundRippleEffect from '../../components/ui/BackgroundRippleEffect';
+import CardSpotlight from '../../components/ui/CardSpotlight';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,14 +36,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-4">
-      <div className="ambient" aria-hidden="true" />
+    <main className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+      <BackgroundRippleEffect />
 
+      <CardSpotlight className="relative z-10 w-full max-w-sm">
       <motion.form
         onSubmit={onSubmit}
         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-sm card p-8 shadow-pop"
+        className="w-full p-8"
       >
         <div className="flex flex-col items-center mb-6">
           <Link href="/" className="mb-3">
@@ -99,6 +102,7 @@ export default function RegisterPage() {
           </Link>
         </p>
       </motion.form>
+      </CardSpotlight>
     </main>
   );
 }

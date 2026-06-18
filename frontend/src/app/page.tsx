@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Github } from 'lucide-react';
 
 import Navbar              from '../components/Navbar';
@@ -11,10 +12,12 @@ import HoverBorderGradient from '../components/ui/HoverBorderGradient';
 import CanvasText          from '../components/ui/CanvasText';
 import TextHoverEffect     from '../components/ui/TextHoverEffect';
 import AnimatedTerminal, { type TerminalLine } from '../components/ui/AnimatedTerminal';
-import InteractiveGlobe, { type GlobeMarker, type GlobeArc } from '../components/ui/InteractiveGlobe';
-import { BentoGrid, BentoCard } from '../components/ui/BentoGrid';
-import DottedGlowBackground from '../components/ui/DottedGlowBackground';
+import LayoutGrid, { type GridCard } from '../components/ui/LayoutGrid';
+import NoiseBackground     from '../components/ui/NoiseBackground';
+import BigFooter           from '../components/ui/BigFooter';
 import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
+
+const CobeGlobe = dynamic(() => import('../components/ui/CobeGlobe'), { ssr: false });
 
 const DEMO_TERMINAL: TerminalLine[] = [
   { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'POST /api/v1/workspaces  language=bash network=true' },
@@ -31,34 +34,84 @@ const DEMO_TERMINAL: TerminalLine[] = [
   { kind: 'out', text: 'sched_switch  cpu=2  run_q=3   net=124KiB/s' },
 ];
 
-const GLOBE_MARKERS: GlobeMarker[] = [
-  { id: 'cluster-a', label: 'cluster-a (DK)',   lat: 55.5,  lng: 9.5,    kind: 'cluster' },
-  { id: 'cluster-b', label: 'cluster-b (IN)',   lat: 28.6,  lng: 77.2,   kind: 'cluster' },
-  { id: 'cluster-c', label: 'cluster-c (US)',   lat: 37.7,  lng: -122.4, kind: 'cluster' },
-  { id: 'u-mum',  label: 'Mumbai',        lat: 19.07, lng: 72.87, kind: 'user' },
-  { id: 'u-bng',  label: 'Bangalore',     lat: 12.97, lng: 77.59, kind: 'user' },
-  { id: 'u-blr',  label: 'Berlin',        lat: 52.52, lng: 13.40, kind: 'user' },
-  { id: 'u-lon',  label: 'London',        lat: 51.51, lng:  -0.13, kind: 'user' },
-  { id: 'u-nyc',  label: 'New York',      lat: 40.71, lng: -74.01, kind: 'user' },
-  { id: 'u-tky',  label: 'Tokyo',         lat: 35.68, lng: 139.69, kind: 'user' },
-  { id: 'u-syd',  label: 'Sydney',        lat: -33.87, lng: 151.21, kind: 'user' },
-  { id: 'u-spo',  label: 'Sao Paulo',     lat: -23.55, lng: -46.63, kind: 'user' },
-  { id: 'w-1', label: 'ws-py-runc',    lat: 56.0,  lng: 10.0,  kind: 'workspace' },
-  { id: 'w-2', label: 'ws-cpp-gvisor', lat: 28.0,  lng: 78.0,  kind: 'workspace' },
-  { id: 'w-3', label: 'ws-sh-fc',      lat: 37.0,  lng: -121.0, kind: 'workspace' },
-];
-
-const GLOBE_ARCS: GlobeArc[] = [
-  { fromId: 'u-mum',  toId: 'cluster-b', flow: 0.8 },
-  { fromId: 'u-bng',  toId: 'cluster-b', flow: 0.7 },
-  { fromId: 'u-blr',  toId: 'cluster-a', flow: 0.6 },
-  { fromId: 'u-lon',  toId: 'cluster-a', flow: 0.5 },
-  { fromId: 'u-nyc',  toId: 'cluster-c', flow: 0.9 },
-  { fromId: 'u-tky',  toId: 'cluster-b', flow: 0.4 },
-  { fromId: 'u-syd',  toId: 'cluster-c', flow: 0.5 },
-  { fromId: 'u-spo',  toId: 'cluster-c', flow: 0.6 },
-  { fromId: 'cluster-a', toId: 'cluster-b', flow: 0.3, color: 'rgba(168,85,247,0.5)' },
-  { fromId: 'cluster-b', toId: 'cluster-c', flow: 0.3, color: 'rgba(168,85,247,0.5)' },
+const FEATURE_CARDS: GridCard[] = [
+  {
+    id: 'ppo', accent: 'astra', span: 'md:col-span-2', icon: <Brain size={28} />,
+    title: 'DRL-PPO Scheduler',
+    blurb: 'A reinforcement-learning agent decides which machine runs your workspace.',
+    what: 'Instead of the default Kubernetes scheduler, ASTRA uses a Proximal Policy Optimization (PPO) agent. It reads a 40-number snapshot of the whole cluster (CPU, memory, queue length, carbon, latency) and learns from experience where to place each workspace so the cluster stays fast and full without overloading any node.',
+    how: [
+      'Create a workspace — placement is automatic, you do nothing.',
+      'Open the Platform page to watch the agent\'s live decisions and reward.',
+      'Heavy load? The agent spreads new pods to idle nodes on its own.',
+    ],
+  },
+  {
+    id: 'ebpf', accent: 'cyan', icon: <Eye size={28} />,
+    title: 'eBPF Telemetry',
+    blurb: 'Kernel-level signals collected with under 1% overhead.',
+    what: 'Tiny safe programs run inside the Linux kernel (via Tetragon) and report what every workspace actually does — syscalls, CPU scheduling, network bytes — in well under a second. This is the live data the scheduler and the security scorer both feed on.',
+    how: [
+      'Run any code in a workspace; telemetry starts automatically.',
+      'See per-workspace CPU / run-queue / network in the Clusters view.',
+      'Suspicious syscalls raise the risk score in real time.',
+    ],
+  },
+  {
+    id: 'sandbox', accent: 'rose', icon: <Shield size={28} />,
+    title: 'Adaptive Sandboxing',
+    blurb: 'Risky code is automatically locked into a stronger jail.',
+    what: 'Every workspace gets a risk score from its language, permissions, and code patterns. Low risk runs in fast runc containers; medium risk in gVisor (a user-space kernel); high risk in a Firecracker microVM with its own kernel — so dangerous code can\'t escape.',
+    how: [
+      'Pick "Auto" when creating a workspace to let the scorer choose.',
+      'See the chosen tier (runc / gVisor / Firecracker) in the header.',
+      'Owners can pin a stricter tier from the tier menu any time.',
+    ],
+  },
+  {
+    id: 'lstm', accent: 'emerald', icon: <Cpu size={28} />,
+    title: 'LSTM Prewarming',
+    blurb: 'Predicts when you\'ll log in and warms a workspace beforehand.',
+    what: 'A small LSTM model learns each user\'s usage rhythm and predicts sessions about 15 minutes ahead. Matching workspaces are pre-started into a warm pool, so when you actually open one the cold-start wait is gone.',
+    how: [
+      'Just use ASTRA normally for a few days so it learns your pattern.',
+      'Return at your usual time — your workspace opens near-instantly.',
+      'Warm-pool hits show up on the Benchmarks page.',
+    ],
+  },
+  {
+    id: 'multi', accent: 'amber', icon: <Network size={28} />,
+    title: 'Multi-Cluster',
+    blurb: 'Three regions act as one pool the scheduler sees globally.',
+    what: 'Karmada federates cluster-a (Denmark), cluster-b (India) and cluster-c (US). Workspaces are routed to the nearest healthy region, and if a cluster fails its workloads are rescheduled to a survivor in seconds.',
+    how: [
+      'You connect to the closest region automatically — lowest latency.',
+      'Watch live region health on the Clusters page.',
+      'If a region goes down, your workspaces fail over on their own.',
+    ],
+  },
+  {
+    id: 'carbon', accent: 'purple', icon: <Leaf size={28} />,
+    title: 'Carbon-Aware',
+    blurb: 'Batch jobs wait for cleaner, lower-carbon electricity.',
+    what: 'ASTRA reads each region\'s real-time grid carbon intensity (electricityMaps). Interactive workspaces run immediately, but deferrable batch jobs are scheduled into greener time windows or greener regions to cut emissions.',
+    how: [
+      'Mark a job as batch/deferrable when you submit it.',
+      'ASTRA delays it to a low-carbon window automatically.',
+      'See carbon saved per run on the Platform page.',
+    ],
+  },
+  {
+    id: 'crdt', accent: 'cyan', span: 'md:col-span-2', icon: <Users size={28} />,
+    title: 'Yjs CRDT Collaboration',
+    blurb: 'Edit the same file together in real time — like Google Docs for code.',
+    what: 'Monaco is wired to a Yjs CRDT so multiple people can type in the same file at once with no merge conflicts. Awareness shows every collaborator\'s cursor and selection, and sync latency stays under 20ms over WebSocket.',
+    how: [
+      'Open a workspace and click Share to invite teammates by username.',
+      'Open the Editor tab — you\'ll see their live cursors and names.',
+      'Use the presence bar to see who is viewing which file right now.',
+    ],
+  },
 ];
 
 const TEAM = [
@@ -156,7 +209,11 @@ export default function HomePage() {
               </div>
             </div>
             <div className="relative lg:-mr-24 xl:-mr-32">
-              <InteractiveGlobe markers={GLOBE_MARKERS} arcs={GLOBE_ARCS} height={520} />
+              <CobeGlobe />
+              <div className="flex items-center justify-center gap-5 mt-2 text-[11px] text-faint">
+                <Legend color="#a855f7" label="Workspaces" />
+                <Legend color="#60a5fa" label="Clusters" />
+              </div>
             </div>
           </div>
         </div>
@@ -179,51 +236,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BENTO GRID */}
+      {/* FEATURE LAYOUT GRID (click a card to expand + learn) */}
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Seven breakthroughs</p>
-            <h2 className="text-3xl md:text-4xl font-bold">Built for research, designed for production</h2>
+            <h2 className="t-liquid text-3xl md:text-5xl">Built for research, designed for production</h2>
+            <p className="text-muted mt-4 max-w-xl mx-auto">
+              Click any card to see what it does in plain language and how to use it.
+            </p>
           </div>
 
-          <BentoGrid>
-            <BentoCard accent="astra" span="col-2"
-              icon={<Brain size={28} />}
-              title="DRL-PPO Scheduler"
-              description="40-dim state vector. Multi-discrete action space. Proximal Policy Optimization replaces Kubernetes' default scheduler and learns optimal pod placement from live telemetry."
-            />
-            <BentoCard accent="cyan"
-              icon={<Eye size={28} />}
-              title="eBPF Telemetry"
-              description="Sub-second kernel-level signals via Tetragon + sched_ext. < 1% overhead."
-            />
-            <BentoCard accent="rose"
-              icon={<Shield size={28} />}
-              title="Adaptive Sandboxing"
-              description="runc -> gVisor -> Firecracker, auto-selected by real-time risk scoring."
-            />
-            <BentoCard accent="emerald"
-              icon={<Cpu size={28} />}
-              title="LSTM Prewarming"
-              description="Predicts user sessions 15 min ahead. Cold start eliminated for warm-pool hits."
-            />
-            <BentoCard accent="amber"
-              icon={<Network size={28} />}
-              title="Multi-Cluster"
-              description="Karmada federation routes load across regions. PPO sees the global state."
-            />
-            <BentoCard accent="purple"
-              icon={<Leaf size={28} />}
-              title="Carbon-Aware"
-              description="Real-time electricityMaps signal. Batch workloads defer to low-carbon windows."
-            />
-            <BentoCard accent="cyan" span="col-2"
-              icon={<Users size={28} />}
-              title="Yjs CRDT Collaboration"
-              description="Real-time conflict-free editing inside Monaco. Awareness shows every cursor. < 20ms sync latency over WebSocket."
-            />
-          </BentoGrid>
+          <LayoutGrid cards={FEATURE_CARDS} />
         </div>
       </section>
 
@@ -253,35 +277,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA with dotted glow background */}
-      <section className="border-t border-edge">
-        <DottedGlowBackground
-          className="bg-bg py-28"
-          dotColor="rgba(99,102,241,0.18)"
-          glowColor="rgba(168,85,247,0.12)"
-        >
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+      {/* CTA with animated noise background */}
+      <section className="border-t border-edge bg-bg py-24">
+        <div className="max-w-5xl mx-auto px-6">
+          <NoiseBackground className="px-8 py-16 sm:px-16 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               Ready to try the future of cloud IDEs?
             </h2>
-            <p className="text-muted mb-8 max-w-xl mx-auto">
+            <p className="text-white/80 mb-8 max-w-xl mx-auto">
               Spin up a workspace in seconds. Get a private Monaco editor with collaborative editing,
               real-time risk-tier assignment, and one-click code execution.
             </p>
-            <Link href="/register">
-              <HoverBorderGradient containerClassName="text-base">
-                Create your free account
-              </HoverBorderGradient>
+            <Link href="/register"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-slate-900
+                             font-semibold text-base shadow-lg hover:scale-[1.03] transition-transform">
+              Create your free account
             </Link>
-          </div>
-        </DottedGlowBackground>
+          </NoiseBackground>
+        </div>
       </section>
 
-      <footer className="border-t border-edge px-6 py-6 text-xs text-faint text-center bg-bg">
-        ASTRA-IDE &middot; 2026 &middot; <a href="https://github.com/PrasannaMishra001/astra-ide"
-                              className="text-muted hover:text-ink">GitHub</a>
-      </footer>
+      <BigFooter />
     </main>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+      {label}
+    </span>
   );
 }
 
