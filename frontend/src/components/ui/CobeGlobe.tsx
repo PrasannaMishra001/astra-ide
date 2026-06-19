@@ -15,13 +15,15 @@ const ARC     = [0.55, 0.5, 1]  as [number, number, number];
 const CLUSTERS = {
   a: [55.5, 9.5] as [number, number],     // Denmark
   b: [28.6, 77.2] as [number, number],    // India
-  c: [37.7, -122.4] as [number, number],  // US
+  c: [37.7, -122.4] as [number, number],  // US (California)
+  d: [1.35, 103.8] as [number, number],   // Singapore
 };
 
 const MARKERS = [
   { location: CLUSTERS.a, size: 0.1, color: CLUSTER },
   { location: CLUSTERS.b, size: 0.1, color: CLUSTER },
   { location: CLUSTERS.c, size: 0.1, color: CLUSTER },
+  { location: CLUSTERS.d, size: 0.1, color: CLUSTER },
   { location: [19.07, 72.87], size: 0.045, color: USER },  // Mumbai
   { location: [12.97, 77.59], size: 0.045, color: USER },  // Bangalore
   { location: [52.52, 13.40], size: 0.045, color: USER },  // Berlin
@@ -30,6 +32,7 @@ const MARKERS = [
   { location: [35.68, 139.69], size: 0.045, color: USER }, // Tokyo
   { location: [-33.87, 151.21], size: 0.045, color: USER },// Sydney
   { location: [-23.55, -46.63], size: 0.045, color: USER },// Sao Paulo
+  { location: [3.14, 101.69], size: 0.045, color: USER },  // Kuala Lumpur
 ];
 
 const ARCS = [
@@ -38,9 +41,10 @@ const ARCS = [
   { from: [52.52, 13.40] as [number, number],  to: CLUSTERS.a, color: ARC },
   { from: [51.51, -0.13] as [number, number],  to: CLUSTERS.a, color: ARC },
   { from: [40.71, -74.01] as [number, number], to: CLUSTERS.c, color: ARC },
-  { from: [35.68, 139.69] as [number, number], to: CLUSTERS.b, color: ARC },
-  { from: [-33.87, 151.21] as [number, number], to: CLUSTERS.c, color: ARC },
+  { from: [35.68, 139.69] as [number, number], to: CLUSTERS.d, color: ARC },
+  { from: [-33.87, 151.21] as [number, number], to: CLUSTERS.d, color: ARC },
   { from: [-23.55, -46.63] as [number, number], to: CLUSTERS.c, color: ARC },
+  { from: [3.14, 101.69] as [number, number],  to: CLUSTERS.d, color: ARC },
 ];
 
 export default function CobeGlobe({ className }: { className?: string }) {

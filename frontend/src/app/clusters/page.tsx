@@ -22,10 +22,12 @@ import { cn } from '../../lib/utils';
 
 const METRICS_POLL_MS = 4000;
 
-// Region metadata for the demo federation.
+// Region metadata for the demo federation (4 Karmada members).
 const CLUSTER_META: Record<string, { region: string; flagLabel: string }> = {
-  'cluster-a': { region: 'Denmark (west)', flagLabel: 'low-carbon grid' },
-  'cluster-b': { region: 'India (south)',  flagLabel: 'fossil-heavy grid' },
+  'cluster-a': { region: 'Denmark (west)',  flagLabel: 'low-carbon grid' },
+  'cluster-b': { region: 'India (north)',   flagLabel: 'fossil-heavy grid' },
+  'cluster-c': { region: 'California (US)',  flagLabel: 'mixed grid' },
+  'cluster-d': { region: 'Singapore',       flagLabel: 'mixed grid' },
 };
 
 export default function ClustersPage() {
@@ -76,7 +78,7 @@ export default function ClustersPage() {
           <Stat icon={<Boxes size={16} className="text-astra-600 dark:text-astra-400" />}
                 label="Workspaces" value={workspaces.length} sub={`${running} running`} />
           <Stat icon={<Globe2 size={16} className="text-purple-600 dark:text-purple-400" />}
-                label="Clusters" value={metrics?.clusters.length ?? 2} sub="federated regions" />
+                label="Clusters" value={metrics?.clusters.length ?? 4} sub="federated regions" />
           <Stat icon={<Server size={16} className="text-emerald-600 dark:text-emerald-400" />}
                 label="Nodes" value={metrics ? metrics.clusters.reduce((s, c) => s + c.nodes.length, 0) : '...'}
                 sub="reporting telemetry" />

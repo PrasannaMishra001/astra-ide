@@ -190,21 +190,22 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
-              <p className="text-xs uppercase tracking-widest text-astra-400">Live globe</p>
-              <h2 className="text-3xl md:text-4xl font-bold leading-tight">
+              <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400">Live globe</p>
+              <h2 className="t-liquid text-3xl md:text-5xl leading-tight">
                 Workspaces around the world
               </h2>
               <p className="text-muted leading-relaxed max-w-lg">
                 Every user connects to the nearest cluster. The PPO scheduler watches global state and
-                routes workspaces across{' '}
-                <span className="text-astra-600 dark:text-astra-400 font-medium">cluster-a (Denmark)</span>,{' '}
-                <span className="text-purple-600 dark:text-purple-400 font-medium">cluster-b (India)</span>, and{' '}
-                <span className="text-pink-600 dark:text-pink-400 font-medium">cluster-c (US)</span>.
+                routes workspaces across four federated regions:{' '}
+                <span className="text-astra-600 dark:text-astra-400 font-medium">Denmark</span>,{' '}
+                <span className="text-purple-600 dark:text-purple-400 font-medium">India</span>,{' '}
+                <span className="text-pink-600 dark:text-pink-400 font-medium">California</span> and{' '}
+                <span className="text-amber-600 dark:text-amber-400 font-medium">Singapore</span>.
                 Drag the globe to rotate it.
               </p>
               <div className="grid grid-cols-3 gap-4 pt-2">
-                <MiniStat label="Clusters" value="3" />
-                <MiniStat label="Regions" value="EU / IN / US" />
+                <MiniStat label="Clusters" value="4" />
+                <MiniStat label="Regions" value="EU / IN / US / SG" />
                 <MiniStat label="Failover" value="< 10s" />
               </div>
             </div>
@@ -223,8 +224,8 @@ export default function HomePage() {
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
-            <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Live demo</p>
-            <h2 className="text-3xl md:text-4xl font-bold">Adaptive sandboxing, in real time</h2>
+            <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Live demo</p>
+            <h2 className="t-liquid text-3xl md:text-5xl">Adaptive sandboxing, in real time</h2>
             <p className="text-muted mt-4 max-w-2xl mx-auto">
               When a user submits code, the risk scorer routes it to the right isolation tier:
               <span className="text-emerald-600 dark:text-emerald-400"> runc </span>(low overhead),
@@ -240,7 +241,7 @@ export default function HomePage() {
       <section className="bg-bg py-24 border-t border-edge">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
-            <p className="text-xs uppercase tracking-widest text-astra-400 mb-3">Seven breakthroughs</p>
+            <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Seven breakthroughs</p>
             <h2 className="t-liquid text-3xl md:text-5xl">Built for research, designed for production</h2>
             <p className="text-muted mt-4 max-w-xl mx-auto">
               Click any card to see what it does in plain language and how to use it.
@@ -259,7 +260,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8">
-            <p className="text-xs uppercase tracking-widest text-astra-400 mb-6 text-center">Team</p>
+            <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-6 text-center">Team</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {TEAM.map((m) => (
                 <ThreeDCard key={m.roll} intensity={10}>
