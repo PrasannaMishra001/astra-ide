@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     electricity_maps_zone:  str = "DK-DK1"          # sandbox key only works for DK-DK1
     electricity_maps_url:   str = "https://api.electricitymap.org/v3"
 
+    # ── PF-MPPO Scheduler ────────────────────────────────────────────────────
+    scheduler_algorithm: str = "heuristic"       # "heuristic" | "pfmppo"
+    pfmppo_model_path: str = ""                  # path to trained .pt model file
+    pfmppo_rule_library_dir: str = ""            # path to rule library directory
+    pfmppo_k_pairs: int = 10                     # K parameter (top-K task-VM pairs)
+
     # ── CORS ─────────────────────────────────────────────────────────────────
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:3001"]
 

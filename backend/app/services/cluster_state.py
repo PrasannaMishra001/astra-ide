@@ -31,6 +31,14 @@ class Node:
     active_pods:   int   = 0
     # supported sandbox tiers on this node (labels in real K8s)
     sandboxes:     List[str] = field(default_factory=lambda: ["runc", "gvisor", "firecracker"])
+    # PF-MPPO fields (Eq 2): VM capacity and power characteristics
+    cpu_cap:         float = 4.0
+    mem_cap:         float = 8192.0
+    disk_cap:        float = 102400.0
+    bandwidth_mbps:  float = 1000.0
+    proc_rate_mbps:  float = 200.0
+    power_static_w:  float = 11.0
+    power_max_w:     float = 200.0
 
 
 @dataclass
