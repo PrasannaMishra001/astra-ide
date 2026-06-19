@@ -104,7 +104,7 @@ tensorboard/
 data/raw/
 data/processed/
 checkpoints/
-
+data/
 # Kubernetes / Helm
 *.kubeconfig
 charts/*.tgz

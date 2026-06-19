@@ -41,8 +41,11 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--out", type=str, default="runs/pfmppo", help="Output directory")
     parser.add_argument("--log-interval", type=int, default=100, help="Log every N iterations")
-    parser.add_argument("--dag-mode", choices=["random", "template", "hybrid"], default="hybrid",
-                        help="DAG generation mode: random (synthetic), template (IDE workloads), hybrid (mix)")
+    parser.add_argument("--dag-mode", choices=["random", "template", "hybrid", "trace", "trace_hybrid"],
+                        default="hybrid",
+                        help="DAG generation mode: random (synthetic), template (IDE workloads), hybrid (mix), trace (Google cluster trace), trace_hybrid (trace + random)")
+    parser.add_argument("--data-dir", type=str, default=None,
+                        help="Path to Google cluster trace data directory (required for trace/trace_hybrid mode)")
     parser.add_argument("--num-workspaces-min", type=int, default=3,
                         help="Min simultaneous workspaces per episode (template/hybrid mode)")
     parser.add_argument("--num-workspaces-max", type=int, default=8,
@@ -84,6 +87,11 @@ def main() -> int:
         else:
             print(f"WARNING: Config file not found: {config_path}", file=sys.stderr)
 
+    # Validate trace mode requirements
+    if args.dag_mode in ("trace", "trace_hybrid") and not args.data_dir:
+        print("ERROR: --data-dir is required for trace/trace_hybrid mode", file=sys.stderr)
+        return 1
+
     # Build env config
     env_config = {
         "num_tasks": args.num_tasks,
@@ -96,6 +104,7 @@ def main() -> int:
         "dag_mode": args.dag_mode,
         "num_workspaces": (args.num_workspaces_min, args.num_workspaces_max),
         "template_ratio": args.template_ratio,
+        "data_dir": args.data_dir,
     }
 
     # Create output directory

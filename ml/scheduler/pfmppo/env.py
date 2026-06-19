@@ -101,6 +101,7 @@ if _GYM_AVAILABLE:
             num_workspaces: Tuple[int, int] = (3, 8),
             language_weights: Optional[Dict[str, float]] = None,
             template_ratio: float = 0.7,
+            data_dir: Optional[str] = None,
         ):
             super().__init__()
             self.num_tasks = num_tasks
@@ -116,6 +117,8 @@ if _GYM_AVAILABLE:
             self.num_workspaces = num_workspaces
             self.language_weights = language_weights
             self.template_ratio = template_ratio
+            self.data_dir = data_dir
+            self.trace_dataset = None
 
             obs_dim = k_pairs * FEATURES_PER_PAIR
             self.observation_space = spaces.Box(
@@ -148,12 +151,27 @@ if _GYM_AVAILABLE:
             self._episode_count += 1
             dag_seed = self._rng.integers(0, 2**31)
 
+            use_trace = (
+                self.dag_mode == "trace"
+                or (self.dag_mode == "trace_hybrid" and self._rng.random() < self.template_ratio)
+            )
             use_template = (
                 self.dag_mode == "template"
                 or (self.dag_mode == "hybrid" and self._rng.random() < self.template_ratio)
             )
 
-            if use_template:
+            if use_trace:
+                if self.trace_dataset is None:
+                    from ml.scheduler.pfmppo.google_trace_loader import GoogleTraceDataset
+                    self.trace_dataset = GoogleTraceDataset(
+                        data_dir=self.data_dir,
+                        max_tasks_per_episode=self.num_tasks,
+                    ).load()
+                self.dag, self.vms = self.trace_dataset.sample_episode(
+                    rng=np.random.default_rng(int(dag_seed)),
+                    vm_configs=self.vm_configs,
+                )
+            elif use_template:
                 n_ws = int(self._rng.integers(self.num_workspaces[0], self.num_workspaces[1] + 1))
                 ws_rng = np.random.default_rng(int(dag_seed))
                 self.dag, self.vms = generate_template_dag(
