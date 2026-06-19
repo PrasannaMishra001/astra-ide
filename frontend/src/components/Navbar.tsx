@@ -58,7 +58,7 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
           : 'mx-auto max-w-6xl px-4 sm:px-6 h-14 bg-surface/80 backdrop-blur',
       )}>
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image src="/logo.png" alt="ASTRA-IDE" width={28} height={28} priority className="rounded" />
+          <Image src="/logo.png" alt="ASTRA-IDE" width={30} height={30} priority className="rounded-lg ring-1 ring-edge" />
           <span className={cn('text-[15px] font-bold tracking-tight',
             isHero ? 'text-white' : '')}>
             ASTRA-<span className={isHero ? 'text-astra-400' : 'text-astra-600 dark:text-astra-400'}>IDE</span>

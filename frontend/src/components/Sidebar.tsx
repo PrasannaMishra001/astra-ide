@@ -68,13 +68,13 @@ export default function Sidebar() {
     <motion.aside
       animate={{ width: open ? 240 : 68 }}
       transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-      className="sticky top-0 h-screen shrink-0 border-r border-edge bg-surface/80 backdrop-blur
+      className="glass sticky top-0 h-screen shrink-0 border-r border-edge
                  flex flex-col z-40 overflow-hidden"
     >
       {/* Brand + collapse toggle */}
       <div className="h-14 flex items-center gap-2 px-3 border-b border-edge shrink-0">
         <Link href="/" className="flex items-center gap-2 min-w-0">
-          <Image src="/logo.png" alt="ASTRA-IDE" width={28} height={28} priority className="rounded shrink-0" />
+          <Image src="/logo.png" alt="ASTRA-IDE" width={30} height={30} priority className="rounded-lg shrink-0 ring-1 ring-edge" />
           <AnimatePresence>
             {open && (
               <motion.span

@@ -5,32 +5,39 @@
 /* ── Theme tokens ─────────────────────────────────────────────────────────
    Light is the default; `.dark` on <html> flips the palette. Values are RGB
    triplets so Tailwind alpha modifiers work (bg-surface/60 etc).            */
-/* Brand palette: edafb8 blossom · f7e1d7 powder · dedbd2 dust · b0c4b1 sage ·
-   4a5759 iron. Light = warm cream bg + iron-teal ink; dark = deep teal bg +
-   cream ink. Both share the same teal/sage/blossom family.                  */
+/* ── Palettes ───────────────────────────────────────────────────────────────
+   LIGHT — soft pastels (linen / lavender / mint / blush / periwinkle) with
+   near-black text. DARK — sage→deep-slate greens (#9CB080 #618764 #2B5748
+   #273338) with light text. Green is the shared brand accent (see tailwind
+   `astra`). Surfaces are glassy (see .card / .glass).                        */
 :root {
-  --c-bg:          246 236 229;   /* warm powder cream */
-  --c-surface:     253 250 246;   /* near-white warm */
-  --c-raised:      234 227 217;   /* dust grey */
-  --c-edge:        221 212 200;   /* warm border */
-  --c-edge-strong: 176 196 177;   /* b0c4b1 ash sage */
-  --c-ink:         63  75  77;    /* iron grey (deepened) */
-  --c-muted:       95  111 108;   /* muted teal */
-  --c-faint:       151 163 155;   /* light sage */
-  --scroll-track:  234 227 217;
-  --scroll-thumb:  176 196 177;
+  --c-bg:          243 241 245;   /* lavender-mist / parchment blend */
+  --c-surface:     255 255 255;   /* white (cards use translucent glass) */
+  --c-raised:      234 228 233;   /* eae4e9 lavender mist */
+  --c-edge:        226 222 232;   /* soft lavender border */
+  --c-edge-strong: 205 218 253;   /* cddafd periwinkle */
+  --c-ink:         20  20  24;    /* near-black text */
+  --c-muted:       74  78  88;    /* dark slate-grey */
+  --c-faint:       130 133 145;   /* mid grey */
+  --scroll-track:  234 228 233;
+  --scroll-thumb:  205 218 253;
+  /* accent pastels for decoration */
+  --p-blush:       253 226 228;
+  --p-mint:        226 236 233;
+  --p-blue:        190 225 230;
+  --p-lavender:    223 231 253;
 }
 .dark {
-  --c-bg:          35  43  44;    /* very dark teal */
-  --c-surface:     44  54  55;
-  --c-raised:      58  70  71;
-  --c-edge:        58  70  71;
-  --c-edge-strong: 74  87  89;    /* 4a5759 iron grey */
-  --c-ink:         241 231 221;   /* warm cream text */
-  --c-muted:       176 196 177;   /* ash sage */
-  --c-faint:       138 151 143;
-  --scroll-track:  44  54  55;
-  --scroll-thumb:  74  87  89;
+  --c-bg:          39  51  56;    /* 273338 dark slate */
+  --c-surface:     46  60  64;    /* slightly lifted */
+  --c-raised:      43  87  72;    /* 2B5748 deep teal-green */
+  --c-edge:        54  72  72;
+  --c-edge-strong: 97  135 100;   /* 618764 green */
+  --c-ink:         236 240 232;   /* light sage-white text */
+  --c-muted:       156 176 128;   /* 9CB080 sage */
+  --c-faint:       126 146 120;
+  --scroll-track:  46  60  64;
+  --scroll-thumb:  97  135 100;
 }
 
 :root {
@@ -88,12 +95,27 @@ html, body {
 
 /* ── Shared component classes ───────────────────────────────────────────── */
 @layer components {
+  /* Glassmorphic card: translucent surface + blur + subtle highlight border. */
   .card {
-    @apply rounded-xl border border-edge bg-surface shadow-card;
+    @apply rounded-xl shadow-card;
+    background: rgb(var(--c-surface) / 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgb(var(--c-edge) / 0.7);
   }
+  .dark .card { background: rgb(var(--c-surface) / 0.55); }
+  /* Frosted panel for sidebars / sticky chrome. */
+  .glass {
+    background: rgb(var(--c-surface) / 0.6);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border-color: rgb(var(--c-edge) / 0.6);
+  }
+  .dark .glass { background: rgb(var(--c-surface) / 0.45); }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-astra-600 px-4 py-2
-           text-sm font-medium text-white transition-colors hover:bg-astra-700
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-astra-700 px-4 py-2
+           text-sm font-medium text-white transition-colors hover:bg-astra-800
+           dark:bg-astra-500 dark:hover:bg-astra-400 dark:text-astra-900
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-outline {
@@ -153,9 +175,19 @@ html, body {
   position: absolute; inset: -10%; border-radius: 50%;
   filter: blur(80px); opacity: 0.6; pointer-events: none; will-change: transform;
 }
-.aurora-1 { background: radial-gradient(circle at 30% 30%, #4a5759, transparent 60%); animation: aurora-drift-1 18s ease-in-out infinite alternate; }
-.aurora-2 { background: radial-gradient(circle at 70% 60%, #b0c4b1, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
-.aurora-3 { background: radial-gradient(circle at 50% 80%, #edafb8, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.35; }
+.aurora-1 { background: radial-gradient(circle at 30% 30%, #2B5748, transparent 60%); animation: aurora-drift-1 18s ease-in-out infinite alternate; }
+.aurora-2 { background: radial-gradient(circle at 70% 60%, #618764, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
+.aurora-3 { background: radial-gradient(circle at 50% 80%, #9CB080, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.3; }
+
+/* Light hero: calm, STATIC soft-pastel wash (no animation). */
+.aurora-light {
+  background:
+    radial-gradient(ellipse 50% 45% at 18% 22%, #dfe7fd 0%, transparent 60%),
+    radial-gradient(ellipse 45% 40% at 82% 18%, #fde2e4 0%, transparent 60%),
+    radial-gradient(ellipse 55% 50% at 70% 80%, #e2ece9 0%, transparent 62%),
+    radial-gradient(ellipse 50% 45% at 25% 85%, #bee1e6 0%, transparent 60%),
+    linear-gradient(180deg, #fff1e6 0%, #f3f1f5 100%);
+}
 .aurora-grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
   background-image:

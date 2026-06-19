@@ -5,16 +5,16 @@ import { Github } from 'lucide-react';
 
 import Navbar              from '../components/Navbar';
 import AuroraBackground    from '../components/ui/AuroraBackground';
-import Spotlight           from '../components/ui/Spotlight';
-import Sparkles            from '../components/ui/Sparkles';
 import ThreeDCard          from '../components/ui/ThreeDCard';
 import HoverBorderGradient from '../components/ui/HoverBorderGradient';
 import CanvasText          from '../components/ui/CanvasText';
 import TextHoverEffect     from '../components/ui/TextHoverEffect';
+import TeamPhoto           from '../components/ui/TeamPhoto';
 import AnimatedTerminal, { type TerminalLine } from '../components/ui/AnimatedTerminal';
 import LayoutGrid, { type GridCard } from '../components/ui/LayoutGrid';
 import NoiseBackground     from '../components/ui/NoiseBackground';
 import BigFooter           from '../components/ui/BigFooter';
+import { useTheme }        from '../lib/theme';
 import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
 
 const CobeGlobe = dynamic(() => import('../components/ui/CobeGlobe'), { ssr: false });
@@ -115,46 +115,39 @@ const FEATURE_CARDS: GridCard[] = [
 ];
 
 const TEAM = [
-  { name: 'Prasanna Mishra',   roll: '2023IMT-059' },
-  { name: 'Udit Srivastava',   roll: '2023IMT-084' },
-  { name: 'Yash Wani',         roll: '2023IMT-087' },
+  { name: 'Prasanna Mishra',   roll: '2023IMT-059', img: '/team/prasanna.png' },
+  { name: 'Udit Srivastava',   roll: '2023IMT-084', img: '/team/udit.png' },
+  { name: 'Yash Wani',         roll: '2023IMT-087', img: '/team/yash.png' },
 ];
 
 export default function HomePage() {
+  const [theme] = useTheme();
+  // Dot-matrix headline colours: dark greens on the light pastel hero,
+  // light sage/pastels on the dark hero.
+  const grad1: [string, string, string] = theme === 'dark' ? ['#9CB080', '#cddafd', '#fde2e4'] : ['#273338', '#2B5748', '#618764'];
+  const grad2: [string, string, string] = theme === 'dark' ? ['#cddafd', '#9CB080', '#fad2e1'] : ['#2B5748', '#618764', '#9CB080'];
+
   return (
     <main className="min-h-screen">
       {/* HERO */}
       <AuroraBackground className="relative min-h-screen overflow-hidden">
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(176,196,177,0.55)" />
-        <Sparkles density={0.4} color="#dedbd2" />
-
         <Navbar variant="hero" />
 
         <section className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-24 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
           <div className="lg:col-span-3 space-y-7">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-astra-400 mb-3">
+              <p className="text-sm uppercase tracking-[0.3em] text-astra-700 dark:text-astra-300 mb-3">
                 Cloud IDE
               </p>
-              <CanvasText
-                text="The cloud IDE"
-                height={130}
-                fontSize={104}
-                gradient={['#dedbd2', '#b0c4b1', '#edafb8']}
-              />
-              <CanvasText
-                text="that schedules itself."
-                height={130}
-                fontSize={92}
-                gradient={['#b0c4b1', '#edafb8', '#f7e1d7']}
-              />
+              <CanvasText text="The cloud IDE" height={130} fontSize={104} gradient={grad1} />
+              <CanvasText text="that schedules itself." height={130} fontSize={92} gradient={grad2} />
             </div>
 
-            <p className="text-[#dedbd2] text-lg leading-relaxed max-w-2xl">
-              <span className="text-astra-300 font-semibold">DRL-PPO</span> scheduling,{' '}
-              <span className="text-blossom-300 font-semibold">eBPF</span> telemetry,{' '}
-              <span className="text-astra-200 font-semibold">adaptive sandboxing</span>,{' '}
-              <span className="text-blossom-200 font-semibold">LSTM prewarming</span>, multi-cluster
+            <p className="text-muted text-lg leading-relaxed max-w-2xl">
+              <span className="text-astra-700 dark:text-astra-300 font-semibold">DRL-PPO</span> scheduling,{' '}
+              <span className="text-blossom-600 dark:text-blossom-300 font-semibold">eBPF</span> telemetry,{' '}
+              <span className="text-astra-600 dark:text-astra-200 font-semibold">adaptive sandboxing</span>,{' '}
+              <span className="text-blossom-500 dark:text-blossom-200 font-semibold">LSTM prewarming</span>, multi-cluster
               federation, and conflict-free collaboration, in one open research platform.
             </p>
 
@@ -166,7 +159,7 @@ export default function HomePage() {
               </Link>
               <a
                 href="https://github.com/PrasannaMishra001/astra-ide"
-                className="px-5 py-2.5 rounded-full border border-slate-700 hover:border-slate-500 bg-slate-900/60 text-sm font-medium inline-flex items-center gap-2"
+                className="px-5 py-2.5 rounded-full border border-edge-strong hover:bg-raised bg-surface/60 backdrop-blur text-ink text-sm font-medium inline-flex items-center gap-2 transition-colors"
               >
                 <Github size={16} /> View on GitHub
               </a>
@@ -265,10 +258,8 @@ export default function HomePage() {
               {TEAM.map((m) => (
                 <ThreeDCard key={m.roll} intensity={10}>
                   <div className="p-5 card text-center">
-                    <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-astra-500 to-blossom-400 flex items-center justify-center text-xl font-bold mb-3 text-white">
-                      {m.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-                    </div>
-                    <div className="font-semibold">{m.name}</div>
+                    <TeamPhoto src={m.img} alt={m.name} size={96} />
+                    <div className="font-semibold mt-3">{m.name}</div>
                     <div className="text-xs text-faint mt-0.5 font-mono">{m.roll}</div>
                   </div>
                 </ThreeDCard>
@@ -315,7 +306,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="text-2xl font-bold text-astra-400">{value}</div>
+      <div className="text-2xl font-bold text-astra-700 dark:text-astra-300">{value}</div>
       <div className="text-xs text-faint mt-1">{label}</div>
     </div>
   );

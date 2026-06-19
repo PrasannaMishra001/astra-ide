@@ -15,28 +15,28 @@ module.exports = {
         ink:     'rgb(var(--c-ink) / <alpha-value>)',
         muted:   'rgb(var(--c-muted) / <alpha-value>)',
         faint:   'rgb(var(--c-faint) / <alpha-value>)',
-        // Primary accent — sage→iron-teal scale derived from the brand palette
-        // (b0c4b1 ash sage, 4a5759 iron grey). Replaces the old blue.
+        // Primary accent — sage→deep-green scale (9CB080 · 618764 · 2B5748 ·
+        // 273338). Shared brand/action color across light + dark themes.
         astra: {
-          50:  '#eef3f1',
-          100: '#dde7e3',
-          200: '#c4d3cc',
-          300: '#b0c4b1',   // ash sage
-          400: '#8ba395',
-          500: '#6b8479',
-          600: '#4a5759',   // iron grey — primary
-          700: '#3d4849',
-          800: '#313a3b',
-          900: '#252c2d',
+          50:  '#eef3ec',
+          100: '#dbe7d6',
+          200: '#c0d4b8',
+          300: '#9CB080',   // sage
+          400: '#7c9a72',
+          500: '#618764',   // green
+          600: '#4c6e54',
+          700: '#2B5748',   // deep teal-green — primary on light
+          800: '#244a3d',
+          900: '#273338',   // dark slate
         },
-        // Secondary accent — cherry-blossom for highlights / decorative gradients.
+        // Secondary accent — soft blush/petal pastels for highlights + gradients.
         blossom: {
-          100: '#fbe6ea',
-          200: '#f6d2d9',
-          300: '#edafb8',   // cherry blossom
-          400: '#e08e9b',
-          500: '#cf6e7e',
-          600: '#b45464',
+          100: '#fff1e6',   // linen
+          200: '#fde2e4',   // soft blush
+          300: '#fad2e1',   // petal frost
+          400: '#f4b8cf',
+          500: '#e891ad',
+          600: '#d96f93',
         },
       },
       fontFamily: {

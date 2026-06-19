@@ -12,7 +12,7 @@ export function getTheme(): Theme {
   if (typeof window === 'undefined') return 'light';
   const saved = window.localStorage.getItem(KEY);
   if (saved === 'light' || saved === 'dark') return saved;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'light';   // default to light unless the user explicitly picks dark
 }
 
 export function applyTheme(theme: Theme) {
@@ -37,4 +37,4 @@ export function useTheme(): [Theme, (t: Theme) => void] {
 }
 
 // Inline-script source for layout.tsx (runs before hydration; no flash).
-export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${KEY}');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${KEY}');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
