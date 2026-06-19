@@ -179,14 +179,30 @@ html, body {
 .aurora-2 { background: radial-gradient(circle at 70% 60%, #618764, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
 .aurora-3 { background: radial-gradient(circle at 50% 80%, #9CB080, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.3; }
 
-/* Light hero: calm, STATIC soft-pastel wash (no animation). */
+/* Light hero: soft pastel base + gentle blurred colour blobs that drift slowly
+   (calm, not pointer-reactive). Gives the light theme depth so it isn't washed
+   out. */
 .aurora-light {
   background:
-    radial-gradient(ellipse 50% 45% at 18% 22%, #dfe7fd 0%, transparent 60%),
-    radial-gradient(ellipse 45% 40% at 82% 18%, #fde2e4 0%, transparent 60%),
-    radial-gradient(ellipse 55% 50% at 70% 80%, #e2ece9 0%, transparent 62%),
-    radial-gradient(ellipse 50% 45% at 25% 85%, #bee1e6 0%, transparent 60%),
-    linear-gradient(180deg, #fff1e6 0%, #f3f1f5 100%);
+    radial-gradient(ellipse 46% 42% at 20% 24%, #c7d6fb 0%, transparent 58%),
+    radial-gradient(ellipse 42% 38% at 84% 16%, #fbcdd6 0%, transparent 58%),
+    radial-gradient(ellipse 52% 48% at 72% 82%, #c7e3dd 0%, transparent 60%),
+    radial-gradient(ellipse 48% 44% at 22% 88%, #b3dde6 0%, transparent 58%),
+    linear-gradient(180deg, #fbeee3 0%, #eceaf2 100%);
+}
+.aurora-light::before, .aurora-light::after {
+  content: ''; position: absolute; border-radius: 9999px; filter: blur(70px);
+  opacity: 0.6; will-change: transform; pointer-events: none;
+}
+.aurora-light::before {
+  width: 42vw; height: 42vw; left: 8%; top: 6%;
+  background: radial-gradient(circle, #b8c9fb, transparent 70%);
+  animation: blob-a 28s ease-in-out infinite alternate;
+}
+.aurora-light::after {
+  width: 46vw; height: 46vw; right: 4%; bottom: -8%;
+  background: radial-gradient(circle, #f7c7d4, transparent 70%);
+  animation: blob-b 34s ease-in-out infinite alternate;
 }
 .aurora-grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;

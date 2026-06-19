@@ -54,14 +54,13 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
       <div className={cn(
         'flex items-center gap-4',
         isHero
-          ? 'mx-auto max-w-7xl rounded-2xl border border-white/10 bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl px-5 py-2.5 shadow-lg'
+          ? 'mx-auto max-w-7xl rounded-2xl border border-edge dark:border-white/10 bg-surface/60 dark:bg-slate-900/40 backdrop-blur-xl px-5 py-2.5 shadow-lg'
           : 'mx-auto max-w-6xl px-4 sm:px-6 h-14 bg-surface/80 backdrop-blur',
       )}>
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Image src="/logo.png" alt="ASTRA-IDE" width={30} height={30} priority className="rounded-lg ring-1 ring-edge" />
-          <span className={cn('text-[15px] font-bold tracking-tight',
-            isHero ? 'text-white' : '')}>
-            ASTRA-<span className={isHero ? 'text-astra-400' : 'text-astra-600 dark:text-astra-400'}>IDE</span>
+          <span className="text-[15px] font-bold tracking-tight text-ink">
+            ASTRA-<span className="text-astra-700 dark:text-astra-300">IDE</span>
           </span>
         </Link>
 
@@ -72,12 +71,9 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
                     aria-current={pathname?.startsWith(n.href) ? 'page' : undefined}
                     className={cn(
                       isHero
-                        ? 'px-3 py-1.5 rounded-lg text-sm transition-colors'
-                        : '',
-                      isHero
                         ? (pathname?.startsWith(n.href)
-                            ? 'text-white bg-white/10 font-medium'
-                            : 'text-white/70 hover:text-white hover:bg-white/10')
+                            ? 'px-3 py-1.5 rounded-lg text-sm font-medium text-ink bg-ink/10 dark:text-white dark:bg-white/10'
+                            : 'px-3 py-1.5 rounded-lg text-sm text-muted hover:text-ink hover:bg-ink/5 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/10')
                         : (pathname?.startsWith(n.href)
                             ? 'nav-pill-active'
                             : 'nav-pill'),
@@ -89,17 +85,17 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
         )}
 
         <div className="ml-auto flex items-center gap-1.5">
-          <ThemeToggle className={isHero ? '!text-white/70 hover:!text-white hover:!bg-white/10' : ''} />
+          <ThemeToggle className={isHero ? '!text-muted hover:!text-ink hover:!bg-ink/5 dark:!text-white/70 dark:hover:!text-white dark:hover:!bg-white/10' : ''} />
 
           {!loggedIn ? (
             <>
               <Link href="/login"
                     className={cn('px-3 py-1.5 text-sm rounded-lg transition-colors',
-                      isHero ? 'text-white/80 hover:text-white hover:bg-white/10' : 'nav-pill')}>
+                      isHero ? 'text-muted hover:text-ink hover:bg-ink/5 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10' : 'nav-pill')}>
                 Log in
               </Link>
               <Link href="/register"
-                    className="px-4 py-1.5 text-sm rounded-lg bg-astra-600 text-white font-medium hover:bg-astra-700 transition-colors">
+                    className="px-4 py-1.5 text-sm rounded-lg bg-astra-700 dark:bg-astra-500 text-white dark:text-astra-900 font-medium hover:bg-astra-800 dark:hover:bg-astra-400 transition-colors">
                 Sign up
               </Link>
             </>
@@ -112,7 +108,7 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu" aria-expanded={menuOpen}
                 className={cn('flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm transition-colors',
-                  isHero ? 'text-white/80 hover:text-white hover:bg-white/10' : 'btn-ghost pl-2 pr-1.5')}>
+                  isHero ? 'text-muted hover:text-ink hover:bg-ink/5 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10' : 'btn-ghost pl-2 pr-1.5')}>
                 <Avatar user={user} size={24} />
                 <span className="hidden sm:inline max-w-[8rem] truncate">{user?.username}</span>
                 <ChevronDown size={14} />
@@ -124,10 +120,7 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
                           className="fixed inset-0 z-40 cursor-default"
                           onClick={() => setMenuOpen(false)} />
                   <div role="menu"
-                       className={cn('absolute right-0 top-full mt-1.5 z-50 w-56 p-1.5 shadow-pop',
-                         isHero
-                           ? 'rounded-xl border border-white/10 bg-slate-900/90 backdrop-blur-xl text-white'
-                           : 'card')}>
+                       className="absolute right-0 top-full mt-1.5 z-50 w-56 p-1.5 shadow-pop card">
                     <div className="px-2.5 py-2 border-b border-edge mb-1 flex items-center gap-2.5">
                       <Avatar user={user} size={36} />
                       <div className="min-w-0">
@@ -137,13 +130,11 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
                     </div>
                     <button type="button" role="menuitem" disabled={uploading}
                             onClick={() => fileRef.current?.click()}
-                            className={cn('w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm disabled:opacity-50',
-                              isHero ? 'hover:bg-white/10' : 'hover:bg-raised')}>
+                            className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm disabled:opacity-50 hover:bg-raised">
                       {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                       {uploading ? 'Uploading...' : (user?.avatar_url ? 'Change photo' : 'Add profile photo')}
                     </button>
-                    <div className={cn('px-2.5 py-1.5 flex items-center justify-between text-xs',
-                      isHero ? 'text-slate-400' : 'text-muted')}>
+                    <div className="px-2.5 py-1.5 flex items-center justify-between text-xs text-muted">
                       <span className="inline-flex items-center gap-1.5"><User size={12} /> Trust score</span>
                       <span className="font-mono">{user?.trust_score?.toFixed(2)}</span>
                     </div>
@@ -170,7 +161,7 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
             <Link key={n.href} href={n.href}
                   className={cn('whitespace-nowrap text-sm px-3 py-1.5 rounded-lg',
                     isHero
-                      ? (pathname?.startsWith(n.href) ? 'text-white bg-white/10 font-medium' : 'text-white/70')
+                      ? (pathname?.startsWith(n.href) ? 'text-ink bg-ink/10 font-medium dark:text-white dark:bg-white/10' : 'text-muted dark:text-white/70')
                       : (pathname?.startsWith(n.href) ? 'nav-pill-active' : 'nav-pill'))}>
               {n.label}
             </Link>

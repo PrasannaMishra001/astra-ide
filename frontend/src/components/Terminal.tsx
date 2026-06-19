@@ -33,12 +33,13 @@ export default function Terminal({ workspaceId }: { workspaceId: number }) {
       fontFamily: '"JetBrains Mono", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace',
       fontSize: 13,
       lineHeight: 1.35,
+      allowTransparency: true,
       theme: {
-        background: '#0B1120',
-        foreground: '#cbd5e1',
-        cursor: '#38bdf8',
-        cursorAccent: '#0B1120',
-        selectionBackground: '#1e3a5f',
+        background: 'rgba(20, 30, 27, 0.35)',   // translucent so the glass shows through
+        foreground: '#dbe5d8',
+        cursor: '#9CB080',
+        cursorAccent: '#1b2420',
+        selectionBackground: '#2B5748',
         black: '#1e293b', brightBlack: '#475569',
         red: '#f87171',   brightRed: '#fca5a5',
         green: '#34d399', brightGreen: '#6ee7b7',
@@ -96,8 +97,13 @@ export default function Terminal({ workspaceId }: { workspaceId: number }) {
     window.addEventListener('resize', onResize);
     const t = setTimeout(onResize, 60);
 
+    // Refit when the panel itself is resized (e.g. dragging the terminal height).
+    const ro = new ResizeObserver(() => onResize());
+    if (hostRef.current) ro.observe(hostRef.current);
+
     return () => {
       clearTimeout(t);
+      ro.disconnect();
       window.removeEventListener('resize', onResize);
       dataSub.dispose();
       ws.close();
@@ -107,9 +113,9 @@ export default function Terminal({ workspaceId }: { workspaceId: number }) {
   }, [workspaceId, epoch]);
 
   return (
-    <div className="h-full flex flex-col bg-[#0B1120]">
+    <div className="h-full flex flex-col bg-[#16211d]/55 backdrop-blur-2xl">
       {/* Terminal chrome */}
-      <div className="h-9 px-3 flex items-center gap-3 border-b border-slate-800 bg-slate-900/80 select-none">
+      <div className="h-9 px-3 flex items-center gap-3 border-b border-white/10 bg-white/5 select-none">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
@@ -145,7 +151,7 @@ export default function Terminal({ workspaceId }: { workspaceId: number }) {
       <div ref={hostRef} className="flex-1 min-h-0 px-2 py-1.5" />
 
       {/* Footer hint */}
-      <div className="h-6 px-3 flex items-center border-t border-slate-800/60 bg-slate-900/50 text-[10px] text-slate-500">
+      <div className="h-6 px-3 flex items-center border-t border-white/10 bg-white/5 text-[10px] text-slate-400">
         Shell session is rooted in this workspace's files. The same tree is visible in the Files tab.
       </div>
     </div>

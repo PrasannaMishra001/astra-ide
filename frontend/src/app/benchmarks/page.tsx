@@ -27,10 +27,13 @@ const ALGO_LABEL: Record<string, string> = {
   ppo: 'ASTRA PPO', least_loaded: 'Least-Loaded', round_robin: 'Round-Robin',
   random: 'Random', fifo: 'FIFO',
 };
+// On-palette, distinct, harmonious bar colours.
 const ALGO_COLOR: Record<string, string> = {
-  ppo: 'rgb(99 102 241 / 0.9)', least_loaded: 'rgb(16 185 129 / 0.8)',
-  round_robin: 'rgb(245 158 11 / 0.8)', random: 'rgb(168 85 247 / 0.8)',
-  fifo: 'rgb(244 63 94 / 0.8)',
+  ppo:          '#2B5748',   // deep green (ours)
+  least_loaded: '#618764',   // green
+  round_robin:  '#9CB080',   // sage
+  random:       '#8fb7c4',   // muted blue
+  fifo:         '#d98fa6',   // muted blossom
 };
 
 // Headline research results (offline, on real datasets — see DATASETS.md).

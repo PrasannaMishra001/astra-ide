@@ -32,12 +32,6 @@ export default function SvgBarChart({
   return (
     <svg viewBox={`0 0 ${chartW} ${h}`} className="w-full" role="img"
          preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id={`grad-${gid}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4a5759" />
-          <stop offset="100%" stopColor="#edafb8" />
-        </linearGradient>
-      </defs>
 
       {/* gridlines */}
       {ticks.map((t) => {
@@ -65,7 +59,8 @@ export default function SvgBarChart({
             <rect x={labelW} y={y} width={barAreaW} height={rowH} rx={6}
                   className="fill-raised" />
             <rect x={labelW} y={y} width={w} height={rowH} rx={6}
-                  fill={d.best ? `url(#grad-${gid})` : (d.color || 'rgb(148 163 184 / 0.55)')}>
+                  fill={d.color || '#9CB080'} opacity={d.best ? 1 : 0.4}
+                  stroke={d.best ? d.color || '#2B5748' : 'transparent'} strokeWidth={d.best ? 1.5 : 0}>
               <animate attributeName="width" from="0" to={w} dur="0.7s" fill="freeze"
                        calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />
             </rect>

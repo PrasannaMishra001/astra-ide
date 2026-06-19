@@ -6,6 +6,7 @@ import {
   ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, FilePlus,
   FileCode2, FileText, FileJson, FileTerminal, FileImage, Image as ImageIcon,
   GitBranch, RefreshCw, Save, Search, TerminalSquare, Trash2, Loader2, X, Check, Palette,
+  PanelLeft, GripHorizontal,
 } from 'lucide-react';
 
 const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
@@ -103,6 +104,37 @@ interface FMProps {
 
 export default function FileManager({ workspaceId, frozen = false, onActiveFile, openSignal }: FMProps) {
   const [showTerminal, setShowTerminal] = useState(false);
+  // Resizable panels (VS Code-style). Explorer collapses fully below a minimum;
+  // terminal closes when dragged below a minimum.
+  const [explorerW, setExplorerW] = useState(256);
+  const [explorerCollapsed, setExplorerCollapsed] = useState(false);
+  const [termH, setTermH] = useState(224);
+  const drag = useRef<{ kind: 'x' | 'y'; startPos: number; startVal: number } | null>(null);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const d = drag.current; if (!d) return;
+      if (d.kind === 'x') {
+        const next = d.startVal + (e.clientX - d.startPos);
+        if (next < 120) { setExplorerCollapsed(true); }
+        else { setExplorerCollapsed(false); setExplorerW(Math.min(480, next)); }
+      } else {
+        const next = d.startVal - (e.clientY - d.startPos);   // drag up = taller
+        if (next < 64) { setShowTerminal(false); drag.current = null; }
+        else { setTermH(Math.min(560, next)); }
+      }
+    }
+    function onUp() { drag.current = null; document.body.style.userSelect = ''; document.body.style.cursor = ''; }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  function startDrag(kind: 'x' | 'y', e: React.MouseEvent) {
+    drag.current = { kind, startPos: kind === 'x' ? e.clientX : e.clientY, startVal: kind === 'x' ? explorerW : termH };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = kind === 'x' ? 'col-resize' : 'row-resize';
+  }
   const [files, setFiles] = useState<WsFile[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -232,8 +264,18 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
 
   return (
     <div className="flex h-full bg-surface">
-      {/* Explorer sidebar */}
-      <aside className="w-64 border-r border-edge bg-raised/40 flex flex-col">
+      {/* Collapsed explorer: thin reopen strip (VS Code-style) */}
+      {explorerCollapsed && (
+        <div className="w-9 border-r border-edge bg-raised/40 flex flex-col items-center py-2 shrink-0">
+          <IconBtn title="Show explorer" onClick={() => { setExplorerCollapsed(false); setExplorerW(256); }}>
+            <PanelLeft size={15} />
+          </IconBtn>
+        </div>
+      )}
+
+      {/* Explorer sidebar (resizable) */}
+      <aside className={cn('border-r border-edge bg-raised/40 flex flex-col shrink-0', explorerCollapsed && 'hidden')}
+             style={{ width: explorerW }}>
         <div className="px-3 py-2 border-b border-edge flex items-center gap-1">
           <span className="t-overline text-faint flex-1">{showSearch ? 'Search' : 'Explorer'}</span>
           <IconBtn title="Search in project" onClick={() => setShowSearch((v) => !v)}>
@@ -329,6 +371,12 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
         </div>
       </aside>
 
+      {/* Vertical resize handle between explorer and editor */}
+      {!explorerCollapsed && (
+        <div onMouseDown={(e) => startDrag('x', e)} title="Drag to resize · drag left to hide"
+             className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-astra-500/40 transition-colors" />
+      )}
+
       {/* Editor pane */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-3 h-9 border-b border-edge flex items-center gap-3 text-xs bg-raised/40">
@@ -416,10 +464,18 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
           )}
         </div>
 
-        {/* Integrated terminal (toggle from the toolbar) */}
+        {/* Integrated terminal (toggle from the toolbar) — resizable, drag the
+            handle; drag below the minimum to close. */}
         {showTerminal && (
-          <div className="h-56 border-t border-edge shrink-0">
-            <Terminal workspaceId={workspaceId} />
+          <div className="border-t border-edge shrink-0 flex flex-col" style={{ height: termH }}>
+            <div onMouseDown={(e) => startDrag('y', e)} title="Drag to resize · drag down to close"
+                 className="h-1.5 shrink-0 cursor-row-resize flex items-center justify-center
+                            bg-transparent hover:bg-astra-500/40 transition-colors group">
+              <GripHorizontal size={12} className="text-faint group-hover:text-astra-500" />
+            </div>
+            <div className="flex-1 min-h-0">
+              <Terminal workspaceId={workspaceId} />
+            </div>
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ import {
 
 import AppShell from '../../components/AppShell';
 import ActivityFeed from '../../components/ActivityFeed';
+import FederationTopology from '../../components/FederationTopology';
 import {
   listWorkspaces, getNodeMetrics,
   type Workspace, type MetricsSnapshot, type NodeMetrics, type ClusterMetrics,
@@ -87,6 +88,9 @@ export default function ClustersPage() {
                 value={`${tiers.runc ?? 0} / ${tiers.gvisor ?? 0} / ${tiers.firecracker ?? 0}`}
                 sub="runc / gVisor / Firecracker" />
         </div>
+
+        {/* Federation topology */}
+        {metrics && <FederationTopology clusters={metrics.clusters} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Cluster cards */}
