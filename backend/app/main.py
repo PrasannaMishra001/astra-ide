@@ -24,7 +24,8 @@ def _ensure_columns() -> None:
     from sqlalchemy import inspect, text
     insp = inspect(engine)
     wanted = {
-        "users":      [("avatar_url", "VARCHAR(512)")],
+        "users":      [("avatar_url", "VARCHAR(512)"),
+                       ("is_admin", "BOOLEAN DEFAULT FALSE")],
         "workspaces": [("forked_from_id", "INTEGER"),
                        ("frozen", "BOOLEAN DEFAULT FALSE"),
                        ("shared_excludes", "TEXT DEFAULT ''")],
@@ -40,11 +41,27 @@ def _ensure_columns() -> None:
                     conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {ddl}'))
 
 
+def _bootstrap_admins() -> None:
+    """Promote configured admins. The first registered user (id=1) is always an
+    admin; additional admins can be listed in the ADMIN_EMAILS env var."""
+    import os
+    from sqlalchemy import text
+    emails = [e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()]
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE users SET is_admin = TRUE WHERE id = 1"))
+            for e in emails:
+                conn.execute(text("UPDATE users SET is_admin = TRUE WHERE lower(email) = :e"), {"e": e})
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables on startup (for dev — use Alembic in production)
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
+    _bootstrap_admins()
     # Kick off the background telemetry/event simulator
     await telemetry_loop.start()
     try:

@@ -39,6 +39,7 @@ export interface User {
   trust_score: number;
   preferred_lang: string;
   avatar_url?: string | null;
+  is_admin?: boolean;
 }
 
 export interface TokenResponse {
@@ -437,6 +438,28 @@ export interface BenchmarkRunLog {
 
 export async function getBenchmarkHistory(limit = 20): Promise<BenchmarkRunLog[]> {
   const { data } = await api.get<BenchmarkRunLog[]>(`/benchmarks/history?limit=${limit}`);
+  return data;
+}
+
+// ── Admin ──────────────────────────────────────────────────────────────────
+export interface AdminWorkspace {
+  id: number; name: string; language: string; sandbox_tier: string; status: string;
+  cpu_cores?: number | null; memory_mb?: number | null; cluster_id?: string | null; risk_score?: number | null;
+}
+export interface AdminUser {
+  id: number; username: string; email: string; is_admin: boolean; trust_score: number;
+  created_at: string; avatar_url?: string | null;
+  workspace_count: number; running_count: number;
+  tiers: Record<string, number>; total_cpu: number; total_mem_mb: number;
+  edits: number; shares: number; benchmark_runs: number;
+  features: string[]; workspaces: AdminWorkspace[];
+}
+export interface AdminOverview {
+  total_users: number; total_workspaces: number; running_workspaces: number;
+  total_edits: number; total_benchmark_runs: number; users: AdminUser[];
+}
+export async function getAdminUsers(): Promise<AdminOverview> {
+  const { data } = await api.get<AdminOverview>('/admin/users');
   return data;
 }
 

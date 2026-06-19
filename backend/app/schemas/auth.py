@@ -21,6 +21,7 @@ class UserOut(BaseModel):
     trust_score:    float
     preferred_lang: str
     avatar_url:     Optional[str] = None
+    is_admin:       bool = False
 
     class Config:
         from_attributes = True

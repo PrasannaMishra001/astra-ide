@@ -48,13 +48,12 @@ export default function Navbar({ variant = 'default' }: { variant?: 'default' | 
 
   return (
     <nav className={cn(
-      'sticky top-0 z-40 w-full',
-      isHero ? 'px-4 sm:px-6 py-3' : 'border-b border-edge',
+      isHero ? 'fixed top-0 inset-x-0 z-50 px-4 sm:px-6 py-3' : 'sticky top-0 z-40 w-full border-b border-edge',
     )}>
       <div className={cn(
         'flex items-center gap-4',
         isHero
-          ? 'mx-auto max-w-7xl rounded-2xl border border-edge dark:border-white/10 bg-surface/60 dark:bg-slate-900/40 backdrop-blur-xl px-5 py-2.5 shadow-lg'
+          ? 'mx-auto max-w-7xl rounded-2xl border border-amber-200/70 dark:border-white/10 bg-amber-50/75 dark:bg-slate-900/45 backdrop-blur-xl px-5 py-2.5 shadow-lg shadow-amber-900/5'
           : 'mx-auto max-w-6xl px-4 sm:px-6 h-14 bg-surface/80 backdrop-blur',
       )}>
         <Link href="/" className="flex items-center gap-2 shrink-0">

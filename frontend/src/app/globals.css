@@ -231,13 +231,7 @@ html, body {
 .noise-layer {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
-  animation: noise-shift 0.6s steps(3) infinite;
-}
-@keyframes noise-shift {
-  0%   { transform: translate(0, 0); }
-  33%  { transform: translate(-4%, 2%); }
-  66%  { transform: translate(3%, -3%); }
-  100% { transform: translate(0, 0); }
+  /* static grain — the animated translate caused edge flicker */
 }
 
 /* ── Liquid-glass headings (Apple-style frosted, specular sweep) ─────────── */

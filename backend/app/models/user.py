@@ -14,6 +14,7 @@ class User(Base):
     username:        Mapped[str]      = mapped_column(String(64), unique=True, index=True)
     hashed_password: Mapped[str]      = mapped_column(String(255))
     is_active:       Mapped[bool]     = mapped_column(Boolean, default=True)
+    is_admin:        Mapped[bool]     = mapped_column(Boolean, default=False)
     trust_score:     Mapped[float]    = mapped_column(Float, default=0.5)  # Used by risk scorer
     preferred_lang:  Mapped[str]      = mapped_column(String(32), default="python")
     avatar_url:      Mapped[str]      = mapped_column(String(512), nullable=True)  # imgbb-hosted profile image

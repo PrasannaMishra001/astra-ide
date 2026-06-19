@@ -14,6 +14,8 @@ import AnimatedTerminal, { type TerminalLine } from '../components/ui/AnimatedTe
 import LayoutGrid, { type GridCard } from '../components/ui/LayoutGrid';
 import NoiseBackground     from '../components/ui/NoiseBackground';
 import BigFooter           from '../components/ui/BigFooter';
+import CountUp             from '../components/ui/CountUp';
+import GoToTop             from '../components/ui/GoToTop';
 import { useTheme }        from '../lib/theme';
 import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
 
@@ -128,12 +130,12 @@ export default function HomePage() {
   const grad2: [string, string, string] = theme === 'dark' ? ['#cddafd', '#9CB080', '#fad2e1'] : ['#2B5748', '#618764', '#9CB080'];
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen overflow-x-hidden">
       {/* HERO */}
       <AuroraBackground className="relative min-h-screen overflow-hidden">
         <Navbar variant="hero" />
 
-        <section className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-24 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
+        <section className="relative z-10 max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
           <div className="lg:col-span-3 space-y-7">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-astra-700 dark:text-astra-300 mb-3">
@@ -166,21 +168,23 @@ export default function HomePage() {
             </div>
 
             <div className="pt-6 grid grid-cols-3 gap-6 max-w-xl text-sm">
-              <Stat value="< 2s"   label="Cold start (predicted)" />
-              <Stat value="78%+"   label="Resource utilization" />
-              <Stat value="< 20ms" label="Collab latency" />
+              <Stat prefix="< " value={2}  suffix="s"  label="Cold start (predicted)" />
+              <Stat value={78} suffix="%+" label="Resource utilization" />
+              <Stat prefix="< " value={20} suffix="ms" label="Collab latency" />
             </div>
           </div>
 
           <div className="lg:col-span-2 flex justify-center">
-            <AnimatedTerminal lines={DEMO_TERMINAL} title="astra-ide@cloud" className="w-full max-w-md" />
+            <AnimatedTerminal lines={DEMO_TERMINAL} title="astra-ide@cloud"
+                              speedMul={2} bodyHeight={400} className="w-full max-w-xl" />
           </div>
         </section>
       </AuroraBackground>
 
       {/* GLOBE - text left, globe right (partially clipped) */}
-      <section className="bg-bg py-24 border-t border-edge overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
+        <SectionBlobs a="#cddafd" b="#c7e3dd" />
+        <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
               <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400">Live globe</p>
@@ -214,8 +218,9 @@ export default function HomePage() {
       </section>
 
       {/* DEMO TERMINAL */}
-      <section className="bg-bg py-24 border-t border-edge">
-        <div className="max-w-5xl mx-auto px-6">
+      <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
+        <SectionBlobs a="#c7e3dd" b="#fbcdd6" />
+        <div className="relative max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Live demo</p>
             <h2 className="t-liquid text-3xl md:text-5xl">Adaptive sandboxing, in real time</h2>
@@ -231,8 +236,9 @@ export default function HomePage() {
       </section>
 
       {/* FEATURE LAYOUT GRID (click a card to expand + learn) */}
-      <section className="bg-bg py-24 border-t border-edge">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
+        <SectionBlobs a="#dfe7fd" b="#e2ece9" />
+        <div className="relative max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Seven breakthroughs</p>
             <h2 className="t-liquid text-3xl md:text-5xl">Built for research, designed for production</h2>
@@ -246,8 +252,9 @@ export default function HomePage() {
       </section>
 
       {/* TEXT HOVER + TEAM */}
-      <section className="bg-bg py-24 border-t border-edge">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
+        <SectionBlobs a="#fbcdd6" b="#cddafd" />
+        <div className="relative max-w-6xl mx-auto px-6">
           <div className="h-52 md:h-72">
             <TextHoverEffect text="ASTRA-IDE" />
           </div>
@@ -270,7 +277,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA with animated noise background */}
-      <section className="border-t border-edge bg-bg py-24">
+      <section className="border-t border-edge bg-bg py-14">
         <div className="max-w-5xl mx-auto px-6">
           <NoiseBackground className="px-8 py-16 sm:px-16 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
@@ -290,6 +297,7 @@ export default function HomePage() {
       </section>
 
       <BigFooter />
+      <GoToTop />
     </main>
   );
 }
@@ -303,10 +311,26 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+// Soft blurred colour blobs behind a section (subtle in dark, richer in light)
+// so content sections don't look bland. Place as first child of a `relative
+// overflow-hidden` section.
+function SectionBlobs({ a = '#cddafd', b = '#fde2e4' }: { a?: string; b?: string }) {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute -left-24 top-4 w-80 h-80 rounded-full blur-3xl opacity-50 dark:opacity-[0.12]"
+           style={{ background: `radial-gradient(circle, ${a}, transparent 70%)` }} />
+      <div className="absolute -right-20 bottom-0 w-96 h-96 rounded-full blur-3xl opacity-40 dark:opacity-[0.10]"
+           style={{ background: `radial-gradient(circle, ${b}, transparent 70%)` }} />
+    </div>
+  );
+}
+
+function Stat({ value, label, prefix = '', suffix = '' }:
+  { value: number; label: string; prefix?: string; suffix?: string }) {
   return (
     <div>
-      <div className="text-2xl font-bold text-astra-700 dark:text-astra-300">{value}</div>
+      <CountUp value={value} prefix={prefix} suffix={suffix}
+               className="text-2xl font-bold text-astra-700 dark:text-astra-300" />
       <div className="text-xs text-faint mt-1">{label}</div>
     </div>
   );
