@@ -26,7 +26,7 @@ class TestTrainingConvergence(unittest.TestCase):
     """Test that training loop shows improvement over iterations."""
 
     def test_reward_improves(self):
-        """Train for 100 iterations on a trivial DAG and verify reward trend."""
+        """Train for 300 iterations and verify reward trend improves."""
         env_config = {
             "num_tasks": 5,
             "num_vms": 2,
@@ -40,23 +40,83 @@ class TestTrainingConvergence(unittest.TestCase):
             env_config=env_config,
             k_pairs=10,
             lr=0.001,
-            batch_size=50,
+            batch_size=100,
             gamma=0.9,
             epsilon=0.2,
         )
 
-        metrics = trainer.train(iterations=100, log_interval=200)
+        metrics = trainer.train(iterations=300, log_interval=500)
 
-        # Compare first 10 vs last 10 mean rewards
-        early_rewards = metrics["mean_reward"][:10]
-        late_rewards = metrics["mean_reward"][-10:]
+        # Compare first 30 vs last 30 mean rewards
+        early_rewards = metrics["mean_reward"][:30]
+        late_rewards = metrics["mean_reward"][-30:]
 
         early_mean = np.mean(early_rewards)
         late_mean = np.mean(late_rewards)
 
-        # Late rewards should be at least as good as early (agent shouldn't degrade)
-        # Note: on very short training, improvement may be marginal
-        self.assertGreaterEqual(late_mean, early_mean - 5.0)
+        # With 300 iterations, the agent should show clear improvement
+        self.assertGreater(late_mean, early_mean)
+
+
+@unittest.skipUnless(_OK, "gymnasium not installed")
+class TestTemplateTrainingConvergence(unittest.TestCase):
+    """Test that training on template DAGs converges."""
+
+    def test_template_mode_reward_improves(self):
+        """Train for 300 iterations on template DAGs and verify improvement."""
+        env_config = {
+            "num_tasks": 20,
+            "num_vms": 4,
+            "k_pairs": 10,
+            "max_steps": 50,
+            "seed": 42,
+            "dag_mode": "template",
+            "num_workspaces": (2, 4),
+        }
+
+        trainer = CTDETrainer(
+            num_workers=2,
+            env_config=env_config,
+            k_pairs=10,
+            lr=0.001,
+            batch_size=100,
+            gamma=0.9,
+            epsilon=0.2,
+        )
+
+        metrics = trainer.train(iterations=300, log_interval=500)
+
+        early_rewards = metrics["mean_reward"][:30]
+        late_rewards = metrics["mean_reward"][-30:]
+
+        early_mean = np.mean(early_rewards)
+        late_mean = np.mean(late_rewards)
+
+        self.assertGreater(late_mean, early_mean)
+
+    def test_hybrid_mode_runs(self):
+        """Hybrid mode completes training without errors."""
+        env_config = {
+            "num_tasks": 10,
+            "num_vms": 2,
+            "k_pairs": 10,
+            "max_steps": 30,
+            "seed": 42,
+            "dag_mode": "hybrid",
+            "num_workspaces": (2, 3),
+            "template_ratio": 0.5,
+        }
+
+        trainer = CTDETrainer(
+            num_workers=2,
+            env_config=env_config,
+            k_pairs=10,
+            batch_size=50,
+        )
+
+        metrics = trainer.train(iterations=20, log_interval=100)
+        self.assertEqual(len(metrics["mean_reward"]), 20)
+        self.assertTrue(all(np.isfinite(r) for r in metrics["mean_reward"]))
 
 
 @unittest.skipUnless(_OK, "gymnasium not installed")

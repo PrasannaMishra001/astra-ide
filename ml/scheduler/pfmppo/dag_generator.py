@@ -67,12 +67,12 @@ def generate_random_dag(
                     dag.add_edge(f"task_{parent_idx}", f"task_{task_idx}")
 
     # Generate VMs
-    vms = _generate_vms(vm_configs, rng)
+    vms = generate_vms(vm_configs, rng)
 
     return dag, vms
 
 
-def _generate_vms(
+def generate_vms(
     vm_configs: Optional[List[Dict]],
     rng: np.random.Generator,
 ) -> List[VM]:

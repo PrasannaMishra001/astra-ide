@@ -26,8 +26,12 @@ _network_cls = None
 _initialized = False
 
 
+_template_fn = None
+_aggregates_fn = None
+
+
 def _ensure_imports():
-    global _torch, _network_cls, _initialized
+    global _torch, _network_cls, _template_fn, _aggregates_fn, _initialized
     if _initialized:
         return
     _initialized = True
@@ -36,7 +40,13 @@ def _ensure_imports():
         _torch = torch
         sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
         from ml.scheduler.pfmppo.network import PFMPPONetwork
+        from ml.scheduler.pfmppo.workspace_templates import (
+            get_template_for_language,
+            compute_template_aggregates,
+        )
         _network_cls = PFMPPONetwork
+        _template_fn = get_template_for_language
+        _aggregates_fn = compute_template_aggregates
     except ImportError as e:
         logger.warning("PF-MPPO dependencies not available: %s", e)
 
@@ -54,6 +64,28 @@ class PFMPPOInferenceService:
         self.k_pairs = k_pairs
         self.network = None
         self._load_model(model_path)
+
+    def _get_workspace_aggregates(self, workspace: Workspace) -> dict:
+        """Compute aggregate resource profile from workspace template."""
+        if _template_fn and _aggregates_fn:
+            language = getattr(workspace, "language", "generic") or "generic"
+            template = _template_fn(language)
+            agg = _aggregates_fn(template)
+            # Scale by workspace resource request ratio
+            cpu_scale = max(workspace.cpu_request / 0.5, 1.0)
+            agg["peak_cpu"] *= cpu_scale
+            agg["peak_mem"] = max(agg["peak_mem"], workspace.memory_request)
+            return agg
+        # Fallback: minimal single-task profile
+        return {
+            "peak_cpu": workspace.cpu_request,
+            "peak_mem": workspace.memory_request,
+            "total_disk": 1024.0,
+            "total_data_mb": 50.0,
+            "critical_path_duration": 1.0,
+            "num_subtasks": 1,
+            "depth": 0,
+        }
 
     def _load_model(self, model_path: str) -> None:
         """Load the trained PF-MPPO model."""
@@ -94,7 +126,7 @@ class PFMPPOInferenceService:
             return None
 
     def _infer(self, workspace: Workspace) -> Optional[PlacementDecision]:
-        """Run model inference."""
+        """Run model inference with template-aware state encoding."""
         # Build admissible pairs from live cluster state
         nodes = cluster_state.all_nodes()
         clusters = cluster_state.all_clusters()
@@ -109,25 +141,28 @@ class PFMPPOInferenceService:
         if not candidates:
             return None
 
-        # Build state vector (trivial single-task DAG: no predecessors/successors)
+        # Compute template-based aggregate resource profile
+        agg = self._get_workspace_aggregates(workspace)
+
+        # Build state vector with template-aware features
         state = np.zeros(self.k_pairs * 10, dtype=np.float32)
 
         for i, (cid, node) in enumerate(candidates[:self.k_pairs]):
             offset = i * 10
             avail_cpu = node.cpu_cap * (1.0 - node.cpu_util)
             avail_mem = node.mem_cap * (1.0 - node.memory_util)
-            avail_disk = node.disk_cap * 0.8  # assume 80% disk available
+            avail_disk = node.disk_cap * 0.8
 
-            state[offset + 0] = avail_cpu - workspace.cpu_request
-            state[offset + 1] = (avail_mem - workspace.memory_request) / 1000.0
-            state[offset + 2] = (avail_disk - 1024.0) / 10000.0  # default disk req
+            state[offset + 0] = avail_cpu - agg["peak_cpu"]
+            state[offset + 1] = (avail_mem - agg["peak_mem"]) / 1000.0
+            state[offset + 2] = (avail_disk - agg["total_disk"]) / 10000.0
             state[offset + 3] = node.bandwidth_mbps / 1000.0
             state[offset + 4] = node.proc_rate_mbps / 100.0
-            state[offset + 5] = 1.0 / 30.0   # trivial task duration estimate
-            state[offset + 6] = 0.1           # minimal data size
-            state[offset + 7] = 0.0           # succ_nums = 0 (single task)
-            state[offset + 8] = 0.0           # desc_nums = 0
-            state[offset + 9] = 0.0           # task_layers = 0
+            state[offset + 5] = agg["critical_path_duration"] / 30.0
+            state[offset + 6] = agg["total_data_mb"] / 500.0
+            state[offset + 7] = (agg["num_subtasks"] - 1) / 10.0
+            state[offset + 8] = (agg["num_subtasks"] - 1) / 20.0
+            state[offset + 9] = agg["depth"] / 10.0
 
         # Valid action mask
         valid_mask = np.zeros(self.k_pairs, dtype=np.float32)

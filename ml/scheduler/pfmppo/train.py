@@ -41,6 +41,14 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--out", type=str, default="runs/pfmppo", help="Output directory")
     parser.add_argument("--log-interval", type=int, default=100, help="Log every N iterations")
+    parser.add_argument("--dag-mode", choices=["random", "template", "hybrid"], default="hybrid",
+                        help="DAG generation mode: random (synthetic), template (IDE workloads), hybrid (mix)")
+    parser.add_argument("--num-workspaces-min", type=int, default=3,
+                        help="Min simultaneous workspaces per episode (template/hybrid mode)")
+    parser.add_argument("--num-workspaces-max", type=int, default=8,
+                        help="Max simultaneous workspaces per episode (template/hybrid mode)")
+    parser.add_argument("--template-ratio", type=float, default=0.7,
+                        help="Fraction of episodes using templates in hybrid mode")
     args = parser.parse_args()
 
     try:
@@ -85,6 +93,9 @@ def main() -> int:
         "max_deps_per_task": 3,
         "vm_configs": vm_configs,
         "seed": args.seed,
+        "dag_mode": args.dag_mode,
+        "num_workspaces": (args.num_workspaces_min, args.num_workspaces_max),
+        "template_ratio": args.template_ratio,
     }
 
     # Create output directory
@@ -93,6 +104,7 @@ def main() -> int:
 
     print(f"PF-MPPO Training")
     print(f"  Mode:       {args.mode}")
+    print(f"  DAG mode:   {args.dag_mode}")
     print(f"  Workers:    {args.workers}")
     print(f"  Iterations: {args.iterations}")
     print(f"  LR:         {lr}")
@@ -102,6 +114,9 @@ def main() -> int:
     print(f"  K-pairs:    {args.k_pairs}")
     print(f"  Num tasks:  {args.num_tasks}")
     print(f"  Num VMs:    {num_vms}")
+    if args.dag_mode != "random":
+        print(f"  Workspaces: {args.num_workspaces_min}-{args.num_workspaces_max}")
+        print(f"  Template%:  {args.template_ratio * 100:.0f}%")
     print(f"  Output:     {out_dir}")
     print()
 
@@ -141,6 +156,7 @@ def main() -> int:
     # Save training metadata
     metadata = {
         "mode": args.mode,
+        "dag_mode": args.dag_mode,
         "iterations": args.iterations,
         "workers": args.workers,
         "lr": lr,

@@ -22,6 +22,7 @@ except ImportError:
 
 from ml.scheduler.pfmppo.dag import Task, VM, TaskDAG
 from ml.scheduler.pfmppo.dag_generator import generate_random_dag, load_vm_configs
+from ml.scheduler.pfmppo.workspace_templates import generate_template_dag
 from ml.scheduler.pfmppo.graph_algorithms import (
     parse_task_features,
     global_prioritization,
@@ -96,6 +97,10 @@ if _GYM_AVAILABLE:
             alpha1: float = 0.60,
             alpha2: float = 0.20,
             alpha3: float = 0.20,
+            dag_mode: str = "random",
+            num_workspaces: Tuple[int, int] = (3, 8),
+            language_weights: Optional[Dict[str, float]] = None,
+            template_ratio: float = 0.7,
         ):
             super().__init__()
             self.num_tasks = num_tasks
@@ -107,6 +112,10 @@ if _GYM_AVAILABLE:
             self.alpha1 = alpha1
             self.alpha2 = alpha2
             self.alpha3 = alpha3
+            self.dag_mode = dag_mode
+            self.num_workspaces = num_workspaces
+            self.language_weights = language_weights
+            self.template_ratio = template_ratio
 
             obs_dim = k_pairs * FEATURES_PER_PAIR
             self.observation_space = spaces.Box(
@@ -139,12 +148,27 @@ if _GYM_AVAILABLE:
             self._episode_count += 1
             dag_seed = self._rng.integers(0, 2**31)
 
-            self.dag, self.vms = generate_random_dag(
-                num_tasks=self.num_tasks,
-                max_deps_per_task=self.max_deps_per_task,
-                seed=int(dag_seed),
-                vm_configs=self.vm_configs,
+            use_template = (
+                self.dag_mode == "template"
+                or (self.dag_mode == "hybrid" and self._rng.random() < self.template_ratio)
             )
+
+            if use_template:
+                n_ws = int(self._rng.integers(self.num_workspaces[0], self.num_workspaces[1] + 1))
+                ws_rng = np.random.default_rng(int(dag_seed))
+                self.dag, self.vms = generate_template_dag(
+                    num_workspaces=n_ws,
+                    rng=ws_rng,
+                    language_weights=self.language_weights,
+                    vm_configs=self.vm_configs,
+                )
+            else:
+                self.dag, self.vms = generate_random_dag(
+                    num_tasks=self.num_tasks,
+                    max_deps_per_task=self.max_deps_per_task,
+                    seed=int(dag_seed),
+                    vm_configs=self.vm_configs,
+                )
 
             # Reset VM available resources
             for vm in self.vms:

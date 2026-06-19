@@ -8,6 +8,8 @@ Implementation of the paper *"PF-MPPO: Task-dependent workflow scheduling method
 
 PF-MPPO extends standard PPO with:
 - **DAG-based task modeling** — tasks have dependencies forming a directed acyclic graph
+- **Realistic IDE workspace templates** — 7 project-type templates (Python, Node.js, C++, Go, Rust, Monorepo, Generic) with real resource profiles
+- **Hybrid training** — mix of template DAGs (70%) and random DAGs (30%) for domain-specific learning + generalization
 - **Multi-agent CTDE training** — 1 Global PPO + N parallel workers
 - **Pre-training + Fine-tuning** — Rule Library of pre-trained models for different cluster sizes
 - **Algorithm 3 (Model Selection)** — MMD-based selection of the best pre-trained model when cluster scales
@@ -15,37 +17,44 @@ PF-MPPO extends standard PPO with:
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    PF-MPPO Pipeline                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────┐    ┌──────────────┐    ┌──────────────────┐  │
-│  │ TaskDAG  │───▶│ Graph Algos  │───▶│ Admission Control│  │
-│  │ (dag.py) │    │ (Alg 1 & 2)  │    │ (Eq 17)          │  │
-│  └──────────┘    └──────────────┘    └────────┬─────────┘  │
-│                                               │             │
-│                                    Top-K (Task, VM) pairs   │
-│                                               │             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Gymnasium Environment (env.py)           │   │
-│  │  State: K×10 vector (Eq 28)                          │   │
-│  │  Action: Discrete [0, K-1] (Eq 29)                   │   │
-│  │  Reward: -(α₁·log(T) + α₂·log(E) + α₃·log(LB))     │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                          │                                  │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           CTDE Trainer (multi_agent.py)               │   │
-│  │  1 Global PPO ←── trajectories ←── 9 Workers         │   │
-│  │  PPO Update (Eq 36) + Action Masking + Alg 4 (CDF)   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                          │                                  │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │         Rule Library (rule_library.py)                │   │
-│  │  Pre-trained models for 2/4/8/16 node clusters       │   │
-│  │  Selection: Node count → MMD → Shadow execution      │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      PF-MPPO Pipeline                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │         Workspace Templates (workspace_templates.py)        │ │
+│  │  Python | Node.js | C++ | Go | Rust | Monorepo | Generic   │ │
+│  │  image_pull → repo_clone → deps_install → [lsp, ext] → dev │ │
+│  └────────────────────────────┬───────────────────────────────┘ │
+│                               │                                 │
+│  ┌──────────┐    ┌────────────▼──┐    ┌──────────────────┐     │
+│  │ TaskDAG  │───▶│  Graph Algos  │───▶│ Admission Control│     │
+│  │ (dag.py) │    │  (Alg 1 & 2)  │    │ (Eq 17)          │     │
+│  └──────────┘    └───────────────┘    └────────┬─────────┘     │
+│                                                │               │
+│                                     Top-K (Task, VM) pairs     │
+│                                                │               │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Gymnasium Environment (env.py)               │  │
+│  │  DAG Mode: random | template | hybrid                     │  │
+│  │  State: K×10 vector (Eq 28)                               │  │
+│  │  Action: Discrete [0, K-1] (Eq 29)                        │  │
+│  │  Reward: -(α₁·log(T) + α₂·log(E) + α₃·log(LB))          │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                          │                                     │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │           CTDE Trainer (multi_agent.py)                    │  │
+│  │  1 Global PPO ←── trajectories ←── 9 Workers              │  │
+│  │  PPO Update (Eq 36) + Action Masking + Alg 4 (CDF)        │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                          │                                     │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │         Rule Library (rule_library.py)                     │  │
+│  │  Pre-trained models for 2/4/8/16 node clusters            │  │
+│  │  Selection: Node count → MMD → Shadow execution            │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -71,31 +80,48 @@ pip install -r ml/requirements.txt
 python -m unittest discover -s ml/scheduler/pfmppo/tests -v
 ```
 
-All 95 tests should pass.
+All 126 tests should pass (97 core + 29 template tests).
 
 ### Train a Model
 
 ```bash
-# Pre-train on the default 4-node config (quick test: 100 iterations)
+# Hybrid mode (recommended): 70% realistic templates + 30% random DAGs
 python -m ml.scheduler.pfmppo.train \
     --mode pretrain \
+    --dag-mode hybrid \
+    --config ml/scheduler/pfmppo/configs/4_nodes.json \
+    --iterations 2000 \
+    --workers 9 \
+    --batch-size 1000 \
+    --out runs/pfmppo_production
+
+# Template-only mode (IDE-specific specialization)
+python -m ml.scheduler.pfmppo.train \
+    --mode pretrain \
+    --dag-mode template \
+    --config ml/scheduler/pfmppo/configs/4_nodes.json \
+    --iterations 2000 \
+    --workers 9 \
+    --out runs/pfmppo_template
+
+# Random-only mode (original behavior, backward compatible)
+python -m ml.scheduler.pfmppo.train \
+    --mode pretrain \
+    --dag-mode random \
+    --config ml/scheduler/pfmppo/configs/4_nodes.json \
+    --iterations 2000 \
+    --workers 9 \
+    --out runs/pfmppo_random
+
+# Quick test (100 iterations)
+python -m ml.scheduler.pfmppo.train \
+    --mode pretrain \
+    --dag-mode hybrid \
     --config ml/scheduler/pfmppo/configs/4_nodes.json \
     --iterations 100 \
     --workers 4 \
     --batch-size 200 \
     --out runs/pfmppo_test
-
-# Full training (paper parameters: 2000 iterations, 9 workers)
-python -m ml.scheduler.pfmppo.train \
-    --mode pretrain \
-    --config ml/scheduler/pfmppo/configs/4_nodes.json \
-    --iterations 2000 \
-    --workers 9 \
-    --batch-size 1000 \
-    --lr 0.001 \
-    --gamma 0.9 \
-    --epsilon 0.2 \
-    --out runs/pfmppo_production
 ```
 
 ### Fine-tune an Existing Model
@@ -131,6 +157,51 @@ python benchmarks/b1_scheduler/eval_pfmppo.py \
     --workers 9 \
     --num-tasks 20
 ```
+
+---
+
+## Workspace Templates
+
+Training uses realistic IDE workspace startup DAGs instead of purely random task graphs. Each template models the actual sub-task chain for a specific project type.
+
+### Available Templates
+
+| Template | Language(s) | Sub-tasks | Character |
+|----------|-------------|-----------|-----------|
+| Python | `python` | image_pull → repo_clone → pip_install → [lsp, ext] → devserver | Heavy CPU+disk during pip |
+| Node.js | `javascript`, `typescript`, `nodejs` | image_pull → repo_clone → npm_install → [lsp, ext] → devserver | Very high memory+disk |
+| C++ | `cpp`, `c++`, `c` | image_pull → repo_clone → cmake_configure → cmake_build → [lsp, ext] | Very high CPU (120s build) |
+| Go | `go`, `golang` | image_pull → repo_clone → go_mod_download → go_build → [lsp, ext] | High CPU (45s build) |
+| Rust | `rust` | image_pull → repo_clone → cargo_fetch → cargo_build → [lsp, ext] | Heaviest (180s, 4 CPU, 3GB) |
+| Monorepo | `monorepo` | image_pull → repo_clone → [pkg_a, pkg_b, pkg_c] → [lsp, ext] | 3 parallel installs |
+| Generic | fallback | image_pull → repo_clone → ext_load | Minimal 3-task |
+
+### Sub-task Resource Profiles
+
+| Sub-task | CPU | Memory | Disk | Duration | Bandwidth Character |
+|----------|-----|--------|------|----------|-------------------|
+| image_pull | 0.25 | 256 MB | 2 GB | ~10s | High download |
+| repo_clone | 0.5 | 512 MB | 4 GB | ~8s | High download |
+| pip_install | 2.0 | 1 GB | 8 GB | ~30s | CPU+disk bound |
+| npm_install | 2.5 | 2 GB | 12 GB | ~45s | Memory+disk bound |
+| cmake_build | 4.0 | 2 GB | 4 GB | ~120s | CPU bound |
+| cargo_build | 4.0 | 3 GB | 8 GB | ~180s | CPU+memory bound |
+| lsp_start | 1.0 | 768 MB | 256 MB | ~5s | Light |
+| devserver | 0.5 | 256 MB | 128 MB | ~3s | Light |
+
+All values have noise injection (±15–60% variance) for training robustness.
+
+### DAG Modes
+
+| Mode | Flag | Behavior |
+|------|------|----------|
+| **Hybrid** (default) | `--dag-mode hybrid` | 70% template + 30% random per episode |
+| Template | `--dag-mode template` | 100% realistic workspace templates |
+| Random | `--dag-mode random` | Original synthetic DAGs (backward compatible) |
+
+### Multi-Workspace Training
+
+Each episode simulates 3–8 workspaces starting simultaneously (configurable via `--num-workspaces-min/max`). The model learns resource contention across concurrent startups — e.g., placing a Rust build and an npm install on the same compute node causes resource starvation.
 
 ---
 
@@ -188,12 +259,13 @@ Set `SCHEDULER_ALGORITHM=heuristic` (or remove it — heuristic is the default) 
 | `dag.py` | `Task`, `VM`, `TaskDAG` dataclasses (Eqs 1-2) |
 | `graph_algorithms.py` | Algorithm 1 (BFS features), Algorithm 2 (prioritization), Eq 17 (admission control) |
 | `math_models.py` | Eqs 3-16: communication delay, computation time, energy, load balance, reward |
-| `env.py` | Gymnasium environment: Eq 28 (state), Eq 29 (action), Eq 30 (reward) |
-| `dag_generator.py` | Synthetic DAG generation for training |
+| `workspace_templates.py` | 7 IDE workspace startup templates, noise injection, composite DAG generation, aggregate computation |
+| `env.py` | Gymnasium environment: Eq 28 (state), Eq 29 (action), Eq 30 (reward), dag_mode switching |
+| `dag_generator.py` | Synthetic DAG generation (random mode) + `generate_vms()` utility |
 | `network.py` | Custom PyTorch Actor-Critic network (Table 1) |
 | `ppo_agent.py` | PPO agent + Algorithm 4 (weighted random sampling) + rollout buffer |
 | `multi_agent.py` | CTDE trainer: 1 Global PPO + N workers (ThreadPoolExecutor) |
-| `train.py` | CLI training entrypoint (pretrain / finetune) |
+| `train.py` | CLI training entrypoint (pretrain / finetune / dag-mode selection) |
 | `rule_library.py` | Algorithm 3: model storage + MMD selection |
 | `pretrain_all.py` | Batch pre-training for all cluster configs |
 | `configs/*.json` | Cluster configuration files (2/4/8/16 nodes) |
@@ -241,6 +313,9 @@ Set `SCHEDULER_ALGORITHM=heuristic` (or remove it — heuristic is the default) 
 | Iterations | 2000 | `--iterations 2000` |
 | K (top pairs) | 10 | `--k-pairs 10` |
 | Reward weights | α₁=0.60, α₂=0.20, α₃=0.20 | Set in env.py |
+| DAG mode | hybrid | `--dag-mode hybrid` |
+| Workspaces per episode | 3–8 | `--num-workspaces-min 3 --num-workspaces-max 8` |
+| Template ratio (hybrid) | 0.7 | `--template-ratio 0.7` |
 
 ---
 
