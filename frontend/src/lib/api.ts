@@ -463,4 +463,17 @@ export async function getAdminUsers(): Promise<AdminOverview> {
   return data;
 }
 
+// ── Sandbox observability ────────────────────────────────────────────────────
+export interface SandboxTierMetric {
+  tier: string; label: string; startup_ms: number; cpu_overhead_pct: number;
+  syscall_us: number; memory_mb: number; isolation: string;
+}
+export interface SandboxMetrics {
+  timestamp: string; tiers: SandboxTierMetric[]; note: string;
+}
+export async function getSandboxMetrics(): Promise<SandboxMetrics> {
+  const { data } = await api.get<SandboxMetrics>('/metrics/sandbox');
+  return data;
+}
+
 export default api;
