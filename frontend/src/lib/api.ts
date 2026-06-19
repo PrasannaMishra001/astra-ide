@@ -421,4 +421,23 @@ export async function runBenchmark(n_jobs = 200, seed = 42): Promise<BenchmarkRe
   return data;
 }
 
+export interface BenchmarkRunLog {
+  id:               number;
+  created_at:       string;
+  username:         string;
+  n_jobs:           number;
+  seed:             number;
+  winner:           string;
+  ppo_latency_ms:   number;
+  ppo_util_pct:     number;
+  ppo_balance:      number;
+  ppo_sla:          number;
+  latency_gain_pct: number;
+}
+
+export async function getBenchmarkHistory(limit = 20): Promise<BenchmarkRunLog[]> {
+  const { data } = await api.get<BenchmarkRunLog[]>(`/benchmarks/history?limit=${limit}`);
+  return data;
+}
+
 export default api;
