@@ -19,7 +19,7 @@ import GoToTop             from '../components/ui/GoToTop';
 import { useTheme }        from '../lib/theme';
 import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
 
-const CobeGlobe = dynamic(() => import('../components/ui/CobeGlobe'), { ssr: false });
+const GithubGlobe = dynamic(() => import('../components/ui/GithubGlobe'), { ssr: false });
 
 const DEMO_TERMINAL: TerminalLine[] = [
   { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'POST /api/v1/workspaces  language=bash network=true' },
@@ -207,10 +207,10 @@ export default function HomePage() {
               </div>
             </div>
             <div className="relative lg:-mr-24 xl:-mr-32">
-              <CobeGlobe />
+              <GithubGlobe />
               <div className="flex items-center justify-center gap-5 mt-2 text-[11px] text-faint">
-                <Legend color="#edafb8" label="Workspaces" />
-                <Legend color="#b0c4b1" label="Clusters" />
+                <Legend color="#e08e9b" label="User cities" />
+                <Legend color="#9CB080" label="Clusters" />
               </div>
             </div>
           </div>
