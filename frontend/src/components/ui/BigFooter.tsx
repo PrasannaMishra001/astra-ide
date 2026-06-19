@@ -25,9 +25,9 @@ export default function BigFooter() {
       <div className="relative z-10 max-w-6xl mx-auto px-6 pt-12 pb-44 sm:pb-56 flex flex-col items-center gap-4">
         <nav className="flex flex-wrap items-center justify-center gap-5 sm:gap-6 text-sm">
           <Link href="/dashboard" className="text-muted hover:text-astra-500 transition-colors">Workspaces</Link>
-          <Link href="/clusters" className="text-muted hover:text-purple-500 transition-colors">Clusters</Link>
-          <Link href="/benchmarks" className="text-muted hover:text-pink-500 transition-colors">Benchmarks</Link>
-          <Link href="/platform" className="text-muted hover:text-emerald-500 transition-colors">Platform</Link>
+          <Link href="/clusters" className="text-muted hover:text-astra-600 dark:hover:text-astra-300 transition-colors">Clusters</Link>
+          <Link href="/benchmarks" className="text-muted hover:text-blossom-500 dark:hover:text-blossom-300 transition-colors">Benchmarks</Link>
+          <Link href="/platform" className="text-muted hover:text-astra-500 transition-colors">Platform</Link>
         </nav>
         <div className="text-xs text-faint flex items-center gap-2">
           <span className="hover:text-ink transition-colors">ASTRA-IDE</span>

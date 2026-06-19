@@ -12,7 +12,7 @@ export default function NoiseBackground({
   return (
     <div className={cn(
       'relative overflow-hidden rounded-2xl',
-      'bg-gradient-to-br from-astra-600 via-purple-600 to-pink-600',
+      'bg-gradient-to-br from-astra-600 via-astra-500 to-blossom-400',
       className,
     )}>
       <div className="noise-layer pointer-events-none absolute inset-0 opacity-[0.18]" aria-hidden="true" />

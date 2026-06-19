@@ -28,7 +28,7 @@ export default function BackgroundRippleEffect({
     <div className={cn('absolute inset-0 h-full w-full overflow-hidden', className)} aria-hidden="true">
       {/* soft theme glow behind the grid */}
       <div className="absolute inset-0"
-           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgb(99 102 241 / 0.18), transparent 70%)' }} />
+           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgb(176 196 177 / 0.22), transparent 70%)' }} />
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{ width: cols * cellSize, height: rows * cellSize }}

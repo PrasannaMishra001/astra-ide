@@ -38,7 +38,7 @@ export default function CardSpotlight({
       <motion.div
         className="pointer-events-none absolute -inset-px z-0 opacity-0 transition duration-300 group-hover:opacity-100"
         style={{
-          background: `radial-gradient(${radius}px circle at ${pos.x}px ${pos.y}px, rgb(99 102 241 / 0.20), transparent 70%)`,
+          background: `radial-gradient(${radius}px circle at ${pos.x}px ${pos.y}px, rgb(176 196 177 / 0.28), transparent 70%)`,
         }}
         animate={{ opacity: hovered ? 1 : 0 }}
       />

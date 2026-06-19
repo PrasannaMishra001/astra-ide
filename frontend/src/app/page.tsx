@@ -125,8 +125,8 @@ export default function HomePage() {
     <main className="min-h-screen">
       {/* HERO */}
       <AuroraBackground className="relative min-h-screen overflow-hidden">
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(168,85,247,0.7)" />
-        <Sparkles density={0.4} color="#a5b4fc" />
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(176,196,177,0.55)" />
+        <Sparkles density={0.4} color="#dedbd2" />
 
         <Navbar variant="hero" />
 
@@ -140,21 +140,21 @@ export default function HomePage() {
                 text="The cloud IDE"
                 height={130}
                 fontSize={104}
-                gradient={['#60a5fa', '#a855f7', '#ec4899']}
+                gradient={['#dedbd2', '#b0c4b1', '#edafb8']}
               />
               <CanvasText
                 text="that schedules itself."
                 height={130}
                 fontSize={92}
-                gradient={['#a855f7', '#ec4899', '#f97316']}
+                gradient={['#b0c4b1', '#edafb8', '#f7e1d7']}
               />
             </div>
 
-            <p className="text-slate-300 text-lg leading-relaxed max-w-2xl">
-              <span className="text-astra-400 font-semibold">DRL-PPO</span> scheduling,{' '}
-              <span className="text-purple-400 font-semibold">eBPF</span> telemetry,{' '}
-              <span className="text-pink-400 font-semibold">adaptive sandboxing</span>,{' '}
-              <span className="text-amber-400 font-semibold">LSTM prewarming</span>, multi-cluster
+            <p className="text-[#dedbd2] text-lg leading-relaxed max-w-2xl">
+              <span className="text-astra-300 font-semibold">DRL-PPO</span> scheduling,{' '}
+              <span className="text-blossom-300 font-semibold">eBPF</span> telemetry,{' '}
+              <span className="text-astra-200 font-semibold">adaptive sandboxing</span>,{' '}
+              <span className="text-blossom-200 font-semibold">LSTM prewarming</span>, multi-cluster
               federation, and conflict-free collaboration, in one open research platform.
             </p>
 
@@ -197,10 +197,10 @@ export default function HomePage() {
               <p className="text-muted leading-relaxed max-w-lg">
                 Every user connects to the nearest cluster. The PPO scheduler watches global state and
                 routes workspaces across four federated regions:{' '}
-                <span className="text-astra-600 dark:text-astra-400 font-medium">Denmark</span>,{' '}
-                <span className="text-purple-600 dark:text-purple-400 font-medium">India</span>,{' '}
-                <span className="text-pink-600 dark:text-pink-400 font-medium">California</span> and{' '}
-                <span className="text-amber-600 dark:text-amber-400 font-medium">Singapore</span>.
+                <span className="text-astra-600 dark:text-astra-300 font-medium">Denmark</span>,{' '}
+                <span className="text-blossom-500 dark:text-blossom-300 font-medium">India</span>,{' '}
+                <span className="text-astra-500 dark:text-astra-400 font-medium">California</span> and{' '}
+                <span className="text-blossom-400 dark:text-blossom-200 font-medium">Singapore</span>.
                 Drag the globe to rotate it.
               </p>
               <div className="grid grid-cols-3 gap-4 pt-2">
@@ -212,8 +212,8 @@ export default function HomePage() {
             <div className="relative lg:-mr-24 xl:-mr-32">
               <CobeGlobe />
               <div className="flex items-center justify-center gap-5 mt-2 text-[11px] text-faint">
-                <Legend color="#a855f7" label="Workspaces" />
-                <Legend color="#60a5fa" label="Clusters" />
+                <Legend color="#edafb8" label="Workspaces" />
+                <Legend color="#b0c4b1" label="Clusters" />
               </div>
             </div>
           </div>
@@ -265,7 +265,7 @@ export default function HomePage() {
               {TEAM.map((m) => (
                 <ThreeDCard key={m.roll} intensity={10}>
                   <div className="p-5 card text-center">
-                    <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-astra-500 to-purple-600 flex items-center justify-center text-xl font-bold mb-3">
+                    <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-astra-500 to-blossom-400 flex items-center justify-center text-xl font-bold mb-3 text-white">
                       {m.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                     </div>
                     <div className="font-semibold">{m.name}</div>

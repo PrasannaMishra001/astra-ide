@@ -8,9 +8,9 @@ import { useEffect, useRef, useState } from 'react';
 import createGlobe from 'cobe';
 import { cn } from '../../lib/utils';
 
-const CLUSTER = [0.38, 0.65, 1] as [number, number, number];   // astra blue
-const USER    = [0.66, 0.42, 1] as [number, number, number];   // purple
-const ARC     = [0.55, 0.5, 1]  as [number, number, number];
+const CLUSTER = [0.69, 0.77, 0.69] as [number, number, number]; // ash sage b0c4b1
+const USER    = [0.93, 0.69, 0.72] as [number, number, number]; // blossom edafb8
+const ARC     = [0.80, 0.73, 0.74] as [number, number, number]; // soft blossom-grey
 
 const CLUSTERS = {
   a: [55.5, 9.5] as [number, number],     // Denmark
@@ -71,9 +71,9 @@ export default function CobeGlobe({ className }: { className?: string }) {
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 6,
-      baseColor: [0.27, 0.4, 0.62],
+      baseColor: [0.29, 0.34, 0.35],
       markerColor: CLUSTER,
-      glowColor: [0.4, 0.5, 0.9],
+      glowColor: [0.69, 0.77, 0.69],
       markers: MARKERS,
       arcs: ARCS,
       arcColor: ARC,

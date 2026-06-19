@@ -5,29 +5,32 @@
 /* ── Theme tokens ─────────────────────────────────────────────────────────
    Light is the default; `.dark` on <html> flips the palette. Values are RGB
    triplets so Tailwind alpha modifiers work (bg-surface/60 etc).            */
+/* Brand palette: edafb8 blossom · f7e1d7 powder · dedbd2 dust · b0c4b1 sage ·
+   4a5759 iron. Light = warm cream bg + iron-teal ink; dark = deep teal bg +
+   cream ink. Both share the same teal/sage/blossom family.                  */
 :root {
-  --c-bg:          248 250 252;   /* slate-50  */
-  --c-surface:     255 255 255;
-  --c-raised:      241 245 249;   /* slate-100 */
-  --c-edge:        226 232 240;   /* slate-200 */
-  --c-edge-strong: 203 213 225;   /* slate-300 */
-  --c-ink:         15  23  42;    /* slate-900 */
-  --c-muted:       71  85  105;   /* slate-600 */
-  --c-faint:       148 163 184;   /* slate-400 */
-  --scroll-track:  241 245 249;
-  --scroll-thumb:  203 213 225;
+  --c-bg:          246 236 229;   /* warm powder cream */
+  --c-surface:     253 250 246;   /* near-white warm */
+  --c-raised:      234 227 217;   /* dust grey */
+  --c-edge:        221 212 200;   /* warm border */
+  --c-edge-strong: 176 196 177;   /* b0c4b1 ash sage */
+  --c-ink:         63  75  77;    /* iron grey (deepened) */
+  --c-muted:       95  111 108;   /* muted teal */
+  --c-faint:       151 163 155;   /* light sage */
+  --scroll-track:  234 227 217;
+  --scroll-thumb:  176 196 177;
 }
 .dark {
-  --c-bg:          2   6   23;    /* slate-950 */
-  --c-surface:     11  18  32;
-  --c-raised:      30  41  59;    /* slate-800 */
-  --c-edge:        30  41  59;
-  --c-edge-strong: 51  65  85;    /* slate-700 */
-  --c-ink:         226 232 240;   /* slate-200 */
-  --c-muted:       148 163 184;   /* slate-400 */
-  --c-faint:       100 116 139;   /* slate-500 */
-  --scroll-track:  15  23  42;
-  --scroll-thumb:  51  65  85;
+  --c-bg:          35  43  44;    /* very dark teal */
+  --c-surface:     44  54  55;
+  --c-raised:      58  70  71;
+  --c-edge:        58  70  71;
+  --c-edge-strong: 74  87  89;    /* 4a5759 iron grey */
+  --c-ink:         241 231 221;   /* warm cream text */
+  --c-muted:       176 196 177;   /* ash sage */
+  --c-faint:       138 151 143;
+  --scroll-track:  44  54  55;
+  --scroll-thumb:  74  87  89;
 }
 
 :root {
@@ -130,16 +133,16 @@ html, body {
 }
 .ambient::before {
   width: 560px; height: 560px; left: -120px; top: -160px;
-  background: radial-gradient(circle, rgb(59 130 246 / 0.16), transparent 65%);
+  background: radial-gradient(circle, rgb(176 196 177 / 0.22), transparent 65%);
   animation: blob-a 26s ease-in-out infinite alternate;
 }
 .ambient::after {
   width: 640px; height: 640px; right: -180px; bottom: -220px;
-  background: radial-gradient(circle, rgb(168 85 247 / 0.12), transparent 65%);
+  background: radial-gradient(circle, rgb(237 175 184 / 0.16), transparent 65%);
   animation: blob-b 32s ease-in-out infinite alternate;
 }
-.dark .ambient::before { background: radial-gradient(circle, rgb(59 130 246 / 0.10), transparent 65%); }
-.dark .ambient::after  { background: radial-gradient(circle, rgb(168 85 247 / 0.08), transparent 65%); }
+.dark .ambient::before { background: radial-gradient(circle, rgb(176 196 177 / 0.10), transparent 65%); }
+.dark .ambient::after  { background: radial-gradient(circle, rgb(237 175 184 / 0.08), transparent 65%); }
 @keyframes blob-a { to { transform: translate(70px, 50px) scale(1.12); } }
 @keyframes blob-b { to { transform: translate(-60px, -50px) scale(0.94); } }
 
@@ -150,9 +153,9 @@ html, body {
   position: absolute; inset: -10%; border-radius: 50%;
   filter: blur(80px); opacity: 0.6; pointer-events: none; will-change: transform;
 }
-.aurora-1 { background: radial-gradient(circle at 30% 30%, #3b82f6, transparent 60%); animation: aurora-drift-1 18s ease-in-out infinite alternate; }
-.aurora-2 { background: radial-gradient(circle at 70% 60%, #a855f7, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
-.aurora-3 { background: radial-gradient(circle at 50% 80%, #ec4899, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.4; }
+.aurora-1 { background: radial-gradient(circle at 30% 30%, #4a5759, transparent 60%); animation: aurora-drift-1 18s ease-in-out infinite alternate; }
+.aurora-2 { background: radial-gradient(circle at 70% 60%, #b0c4b1, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
+.aurora-3 { background: radial-gradient(circle at 50% 80%, #edafb8, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.35; }
 .aurora-grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
   background-image:
@@ -209,21 +212,21 @@ html, body {
   animation: liquid-sheen 6s linear infinite;
   filter: drop-shadow(0 2px 12px rgb(124 58 237 / 0.18));
 }
-/* Light mode: deepen the base hues so it stays legible on white. */
+/* Light mode: iron-teal → sage → blossom, legible on warm cream. */
 .t-liquid {
   background-image: linear-gradient(
     105deg,
-    #1d4ed8 0%, #6d28d9 22%, #be185d 40%,
-    #312e81 50%,
-    #be185d 60%, #6d28d9 78%, #1d4ed8 100%
+    #4a5759 0%, #6b8479 22%, #cf6e7e 40%,
+    #3d4849 50%,
+    #cf6e7e 60%, #6b8479 78%, #4a5759 100%
   );
 }
 .dark .t-liquid {
   background-image: linear-gradient(
     105deg,
-    #60a5fa 0%, #a855f7 22%, #ec4899 40%,
-    #ffffff 50%,
-    #ec4899 60%, #a855f7 78%, #60a5fa 100%
+    #b0c4b1 0%, #cdd8cd 22%, #edafb8 40%,
+    #f7e1d7 50%,
+    #edafb8 60%, #cdd8cd 78%, #b0c4b1 100%
   );
 }
 @keyframes liquid-sheen {

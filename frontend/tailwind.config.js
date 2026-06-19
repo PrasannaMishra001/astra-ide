@@ -15,17 +15,28 @@ module.exports = {
         ink:     'rgb(var(--c-ink) / <alpha-value>)',
         muted:   'rgb(var(--c-muted) / <alpha-value>)',
         faint:   'rgb(var(--c-faint) / <alpha-value>)',
+        // Primary accent — sage→iron-teal scale derived from the brand palette
+        // (b0c4b1 ash sage, 4a5759 iron grey). Replaces the old blue.
         astra: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50:  '#eef3f1',
+          100: '#dde7e3',
+          200: '#c4d3cc',
+          300: '#b0c4b1',   // ash sage
+          400: '#8ba395',
+          500: '#6b8479',
+          600: '#4a5759',   // iron grey — primary
+          700: '#3d4849',
+          800: '#313a3b',
+          900: '#252c2d',
+        },
+        // Secondary accent — cherry-blossom for highlights / decorative gradients.
+        blossom: {
+          100: '#fbe6ea',
+          200: '#f6d2d9',
+          300: '#edafb8',   // cherry blossom
+          400: '#e08e9b',
+          500: '#cf6e7e',
+          600: '#b45464',
         },
       },
       fontFamily: {

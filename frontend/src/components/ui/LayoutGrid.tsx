@@ -109,7 +109,7 @@ export default function LayoutGrid({ cards }: { cards: GridCard[] }) {
                       {active.how.map((step, i) => (
                         <li key={i} className="flex gap-3 text-sm text-muted leading-relaxed">
                           <span className={cn('shrink-0 grid place-items-center w-6 h-6 rounded-full text-xs font-semibold text-white',
-                            'bg-gradient-to-br from-astra-500 to-purple-600')}>
+                            'bg-gradient-to-br from-astra-500 to-blossom-400')}>
                             {i + 1}
                           </span>
                           <span className="pt-0.5">{step}</span>

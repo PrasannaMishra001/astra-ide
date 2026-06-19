@@ -43,11 +43,11 @@ export default function TextHoverEffect({ text, className, duration = 0.4 }: Pro
         <linearGradient id="textGrad" gradientUnits="userSpaceOnUse" cx="50%" cy="50%" r="25%">
           {hovered && (
             <>
-              <stop offset="0%"   stopColor="#60a5fa" />
-              <stop offset="25%"  stopColor="#a855f7" />
-              <stop offset="50%"  stopColor="#ec4899" />
-              <stop offset="75%"  stopColor="#f97316" />
-              <stop offset="100%" stopColor="#facc15" />
+              <stop offset="0%"   stopColor="#4a5759" />
+              <stop offset="25%"  stopColor="#b0c4b1" />
+              <stop offset="50%"  stopColor="#edafb8" />
+              <stop offset="75%"  stopColor="#f7e1d7" />
+              <stop offset="100%" stopColor="#dedbd2" />
             </>
           )}
         </linearGradient>
