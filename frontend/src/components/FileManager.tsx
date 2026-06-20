@@ -6,14 +6,14 @@ import {
   ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, FilePlus,
   FileCode2, FileText, FileJson, FileTerminal, FileImage, Image as ImageIcon,
   GitBranch, RefreshCw, Save, Search, TerminalSquare, Trash2, Loader2, X, Check, Palette,
-  PanelLeft, GripHorizontal,
+  PanelLeft, GripHorizontal, Upload,
 } from 'lucide-react';
 
 const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
 import {
   listFiles, readFile, writeFile, importRepo, makeDir, deletePath,
-  searchWorkspace, rawFileUrl, type WsFile, type SearchHit,
+  searchWorkspace, rawFileUrl, uploadFiles, type WsFile, type SearchHit,
 } from '../lib/api';
 import { toast } from '../lib/toast';
 import { cn } from '../lib/utils';
@@ -100,9 +100,11 @@ interface FMProps {
   onActiveFile?: (path: string | null) => void;
   /** Bump `.n` to request opening `.path` from outside (e.g. settings config). */
   openSignal?: { path: string; n: number };
+  /** Reports whether the open file has unsaved edits (for the leave guard). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export default function FileManager({ workspaceId, frozen = false, onActiveFile, openSignal }: FMProps) {
+export default function FileManager({ workspaceId, frozen = false, onActiveFile, openSignal, onDirtyChange }: FMProps) {
   const [showTerminal, setShowTerminal] = useState(false);
   // Resizable panels (VS Code-style). Explorer collapses fully below a minimum;
   // terminal closes when dragged below a minimum.
@@ -180,6 +182,27 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
     if (monaco) setMonacoTheme(await applyEditorTheme(monaco, id));
     setShowThemePicker(false);
     toast.success('Theme applied', themeById(id).label);
+  }
+
+  // Surface unsaved-edit state to the workspace page (leave guard).
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+
+  // ── File upload (button + drag-drop) ──────────────────────────────────────
+  const uploadRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function doUpload(files: FileList | File[]) {
+    if (!files || (files as FileList).length === 0) return;
+    if (frozen) { toast.error('Workspace is frozen', 'Unfreeze to upload.'); return; }
+    setUploading(true);
+    try {
+      const saved = await uploadFiles(workspaceId, files);
+      await refresh();
+      toast.success('Uploaded', `${saved.length} file(s) added`);
+    } catch (e: any) {
+      toast.error('Upload failed', e?.response?.data?.detail || 'Error');
+    } finally { setUploading(false); }
   }
 
   async function open(path: string) {
@@ -274,8 +297,20 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
       )}
 
       {/* Explorer sidebar (resizable) */}
-      <aside className={cn('border-r border-edge bg-raised/40 flex flex-col shrink-0 overflow-hidden', explorerCollapsed && 'hidden')}
-             style={{ width: explorerW }}>
+      <input ref={uploadRef} type="file" multiple className="hidden" aria-label="Upload files"
+             onChange={(e) => { if (e.target.files) doUpload(e.target.files); e.target.value = ''; }} />
+      <aside className={cn('relative border-r border-edge bg-raised/40 flex flex-col shrink-0 overflow-hidden', explorerCollapsed && 'hidden')}
+             style={{ width: explorerW }}
+             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+             onDragLeave={() => setDragOver(false)}
+             onDrop={(e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files?.length) doUpload(e.dataTransfer.files); }}>
+        {dragOver && (
+          <div className="absolute inset-0 z-20 grid place-items-center bg-astra-500/15 border-2 border-dashed border-astra-500 pointer-events-none">
+            <span className="text-xs font-medium text-astra-700 dark:text-astra-200 inline-flex items-center gap-1.5">
+              <Upload size={14} /> Drop to upload
+            </span>
+          </div>
+        )}
         <div className="px-3 py-2 border-b border-edge flex items-center gap-1">
           <span className="t-overline text-faint flex-1">{showSearch ? 'Search' : 'Explorer'}</span>
           <IconBtn title="Search in project" onClick={() => setShowSearch((v) => !v)}>
@@ -283,6 +318,9 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
           </IconBtn>
           <IconBtn title="New file"   onClick={() => { setPrompt({ kind: 'file' }); setPromptValue(''); }}><FilePlus size={14} /></IconBtn>
           <IconBtn title="New folder" onClick={() => { setPrompt({ kind: 'folder' }); setPromptValue(''); }}><FolderPlus size={14} /></IconBtn>
+          <IconBtn title="Upload files" onClick={() => uploadRef.current?.click()}>
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={14} />}
+          </IconBtn>
           <IconBtn title="Import Git repository" onClick={() => { setPrompt({ kind: 'import' }); setPromptValue(''); }}><GitBranch size={14} /></IconBtn>
           <IconBtn title="Collapse all folders" onClick={collapseAll}><ChevronsDownUp size={13} /></IconBtn>
           <IconBtn title="Refresh" onClick={refresh}><RefreshCw size={13} /></IconBtn>
@@ -441,7 +479,7 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
               onMount={(_e, m) => { setMonaco(m); applyEditorTheme(m, themeId).then(setMonacoTheme).catch(() => {}); }}
               onChange={(v) => { setContent(v ?? ''); setDirty(true); setSaveState('idle'); }}
               options={{
-                readOnly: frozen,
+                readOnly: frozen, automaticLayout: true,
                 fontSize: 13.5, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on',
                 bracketPairColorization: { enabled: true },
                 guides: { bracketPairs: true, indentation: true, highlightActiveIndentation: true },

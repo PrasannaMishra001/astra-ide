@@ -1,8 +1,12 @@
 """Workspace CRUD endpoints + sharing + code execution + terminal."""
 import asyncio
 import json
+from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter, Depends, File, Form, HTTPException, UploadFile,
+    WebSocket, WebSocketDisconnect, status,
+)
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -310,6 +314,28 @@ def write_file(workspace_id: int, payload: WriteFileRequest,
         return {"ok": True, "path": payload.path, "size": size}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{workspace_id}/upload")
+async def upload_files(workspace_id: int,
+                       files: List[UploadFile] = File(...),
+                       dest: str = Form(""),
+                       db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_user)) -> dict:
+    """Upload one or more files into the workspace (optionally under `dest`)."""
+    ws = _ws_or_404(db, workspace_id, current_user.id)
+    _guard_frozen(ws)
+    saved: list[str] = []
+    for f in files:
+        name = (f.filename or "upload").split("/")[-1].split("\\")[-1]
+        rel = f"{dest.strip('/')}/{name}" if dest.strip("/") else name
+        data = await f.read()
+        try:
+            workspace_files.write_bytes_file(workspace_id, rel, data)
+            saved.append(rel)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"{name}: {e}")
+    return {"ok": True, "uploaded": saved}
 
 
 class MkdirRequest(BaseModel):

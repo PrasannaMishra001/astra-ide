@@ -55,6 +55,22 @@ export default function WorkspacePage() {
   const [modal, setModal] = useState<'share' | 'history' | 'settings' | null>(null);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [openSignal, setOpenSignal] = useState<{ path: string; n: number }>({ path: '', n: 0 });
+  const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // Warn on browser close/refresh if there are unsaved edits.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsaved) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnsaved]);
+
+  function goBack() {
+    if (hasUnsaved) setConfirmLeave(true);
+    else router.push('/dashboard');
+  }
 
   // Live presence across the workspace (who's here + which file).
   const peers = usePresence(
@@ -108,11 +124,12 @@ export default function WorkspacePage() {
   return (
     <div className="h-screen flex flex-col bg-bg">
       <header className="border-b border-edge bg-surface px-3 sm:px-4 py-2 flex items-center gap-3 flex-wrap">
-        <Link href="/dashboard" className="btn-ghost px-2"><ArrowLeft size={15} /></Link>
+        <button type="button" onClick={goBack} aria-label="Back to dashboard" className="btn-ghost px-2"><ArrowLeft size={15} /></button>
 
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="font-semibold truncate max-w-[9rem] sm:max-w-xs">{ws.name}</h1>
           <span className="hidden sm:inline text-xs text-faint font-mono">{ws.language}</span>
+          {hasUnsaved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Unsaved changes" />}
         </div>
 
         <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
@@ -175,19 +192,24 @@ export default function WorkspacePage() {
         </div>
       </header>
 
-      <section className="flex-1 min-h-0" role="tabpanel">
-        {view === 'files' && (
+      {/* All views stay mounted so the terminal session, open file and unsaved
+          edits persist when you switch tabs or go to Preview/Editor and back. */}
+      <section className="flex-1 min-h-0 relative" role="tabpanel">
+        <div className={cn('absolute inset-0', view !== 'files' && 'hidden')}>
           <FileManager workspaceId={ws.id} frozen={!!ws.frozen}
-                       onActiveFile={setActiveFile} openSignal={openSignal} />
-        )}
-        {view === 'preview' && <PreviewPanel workspaceId={ws.id} onClose={() => setView('files')} />}
-        {view === 'collab' && (
+                       onActiveFile={setActiveFile} openSignal={openSignal}
+                       onDirtyChange={setHasUnsaved} />
+        </div>
+        <div className={cn('absolute inset-0', view !== 'collab' && 'hidden')}>
           <CollabEditor
             workspaceId={ws.id} room={ws.yjs_room} language={ws.language}
             initialCode={undefined} username={user.username}
             isOwner={isOwner} status={ws.status} sandbox={ws.sandbox_tier}
           />
-        )}
+        </div>
+        <div className={cn('absolute inset-0', view !== 'preview' && 'hidden')}>
+          <PreviewPanel workspaceId={ws.id} onClose={() => setView('files')} />
+        </div>
       </section>
 
       {modal === 'share' && <ShareModal workspaceId={ws.id} isOwner={isOwner} onClose={() => setModal(null)} />}
@@ -196,6 +218,27 @@ export default function WorkspacePage() {
         <SettingsModal ws={ws} isOwner={isOwner} onChanged={setWs}
                        onClose={() => setModal(null)}
                        onOpenFile={(p) => { setView('files'); setOpenSignal((s) => ({ path: p, n: s.n + 1 })); }} />
+      )}
+
+      {confirmLeave && (
+        <div className="fixed inset-0 z-[70] grid place-items-center p-4 bg-black/55 backdrop-blur-sm"
+             role="dialog" aria-modal="true" onClick={() => setConfirmLeave(false)}>
+          <div className="card p-5 max-w-sm w-full shadow-pop" onClick={(e) => e.stopPropagation()}>
+            <h3 className="t-h3 mb-1.5">Leave with unsaved changes?</h3>
+            <p className="text-sm text-muted mb-5">
+              You have edits that haven&apos;t been saved. Leaving now will discard them.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setConfirmLeave(false)} className="btn-outline px-3 py-1.5 text-sm">
+                Cancel
+              </button>
+              <button type="button" onClick={() => router.push('/dashboard')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium">
+                Discard &amp; leave
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -476,4 +476,30 @@ export async function getSandboxMetrics(): Promise<SandboxMetrics> {
   return data;
 }
 
+// ── Pods (container management) ──────────────────────────────────────────────
+export interface PodInfo {
+  id: number; name: string; status: string; language: string; sandbox_tier: string;
+  runtime_class: string; image: string; cluster_id: string; node_name: string; pod_name: string;
+  cpu_request: number; memory_request: number; cpu_pct: number; mem_pct: number; mem_mb: number;
+  restarts: number; uptime_s: number; created_at: string;
+}
+export async function getPods(): Promise<PodInfo[]> {
+  const { data } = await api.get<PodInfo[]>('/pods');
+  return data;
+}
+export async function getPodLogs(workspaceId: number): Promise<{ pod_name: string; lines: string[] }> {
+  const { data } = await api.get<{ pod_name: string; lines: string[] }>(`/pods/${workspaceId}/logs`);
+  return data;
+}
+
+export async function uploadFiles(workspaceId: number, files: FileList | File[], dest = ''): Promise<string[]> {
+  const form = new FormData();
+  Array.from(files).forEach((f) => form.append('files', f));
+  if (dest) form.append('dest', dest);
+  const { data } = await api.post<{ uploaded: string[] }>(`/workspaces/${workspaceId}/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.uploaded;
+}
+
 export default api;

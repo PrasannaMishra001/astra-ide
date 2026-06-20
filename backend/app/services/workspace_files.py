@@ -122,6 +122,16 @@ def write_file(workspace_id: int, rel: str, content: str) -> int:
     return p.stat().st_size
 
 
+def write_bytes_file(workspace_id: int, rel: str, data: bytes) -> int:
+    """Write raw bytes (uploaded file) into the workspace. 8 MB cap."""
+    if len(data) > 8 * 1024 * 1024:
+        raise ValueError("file too large to upload (max 8 MB)")
+    p = _safe_path(workspace_id, rel)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(data)
+    return p.stat().st_size
+
+
 def make_dir(workspace_id: int, rel: str) -> None:
     """Create a folder (and parents) inside the workspace."""
     p = _safe_path(workspace_id, rel)

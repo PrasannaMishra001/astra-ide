@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  LayoutDashboard, Boxes, BarChart3, LayoutGrid as PlatformIcon, Activity,
+  LayoutDashboard, Boxes, BarChart3, LayoutGrid as PlatformIcon, Activity, Container,
   PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield,
 } from 'lucide-react';
 
@@ -23,6 +23,7 @@ import { cn } from '../lib/utils';
 
 const NAV = [
   { href: '/dashboard',     label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/pods',          label: 'Containers',    icon: Container },
   { href: '/clusters',      label: 'Clusters',      icon: Boxes },
   { href: '/benchmarks',    label: 'Benchmarks',    icon: BarChart3 },
   { href: '/observability', label: 'Observability', icon: Activity },

@@ -397,6 +397,7 @@ export default function CollabEditor({
           language={currentLang}
           onMount={onMount}
           options={{
+            automaticLayout: true,
             fontSize: prefs.fontSize,
             minimap: { enabled: prefs.minimap, scale: 0.7 },
             scrollBeyondLastLine: false,
