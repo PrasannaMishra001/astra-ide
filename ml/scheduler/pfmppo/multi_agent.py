@@ -48,6 +48,13 @@ class WorkerAgent:
             max_deps_per_task=env_config.get("max_deps_per_task", 3),
             vm_configs=env_config.get("vm_configs"),
             seed=env_seed,
+            # Thread the workload-source settings through so --dag-mode / --data-dir
+            # / template / full-dataset options actually reach training.
+            dag_mode=env_config.get("dag_mode", "random"),
+            num_workspaces=env_config.get("num_workspaces", (3, 8)),
+            template_ratio=env_config.get("template_ratio", 0.7),
+            data_dir=env_config.get("data_dir"),
+            max_files=env_config.get("max_files", 10),
         )
 
     def collect_trajectory(self, steps: int) -> RolloutBuffer:

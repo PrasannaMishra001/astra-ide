@@ -52,6 +52,8 @@ def main() -> int:
                         help="Max simultaneous workspaces per episode (template/hybrid mode)")
     parser.add_argument("--template-ratio", type=float, default=0.7,
                         help="Fraction of episodes using templates in hybrid mode")
+    parser.add_argument("--max-files", type=int, default=10,
+                        help="Trace files to load in trace mode (0 = the FULL dataset)")
     args = parser.parse_args()
 
     try:
@@ -105,6 +107,7 @@ def main() -> int:
         "num_workspaces": (args.num_workspaces_min, args.num_workspaces_max),
         "template_ratio": args.template_ratio,
         "data_dir": args.data_dir,
+        "max_files": args.max_files,
     }
 
     # Create output directory

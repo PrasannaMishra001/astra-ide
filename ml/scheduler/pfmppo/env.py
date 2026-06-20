@@ -102,8 +102,10 @@ if _GYM_AVAILABLE:
             language_weights: Optional[Dict[str, float]] = None,
             template_ratio: float = 0.7,
             data_dir: Optional[str] = None,
+            max_files: int = 10,
         ):
             super().__init__()
+            self.max_files = max_files
             self.num_tasks = num_tasks
             self.num_vms = num_vms
             self.k_pairs = k_pairs
@@ -166,6 +168,7 @@ if _GYM_AVAILABLE:
                     self.trace_dataset = GoogleTraceDataset(
                         data_dir=self.data_dir,
                         max_tasks_per_episode=self.num_tasks,
+                        max_files=self.max_files,   # 0 = load the FULL trace
                     ).load()
                 self.dag, self.vms = self.trace_dataset.sample_episode(
                     rng=np.random.default_rng(int(dag_seed)),
