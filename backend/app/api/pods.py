@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User, Workspace
+from app.services import container_service
 
 router = APIRouter(prefix="/pods", tags=["pods"])
 
@@ -55,8 +56,12 @@ class PodInfo(BaseModel):
 
 def _stats(ws: Workspace) -> PodInfo:
     running = ws.status == "RUNNING"
-    rng = random.Random(ws.id * 7919 + int(datetime.now().timestamp()) // 3)  # drifts every ~3s
-    if running:
+    # Prefer REAL container stats when the per-workspace container is up.
+    real = container_service.stats(ws.id) if running else None
+    if real is not None:
+        cpu, mem_mb = real["cpu_pct"], real["mem_mb"]
+    elif running:
+        rng = random.Random(ws.id * 7919 + int(datetime.now().timestamp()) // 3)  # drifts ~3s
         cpu = round(min(98, 8 + rng.random() * 55 + (20 if ws.sandbox_tier == "firecracker" else 0)), 1)
         mem_mb = round(ws.memory_request * (0.35 + rng.random() * 0.5), 1)
     else:
@@ -107,6 +112,10 @@ def pod_logs(workspace_id: int, user: User = Depends(get_current_user),
             f"[{ts}] tetragon     eBPF telemetry streaming (sched_switch, syscalls)",
             f"[{ts}] healthz      OK — cpu {ws.cpu_request} cores / mem {ws.memory_request} MiB",
         ]
+        # Append REAL container logs if the per-workspace container is up.
+        real = container_service.logs(ws.id, tail=30)
+        if real:
+            lines += [f"[{ts}] --- container stdout ---"] + real
     else:
         lines += [f"[{ts}] kubelet      container is {ws.status.lower()}"]
     return PodLogs(pod_name=pod, lines=lines)

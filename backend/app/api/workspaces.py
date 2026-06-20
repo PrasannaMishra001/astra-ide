@@ -25,6 +25,7 @@ from app.services import sharing_service
 from app.services import executor_service
 from app.services import workspace_files
 from app.services import object_store
+from app.services import container_service
 from app.services.terminal_service import TerminalProcess
 from pydantic import BaseModel, Field
 
@@ -144,6 +145,12 @@ def start_workspace(
         raise HTTPException(status_code=404, detail="Workspace not found")
     if workspace.status == "RUNNING":
         return WorkspaceOut.model_validate(workspace)
+    # Best-effort: spin up the real per-workspace container (no-op if Docker
+    # isn't available — status still flips so the UI/terminal-fallback work).
+    try:
+        container_service.start(workspace)
+    except Exception:
+        pass
     workspace_service.transition_status(db, workspace, "RUNNING")
     return WorkspaceOut.model_validate(workspace)
 
@@ -157,6 +164,10 @@ def stop_workspace(
     workspace = sharing_service.get_workspace_for_user(db, workspace_id, current_user.id)
     if workspace is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
+    try:
+        container_service.stop(workspace_id)
+    except Exception:
+        pass
     workspace_service.transition_status(db, workspace, "STOPPED")
     return WorkspaceOut.model_validate(workspace)
 
@@ -528,7 +539,12 @@ async def terminal_ws(websocket: WebSocket, workspace_id: int, token: str | None
         db.close()
 
     cwd = workspace_files.workspace_dir(workspace_id)
-    term = TerminalProcess(cwd)
+    # If a real per-workspace container is running, attach the shell INSIDE it;
+    # otherwise fall back to a shell rooted in the workspace's files.
+    if container_service.is_running(workspace_id):
+        term = TerminalProcess(cwd, argv=container_service.exec_argv(workspace_id))
+    else:
+        term = TerminalProcess(cwd)
     loop = asyncio.get_event_loop()
 
     async def pump_output() -> None:

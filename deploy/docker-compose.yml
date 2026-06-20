@@ -70,7 +70,16 @@ services:
       COLLAB_WS_URL:   ws://collab:1234
       MINIO_ENDPOINT:  http://minio:9000
       CORS_ORIGINS:    '["http://localhost:3000", "http://${PUBLIC_HOST:-localhost}:3000"]'
+      # Real per-workspace containers (Start → docker run; terminal → docker exec).
+      ENABLE_REAL_CONTAINERS: "${ENABLE_REAL_CONTAINERS:-1}"
+      ASTRA_WORKSPACE_DATA:   /app/workspace_data
+      WORKSPACE_DATA_HOST:    ${WORKSPACE_DATA_HOST:-/opt/astra/workspace_data}
     ports: ["8000:8000"]
+    volumes:
+      # Manage real containers + share the workspace files with them (the host
+      # path must match WORKSPACE_DATA_HOST so nested bind-mounts resolve).
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${WORKSPACE_DATA_HOST:-/opt/astra/workspace_data}:/app/workspace_data
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }

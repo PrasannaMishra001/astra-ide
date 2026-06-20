@@ -34,27 +34,30 @@ if _POSIX:
 class TerminalProcess:
     """A shell process with read/write/resize, uniform across platforms."""
 
-    def __init__(self, cwd: Path, shell: str | None = None):
+    def __init__(self, cwd: Path, shell: str | None = None,
+                 argv: list[str] | None = None):
+        # `argv`, if given, is the exact command to run (e.g. a `docker exec`
+        # into the workspace container). Otherwise a plain login shell.
         self.cwd = str(cwd)
         self._closed = False
         if _POSIX:
-            self._start_posix(shell or os.environ.get("SHELL", "/bin/bash"))
+            self._start_posix(argv or [shell or os.environ.get("SHELL", "/bin/bash")])
         else:
-            self._start_windows(shell or "cmd.exe")
+            self._start_windows(argv or [shell or "cmd.exe"])
 
     # ── POSIX: real PTY ──────────────────────────────────────────────────────
-    def _start_posix(self, shell: str) -> None:
+    def _start_posix(self, argv: list[str]) -> None:
         self._master, slave = pty.openpty()
         env = dict(os.environ, TERM="xterm-256color")
         self._proc = subprocess.Popen(
-            [shell], stdin=slave, stdout=slave, stderr=slave,
+            argv, stdin=slave, stdout=slave, stderr=slave,
             cwd=self.cwd, env=env, start_new_session=True, close_fds=True)
         os.close(slave)
 
     # ── Windows: pipe-bridged cmd.exe ────────────────────────────────────────
-    def _start_windows(self, shell: str) -> None:
+    def _start_windows(self, argv: list[str]) -> None:
         self._proc = subprocess.Popen(
-            [shell], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, cwd=self.cwd, bufsize=0,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self._q: "queue.Queue[bytes]" = queue.Queue()

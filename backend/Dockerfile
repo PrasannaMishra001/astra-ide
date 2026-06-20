@@ -15,6 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Docker CLI only (no daemon) — lets the backend manage real per-workspace
+# containers through the host's mounted /var/run/docker.sock.
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.3.1.tgz \
+      -o /tmp/docker.tgz \
+    && tar -xzf /tmp/docker.tgz -C /tmp \
+    && mv /tmp/docker/docker /usr/local/bin/docker \
+    && rm -rf /tmp/docker /tmp/docker.tgz \
+    && docker --version
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
