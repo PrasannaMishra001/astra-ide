@@ -45,6 +45,35 @@ def _docker(args: list[str], timeout: int = 60) -> subprocess.CompletedProcess:
     return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)
 
 
+_RUNTIMES_CACHE: set[str] | None = None
+
+
+def _runtimes() -> set[str]:
+    """Runtimes Docker knows about (e.g. {'runc', 'runsc', 'kata-fc'})."""
+    global _RUNTIMES_CACHE
+    if _RUNTIMES_CACHE is None:
+        try:
+            r = _docker(["info", "--format", "{{range $k,$v := .Runtimes}}{{$k}} {{end}}"], timeout=10)
+            _RUNTIMES_CACHE = set(r.stdout.split()) if r.returncode == 0 else {"runc"}
+        except Exception:
+            _RUNTIMES_CACHE = {"runc"}
+    return _RUNTIMES_CACHE
+
+
+def runtime_for(tier: str) -> str:
+    """Map a sandbox tier to a Docker runtime that's actually installed.
+    runc → runc; gVisor/Firecracker → runsc (gVisor) if present, else runc.
+    (True Firecracker/Kata needs KVM/nested-virt, unavailable on e2 VMs.)"""
+    rts = _runtimes()
+    if tier in ("gvisor", "firecracker") and "runsc" in rts:
+        return "runsc"
+    if tier == "firecracker":
+        for cand in ("kata-fc", "kata-runtime", "kata"):
+            if cand in rts:
+                return cand
+    return "runc"
+
+
 def is_running(ws_id: int) -> bool:
     if not available():
         return False
@@ -63,8 +92,10 @@ def start(ws) -> bool:
     try:
         _docker(["rm", "-f", name], timeout=30)                  # clear any stale one
         workspace_files.workspace_dir(ws.id)                     # ensure the dir exists
+        runtime = runtime_for(ws.sandbox_tier)
         args = [
             "run", "-d", "--name", name, "--label", "astra=1",
+            "--label", f"tier={ws.sandbox_tier}", "--runtime", runtime,
             "--memory", f"{int(ws.memory_request)}m",
             "--cpus", str(ws.cpu_request or 0.5),
             "--pids-limit", "256",

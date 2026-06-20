@@ -9,10 +9,10 @@ export type Theme = 'light' | 'dark';
 const KEY = 'astra-theme';
 
 export function getTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined') return 'dark';
   const saved = window.localStorage.getItem(KEY);
   if (saved === 'light' || saved === 'dark') return saved;
-  return 'light';   // default to light unless the user explicitly picks dark
+  return 'dark';   // default to dark unless the user explicitly picks light
 }
 
 export function applyTheme(theme: Theme) {
@@ -23,7 +23,7 @@ export function applyTheme(theme: Theme) {
 }
 
 export function useTheme(): [Theme, (t: Theme) => void] {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
     setThemeState(getTheme());
@@ -37,4 +37,4 @@ export function useTheme(): [Theme, (t: Theme) => void] {
 }
 
 // Inline-script source for layout.tsx (runs before hydration; no flash).
-export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${KEY}');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${KEY}');if(t!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();`;
