@@ -116,8 +116,8 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
       const d = drag.current; if (!d) return;
       if (d.kind === 'x') {
         const next = d.startVal + (e.clientX - d.startPos);
-        if (next < 120) { setExplorerCollapsed(true); }
-        else { setExplorerCollapsed(false); setExplorerW(Math.min(480, next)); }
+        if (next < 160) { setExplorerCollapsed(true); }
+        else { setExplorerCollapsed(false); setExplorerW(Math.min(480, Math.max(190, next))); }
       } else {
         const next = d.startVal - (e.clientY - d.startPos);   // drag up = taller
         if (next < 64) { setShowTerminal(false); drag.current = null; }
@@ -274,7 +274,7 @@ export default function FileManager({ workspaceId, frozen = false, onActiveFile,
       )}
 
       {/* Explorer sidebar (resizable) */}
-      <aside className={cn('border-r border-edge bg-raised/40 flex flex-col shrink-0', explorerCollapsed && 'hidden')}
+      <aside className={cn('border-r border-edge bg-raised/40 flex flex-col shrink-0 overflow-hidden', explorerCollapsed && 'hidden')}
              style={{ width: explorerW }}>
         <div className="px-3 py-2 border-b border-edge flex items-center gap-1">
           <span className="t-overline text-faint flex-1">{showSearch ? 'Search' : 'Explorer'}</span>

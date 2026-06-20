@@ -184,24 +184,24 @@ html, body {
    out. */
 .aurora-light {
   background:
-    radial-gradient(ellipse 46% 42% at 20% 24%, #c7d6fb 0%, transparent 58%),
-    radial-gradient(ellipse 42% 38% at 84% 16%, #fbcdd6 0%, transparent 58%),
-    radial-gradient(ellipse 52% 48% at 72% 82%, #c7e3dd 0%, transparent 60%),
-    radial-gradient(ellipse 48% 44% at 22% 88%, #b3dde6 0%, transparent 58%),
-    linear-gradient(180deg, #fbeee3 0%, #eceaf2 100%);
+    radial-gradient(ellipse 50% 46% at 18% 22%, #a5b4fc 0%, transparent 56%),
+    radial-gradient(ellipse 46% 42% at 86% 14%, #f9a8d4 0%, transparent 56%),
+    radial-gradient(ellipse 54% 50% at 74% 84%, #7dd3fc 0%, transparent 58%),
+    radial-gradient(ellipse 50% 46% at 20% 90%, #67e8f9 0%, transparent 56%),
+    linear-gradient(180deg, #f5f3ff 0%, #eef2ff 100%);
 }
 .aurora-light::before, .aurora-light::after {
-  content: ''; position: absolute; border-radius: 9999px; filter: blur(70px);
-  opacity: 0.6; will-change: transform; pointer-events: none;
+  content: ''; position: absolute; border-radius: 9999px; filter: blur(60px);
+  opacity: 0.85; will-change: transform; pointer-events: none;
 }
 .aurora-light::before {
-  width: 42vw; height: 42vw; left: 8%; top: 6%;
-  background: radial-gradient(circle, #b8c9fb, transparent 70%);
+  width: 44vw; height: 44vw; left: 6%; top: 4%;
+  background: radial-gradient(circle, #818cf8, transparent 68%);
   animation: blob-a 28s ease-in-out infinite alternate;
 }
 .aurora-light::after {
-  width: 46vw; height: 46vw; right: 4%; bottom: -8%;
-  background: radial-gradient(circle, #f7c7d4, transparent 70%);
+  width: 48vw; height: 48vw; right: 2%; bottom: -10%;
+  background: radial-gradient(circle, #f472b6, transparent 68%);
   animation: blob-b 34s ease-in-out infinite alternate;
 }
 .aurora-grain {
@@ -217,6 +217,17 @@ html, body {
 
 /* ── Conic gradient spin (HoverBorderGradient) ──────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── View Transition for theme toggle: the clip-path circle (set in JS) is the
+   only animation; disable the default cross-fade so the new theme "spreads"
+   cleanly from the button. The new theme paints on top. ─────────────────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 9999; }
 
 /* ── Background ripple (login/signup grid) ──────────────────────────────── */
 @keyframes ripple-flash {
@@ -254,21 +265,21 @@ html, body {
   animation: liquid-sheen 6s linear infinite;
   filter: drop-shadow(0 2px 12px rgb(124 58 237 / 0.18));
 }
-/* Light mode: iron-teal → sage → blossom, legible on warm cream. */
+/* Bright blue → indigo → pink sheen (both themes), eye-catching not muddy. */
 .t-liquid {
   background-image: linear-gradient(
     105deg,
-    #4a5759 0%, #6b8479 22%, #cf6e7e 40%,
-    #3d4849 50%,
-    #cf6e7e 60%, #6b8479 78%, #4a5759 100%
+    #2563eb 0%, #6366f1 22%, #db2777 42%,
+    #4f46e5 50%,
+    #db2777 58%, #6366f1 78%, #2563eb 100%
   );
 }
 .dark .t-liquid {
   background-image: linear-gradient(
     105deg,
-    #b0c4b1 0%, #cdd8cd 22%, #edafb8 40%,
-    #f7e1d7 50%,
-    #edafb8 60%, #cdd8cd 78%, #b0c4b1 100%
+    #60a5fa 0%, #a5b4fc 22%, #f472b6 42%,
+    #c7d2fe 50%,
+    #f472b6 58%, #a5b4fc 78%, #60a5fa 100%
   );
 }
 @keyframes liquid-sheen {

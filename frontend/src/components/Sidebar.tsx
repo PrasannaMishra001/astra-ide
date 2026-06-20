@@ -66,10 +66,11 @@ export default function Sidebar() {
 
   return (
     <motion.aside
+      initial={false}
       animate={{ width: open ? 240 : 68 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 34 }}
       className="glass sticky top-0 h-screen shrink-0 border-r border-edge
-                 flex flex-col z-40 overflow-hidden"
+                 flex flex-col z-40 overflow-visible"
     >
       {/* Brand + collapse toggle */}
       <div className="h-14 flex items-center gap-2 px-3 border-b border-edge shrink-0">
