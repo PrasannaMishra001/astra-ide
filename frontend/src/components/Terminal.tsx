@@ -65,14 +65,14 @@ export default function Terminal({ workspaceId }: { workspaceId: number }) {
       token = raw ? (JSON.parse(raw)?.state?.token ?? '') : '';
     } catch { /* ignore */ }
 
-    // Prefer a direct backend WS endpoint when configured (production deploys
-    // where the Next.js proxy does not upgrade WebSockets); otherwise go
-    // through the same-origin /api proxy (works in dev).
-    const direct = process.env.NEXT_PUBLIC_BACKEND_WS_URL;   // e.g. ws://host:8000
+    // Connect to the terminal WS on the SAME origin the user is on (Caddy routes
+    // /api/v1/* straight to the backend). In local dev (port 3000) fall back to
+    // the Next.js /api proxy.
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = direct
-      ? `${direct}/api/v1/workspaces/${workspaceId}/terminal?token=${encodeURIComponent(token)}`
-      : `${proto}://${window.location.host}/api/workspaces/${workspaceId}/terminal?token=${encodeURIComponent(token)}`;
+    const isDev = window.location.port === '3000' || window.location.hostname === 'localhost';
+    const url = isDev
+      ? `${proto}://${window.location.host}/api/workspaces/${workspaceId}/terminal?token=${encodeURIComponent(token)}`
+      : `${proto}://${window.location.host}/api/v1/workspaces/${workspaceId}/terminal?token=${encodeURIComponent(token)}`;
 
     setConn('connecting');
     const ws = new WebSocket(url);

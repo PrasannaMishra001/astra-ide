@@ -67,10 +67,10 @@ export default function TextHoverEffect({ text, className, duration = 0.35 }: Pr
         x="50%" y="50%"
         textAnchor="middle" dominantBaseline="middle"
         fill="none"
-        stroke="rgb(var(--c-edge-strong))"
-        strokeWidth="0.3"
+        stroke="rgb(var(--c-muted))"
+        strokeWidth="0.6"
         style={{ fontSize: '7.5rem', fontFamily: 'var(--font-sans)', fontWeight: 800, letterSpacing: '-0.04em' }}
-        opacity={hovered ? 0.8 : 0.4}
+        opacity={hovered ? 0.85 : 0.55}
       >
         {text}
       </text>

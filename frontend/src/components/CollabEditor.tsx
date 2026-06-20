@@ -18,6 +18,7 @@ import { Play, Download, Share2, Loader2, Settings2, Check, Palette } from 'luci
 import type { Monaco } from '@monaco-editor/react';
 
 import { executeCode, type ExecuteResponse } from '../lib/api';
+import { collabWsUrl } from '../lib/ws';
 import { cn } from '../lib/utils';
 import { toast } from '../lib/toast';
 import BottomPanel from './BottomPanel';
@@ -134,7 +135,7 @@ export default function CollabEditor({
   // ── Yjs sync ────────────────────────────────────────────────────────────
   useEffect(() => {
     const ydoc     = new Y.Doc();
-    const wsUrl    = process.env.NEXT_PUBLIC_COLLAB_WS_URL || 'ws://localhost:1234';
+    const wsUrl    = collabWsUrl();
     const provider = new WebsocketProvider(wsUrl, room, ydoc);
     const myColor  = pickColor(username);
 

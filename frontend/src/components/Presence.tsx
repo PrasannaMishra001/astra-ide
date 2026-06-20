@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { collabWsUrl } from '../lib/ws';
 
 export interface Peer { name: string; color: string; file: string; avatar?: string | null; self?: boolean; }
 
@@ -22,7 +23,7 @@ export function usePresence(room: string, username: string, file: string,
   const provRef = useRef<WebsocketProvider | null>(null);
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL || 'ws://localhost:1234';
+    const wsUrl = collabWsUrl();
     const ydoc = new Y.Doc();
     const provider = new WebsocketProvider(wsUrl, `presence-${room}`, ydoc);
     provRef.current = provider;

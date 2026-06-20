@@ -23,12 +23,12 @@ export interface GridCard {
 }
 
 const ACCENT: Record<string, { ring: string; text: string; glow: string }> = {
-  astra:   { ring: 'ring-astra-500/30',   text: 'text-astra-500',   glow: 'from-astra-500/20' },
-  cyan:    { ring: 'ring-cyan-500/30',    text: 'text-cyan-500',    glow: 'from-cyan-500/20' },
-  rose:    { ring: 'ring-rose-500/30',    text: 'text-rose-500',    glow: 'from-rose-500/20' },
-  emerald: { ring: 'ring-emerald-500/30', text: 'text-emerald-500', glow: 'from-emerald-500/20' },
-  amber:   { ring: 'ring-amber-500/30',   text: 'text-amber-500',   glow: 'from-amber-500/20' },
-  purple:  { ring: 'ring-purple-500/30',  text: 'text-purple-500',  glow: 'from-purple-500/20' },
+  astra:   { ring: 'ring-astra-500/30',   text: 'text-astra-500',   glow: 'from-astra-400/50' },
+  cyan:    { ring: 'ring-cyan-500/30',    text: 'text-cyan-500',    glow: 'from-cyan-400/50' },
+  rose:    { ring: 'ring-rose-500/30',    text: 'text-rose-500',    glow: 'from-rose-400/50' },
+  emerald: { ring: 'ring-emerald-500/30', text: 'text-emerald-500', glow: 'from-emerald-400/50' },
+  amber:   { ring: 'ring-amber-500/30',   text: 'text-amber-500',   glow: 'from-amber-400/50' },
+  purple:  { ring: 'ring-purple-500/30',  text: 'text-purple-500',  glow: 'from-purple-400/50' },
 };
 
 export default function LayoutGrid({ cards }: { cards: GridCard[] }) {
@@ -51,7 +51,7 @@ export default function LayoutGrid({ cards }: { cards: GridCard[] }) {
                 card.span,
               )}
             >
-              <div className={cn('absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl bg-gradient-to-br to-transparent opacity-60', a.glow)} />
+              <div className={cn('absolute -top-12 -right-12 h-44 w-44 rounded-full blur-2xl bg-gradient-to-br to-transparent opacity-90 dark:opacity-50', a.glow)} />
               <motion.div layoutId={`icon-${card.id}`} className={cn('relative mb-4', a.text)}>
                 {card.icon}
               </motion.div>

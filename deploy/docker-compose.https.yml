@@ -27,13 +27,15 @@ services:
   frontend:
     build:
       args:
-        # Baked into the production bundle at build time.
-        NEXT_PUBLIC_COLLAB_WS_URL:  wss://34-14-181-224.sslip.io/collab
-        NEXT_PUBLIC_BACKEND_WS_URL: wss://34-14-181-224.sslip.io
+        # WS URLs are now derived at runtime from window.location (see lib/ws.ts),
+        # so the app works on any domain. These remain only as a dev fallback.
+        NEXT_PUBLIC_COLLAB_WS_URL:  wss://astraide.tech/collab
+        NEXT_PUBLIC_BACKEND_WS_URL: wss://astraide.tech
 
   backend:
     environment:
-      CORS_ORIGINS: '["https://34-14-181-224.sslip.io","http://34.14.181.224:3000","http://localhost:3000"]'
+      FRONTEND_URL: https://astraide.tech
+      CORS_ORIGINS: '["https://astraide.tech","https://www.astraide.tech","https://34-14-181-224.sslip.io","http://34.14.181.224:3000","http://localhost:3000"]'
 
 volumes:
   caddy_data:

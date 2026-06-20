@@ -35,10 +35,10 @@ def make_state() -> str:
     return secrets.token_urlsafe(24)
 
 
-def build_auth_url(state: str) -> str:
+def build_auth_url(state: str, redirect_uri: str | None = None) -> str:
     params = {
         "client_id":     settings.google_client_id,
-        "redirect_uri":  settings.google_redirect_uri,
+        "redirect_uri":  redirect_uri or settings.google_redirect_uri,
         "response_type": "code",
         "scope":         _SCOPES,
         "state":         state,
@@ -48,9 +48,10 @@ def build_auth_url(state: str) -> str:
     return f"{_AUTH_ENDPOINT}?{urlencode(params)}"
 
 
-def exchange_code(code: str) -> dict:
+def exchange_code(code: str, redirect_uri: str | None = None) -> dict:
     """Exchange an auth code for tokens, then fetch the user's profile.
 
+    `redirect_uri` MUST match the one used in build_auth_url (Google checks it).
     Returns {"email", "name", "sub", "picture", "email_verified"}.
     Raises httpx.HTTPStatusError on a failed exchange.
     """
@@ -59,7 +60,7 @@ def exchange_code(code: str) -> dict:
             "code":          code,
             "client_id":     settings.google_client_id,
             "client_secret": settings.google_client_secret,
-            "redirect_uri":  settings.google_redirect_uri,
+            "redirect_uri":  redirect_uri or settings.google_redirect_uri,
             "grant_type":    "authorization_code",
         })
         tok.raise_for_status()

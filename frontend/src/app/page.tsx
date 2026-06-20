@@ -183,7 +183,7 @@ export default function HomePage() {
 
       {/* GLOBE - text left, globe right (partially clipped) */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#cddafd" b="#c7e3dd" />
+        <SectionBlobs a="#818cf8" b="#7dd3fc" />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
@@ -219,7 +219,7 @@ export default function HomePage() {
 
       {/* DEMO TERMINAL */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#c7e3dd" b="#fbcdd6" />
+        <SectionBlobs a="#5eead4" b="#f9a8c0" />
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Live demo</p>
@@ -237,7 +237,7 @@ export default function HomePage() {
 
       {/* FEATURE LAYOUT GRID (click a card to expand + learn) */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#dfe7fd" b="#e2ece9" />
+        <SectionBlobs a="#a5b4fc" b="#7dd3fc" />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Seven breakthroughs</p>
@@ -253,7 +253,7 @@ export default function HomePage() {
 
       {/* TEXT HOVER + TEAM */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#fbcdd6" b="#cddafd" />
+        <SectionBlobs a="#f9a8c0" b="#a5b4fc" />
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="h-52 md:h-72">
             <TextHoverEffect text="ASTRA-IDE" />
@@ -314,13 +314,15 @@ function Legend({ color, label }: { color: string; label: string }) {
 // Soft blurred colour blobs behind a section (subtle in dark, richer in light)
 // so content sections don't look bland. Place as first child of a `relative
 // overflow-hidden` section.
-function SectionBlobs({ a = '#cddafd', b = '#fde2e4' }: { a?: string; b?: string }) {
+function SectionBlobs({ a = '#a5b4fc', b = '#f9a8c0' }: { a?: string; b?: string }) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -left-20 top-0 w-[28rem] h-[28rem] rounded-full blur-[80px] opacity-70 dark:opacity-25"
-           style={{ background: `radial-gradient(circle, ${a}, transparent 65%)` }} />
-      <div className="absolute -right-16 bottom-0 w-[32rem] h-[32rem] rounded-full blur-[80px] opacity-60 dark:opacity-20"
-           style={{ background: `radial-gradient(circle, ${b}, transparent 65%)` }} />
+      <div className="absolute -left-16 -top-10 w-[34rem] h-[34rem] rounded-full blur-[70px] opacity-90 dark:opacity-40"
+           style={{ background: `radial-gradient(circle, ${a}, transparent 62%)` }} />
+      <div className="absolute -right-16 -bottom-10 w-[38rem] h-[38rem] rounded-full blur-[70px] opacity-80 dark:opacity-35"
+           style={{ background: `radial-gradient(circle, ${b}, transparent 62%)` }} />
+      <div className="absolute left-1/3 top-1/4 w-[22rem] h-[22rem] rounded-full blur-[70px] opacity-60 dark:opacity-25"
+           style={{ background: 'radial-gradient(circle, #86d9c4, transparent 65%)' }} />
     </div>
   );
 }

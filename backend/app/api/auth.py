@@ -2,7 +2,7 @@
 import secrets
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -96,37 +96,54 @@ def update_me(payload: UpdateProfile, db: Session = Depends(get_db),
 
 # ── Google OAuth (Sign in with Google) ──────────────────────────────────────
 
+def _public_base(request: Request) -> str:
+    """The public origin the user actually hit (e.g. https://astraide.tech),
+    honouring the reverse-proxy headers Caddy sets. Lets OAuth work on whatever
+    domain the user came from — astraide.tech, the sslip host, etc."""
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = (request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.netloc)
+    return f"{proto}://{host}"
+
+
+def _redirect_uri(request: Request) -> str:
+    # Browser-facing callback path (Caddy/Next proxy /api -> backend /api/v1).
+    return f"{_public_base(request)}/api/auth/google/callback"
+
+
 @router.get("/google/login")
-def google_login() -> RedirectResponse:
+def google_login(request: Request) -> RedirectResponse:
     """Kick off the OAuth flow — redirect the browser to Google's consent page."""
+    base = _public_base(request)
     if not oauth_service.is_configured():
         # Not configured: bounce back to the login page with a clear message.
-        return RedirectResponse(
-            f"{settings.frontend_url}/login?error=google_not_configured")
+        return RedirectResponse(f"{base}/login?error=google_not_configured")
     state = oauth_service.make_state()
-    resp = RedirectResponse(oauth_service.build_auth_url(state))
+    resp = RedirectResponse(oauth_service.build_auth_url(state, _redirect_uri(request)))
     # Stash state in a short-lived cookie for CSRF protection on callback.
     resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
     return resp
 
 
 @router.get("/google/callback")
-def google_callback(code: str | None = None, state: str | None = None,
+def google_callback(request: Request, code: str | None = None, state: str | None = None,
                     error: str | None = None, db: Session = Depends(get_db)):
     """Handle Google's redirect: exchange the code, find/create the user, mint a JWT."""
+    base = _public_base(request)
     if error or not code:
-        return RedirectResponse(f"{settings.frontend_url}/login?error=google_denied")
+        return RedirectResponse(f"{base}/login?error=google_denied")
     if not oauth_service.is_configured():
-        return RedirectResponse(f"{settings.frontend_url}/login?error=google_not_configured")
+        return RedirectResponse(f"{base}/login?error=google_not_configured")
 
     try:
-        profile = oauth_service.exchange_code(code)
+        profile = oauth_service.exchange_code(code, _redirect_uri(request))
     except httpx.HTTPError:
-        return RedirectResponse(f"{settings.frontend_url}/login?error=google_exchange_failed")
+        return RedirectResponse(f"{base}/login?error=google_exchange_failed")
 
     email = (profile.get("email") or "").lower()
     if not email:
-        return RedirectResponse(f"{settings.frontend_url}/login?error=google_no_email")
+        return RedirectResponse(f"{base}/login?error=google_no_email")
 
     user = db.query(User).filter(User.email == email).first()
     if user is None:
@@ -141,5 +158,5 @@ def google_callback(code: str | None = None, state: str | None = None,
         db.refresh(user)
 
     token = create_access_token(subject=user.id)
-    # Hand the JWT to the SPA, which stores it and loads the session.
-    return RedirectResponse(f"{settings.frontend_url}/oauth/callback?token={token}")
+    # Hand the JWT to the SPA on the SAME origin the user came from.
+    return RedirectResponse(f"{base}/oauth/callback?token={token}")
