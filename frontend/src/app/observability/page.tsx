@@ -19,7 +19,7 @@ import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
 
 const TIER_COLOR: Record<string, string> = {
-  runc: '#618764', gvisor: '#e08e9b', firecracker: '#2B5748',
+  runc: '#7ec89a', gvisor: '#f0a8b8', firecracker: '#5eb8d4',
 };
 const POLL_MS = 2000;
 const WINDOW = 30;          // samples kept on the rolling charts

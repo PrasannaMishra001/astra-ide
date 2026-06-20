@@ -57,30 +57,30 @@ function Globe() {
     if (!g || !countries) return;
     g.hexPolygonsData(countries.features)
       .hexPolygonResolution(3)
-      .hexPolygonMargin(0.7)
-      .hexPolygonColor(() => 'rgba(156,176,128,0.55)')
+      .hexPolygonMargin(0.62)
+      .hexPolygonColor(() => 'rgba(156,196,140,0.85)')
       .showAtmosphere(true)
-      .atmosphereColor('#9CB080')
-      .atmosphereAltitude(0.16);
+      .atmosphereColor('#7ec8e3')
+      .atmosphereAltitude(0.22);
     const mat: any = g.globeMaterial();
-    mat.color = new Color('#1b2a24');
-    mat.emissive = new Color('#16211d');
-    mat.emissiveIntensity = 0.1;
-    mat.shininess = 0.7;
+    mat.color = new Color('#1a3040');
+    mat.emissive = new Color('#1a3848');
+    mat.emissiveIntensity = 0.35;
+    mat.shininess = 0.9;
 
     g.arcsData(ARCS)
       .arcColor((d: any) => d.color)
-      .arcAltitude(0.18)
-      .arcStroke(0.5)
+      .arcAltitude(0.22)
+      .arcStroke(0.8)
       .arcDashLength(0.9)
-      .arcDashGap(4)
-      .arcDashAnimateTime(2200)
-      .arcsTransitionDuration(1000);
+      .arcDashGap(3)
+      .arcDashAnimateTime(1800)
+      .arcsTransitionDuration(800);
 
     g.pointsData(POINTS)
       .pointColor((d: any) => d.color)
-      .pointAltitude(0.0)
-      .pointRadius((d: any) => d.size);
+      .pointAltitude(0.01)
+      .pointRadius((d: any) => d.size * 1.4);
   }, [countries]);
 
   return <threeGlobe ref={ref} />;
@@ -89,11 +89,11 @@ function Globe() {
 function Lights() {
   const { scene } = useThree();
   useEffect(() => {
-    scene.fog = new Fog(0x1b2a24, 400, 2000);
-    const amb = new AmbientLight(0x9CB080, 0.6);
-    const dir = new DirectionalLight(0xffffff, 0.7); dir.position.set(-200, 200, 200);
-    const p1 = new PointLight(0xe08e9b, 0.7); p1.position.set(-200, 300, 200);
-    const p2 = new PointLight(0x9CB080, 0.5); p2.position.set(200, -200, 200);
+    scene.fog = new Fog(0x1a3040, 400, 2000);
+    const amb = new AmbientLight(0xc8dde8, 1.0);
+    const dir = new DirectionalLight(0xffffff, 1.2); dir.position.set(-200, 200, 200);
+    const p1 = new PointLight(0xe8b0bb, 1.0); p1.position.set(-200, 300, 200);
+    const p2 = new PointLight(0x7ec8e3, 0.8); p2.position.set(200, -200, 200);
     scene.add(amb, dir, p1, p2);
     return () => { scene.remove(amb, dir, p1, p2); };
   }, [scene]);

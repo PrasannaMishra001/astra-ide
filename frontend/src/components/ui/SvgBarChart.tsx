@@ -57,9 +57,9 @@ export default function SvgBarChart({
               {d.label}
             </text>
             <rect x={labelW} y={y} width={barAreaW} height={rowH} rx={6}
-                  className="fill-raised" />
+                  fill="rgb(var(--c-edge))" opacity={0.5} />
             <rect x={labelW} y={y} width={w} height={rowH} rx={6}
-                  fill={d.color || '#9CB080'} opacity={d.best ? 1 : 0.4}
+                  fill={d.color || '#9CB080'} opacity={d.best ? 1 : 0.55}
                   stroke={d.best ? d.color || '#2B5748' : 'transparent'} strokeWidth={d.best ? 1.5 : 0}>
               <animate attributeName="width" from="0" to={w} dur="0.7s" fill="freeze"
                        calcMode="spline" keySplines="0.16 1 0.3 1" keyTimes="0;1" />

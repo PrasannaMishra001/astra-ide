@@ -34,15 +34,14 @@ const STORAGE_KEY = 'astra-sidebar-open';
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, setUser, clearSession } = useAuth();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved !== null ? saved === '1' : true;
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) setOpen(saved === '1');
-  }, []);
   function toggle() {
     setOpen((v) => { localStorage.setItem(STORAGE_KEY, v ? '0' : '1'); return !v; });
   }

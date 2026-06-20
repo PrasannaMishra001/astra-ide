@@ -28,16 +28,16 @@
   --p-lavender:    223 231 253;
 }
 .dark {
-  --c-bg:          39  51  56;    /* 273338 dark slate */
-  --c-surface:     46  60  64;    /* slightly lifted */
-  --c-raised:      43  87  72;    /* 2B5748 deep teal-green */
-  --c-edge:        54  72  72;
-  --c-edge-strong: 97  135 100;   /* 618764 green */
-  --c-ink:         236 240 232;   /* light sage-white text */
-  --c-muted:       156 176 128;   /* 9CB080 sage */
-  --c-faint:       126 146 120;
-  --scroll-track:  46  60  64;
-  --scroll-thumb:  97  135 100;
+  --c-bg:          33  44  48;    /* slightly cooler dark slate */
+  --c-surface:     40  54  58;
+  --c-raised:      50  68  65;
+  --c-edge:        60  78  75;
+  --c-edge-strong: 110 145 112;   /* visible green border */
+  --c-ink:         240 245 238;   /* bright cream-white text */
+  --c-muted:       186 206 170;   /* LIGHTER sage for readable labels */
+  --c-faint:       148 168 142;   /* clearly visible secondary text */
+  --scroll-track:  40  54  58;
+  --scroll-thumb:  110 145 112;
 }
 
 :root {

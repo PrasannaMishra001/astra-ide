@@ -317,10 +317,10 @@ function Legend({ color, label }: { color: string; label: string }) {
 function SectionBlobs({ a = '#cddafd', b = '#fde2e4' }: { a?: string; b?: string }) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -left-24 top-4 w-80 h-80 rounded-full blur-3xl opacity-50 dark:opacity-[0.12]"
-           style={{ background: `radial-gradient(circle, ${a}, transparent 70%)` }} />
-      <div className="absolute -right-20 bottom-0 w-96 h-96 rounded-full blur-3xl opacity-40 dark:opacity-[0.10]"
-           style={{ background: `radial-gradient(circle, ${b}, transparent 70%)` }} />
+      <div className="absolute -left-20 top-0 w-[28rem] h-[28rem] rounded-full blur-[80px] opacity-70 dark:opacity-25"
+           style={{ background: `radial-gradient(circle, ${a}, transparent 65%)` }} />
+      <div className="absolute -right-16 bottom-0 w-[32rem] h-[32rem] rounded-full blur-[80px] opacity-60 dark:opacity-20"
+           style={{ background: `radial-gradient(circle, ${b}, transparent 65%)` }} />
     </div>
   );
 }
