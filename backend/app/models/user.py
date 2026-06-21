@@ -1,6 +1,6 @@
 """User model."""
 from datetime import datetime
-from sqlalchemy import String, DateTime, Float, Boolean
+from sqlalchemy import String, DateTime, Float, Boolean, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -19,5 +19,10 @@ class User(Base):
     preferred_lang:  Mapped[str]      = mapped_column(String(32), default="python")
     avatar_url:      Mapped[str]      = mapped_column(String(512), nullable=True)  # imgbb-hosted profile image
     created_at:      Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # ── GitHub OAuth ──────────────────────────────────────────────────────────
+    github_id:           Mapped[int | None]  = mapped_column(BigInteger, unique=True, nullable=True, index=True)
+    github_login:        Mapped[str | None]  = mapped_column(String(128), nullable=True)  # GitHub username
+    github_access_token: Mapped[str | None]  = mapped_column(String(2048), nullable=True)  # Fernet-encrypted
 
     workspaces = relationship("Workspace", back_populates="owner", cascade="all, delete-orphan")

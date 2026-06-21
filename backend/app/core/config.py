@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     google_redirect_uri:  str = "http://localhost:3000/api/auth/google/callback"
     frontend_url:         str = "http://localhost:3000"
 
+    # ── GitHub OAuth (Sign in with GitHub + repo access) ─────────────────────
+    # Create an OAuth App at https://github.com/settings/developers
+    # Set Authorization callback URL to: http://localhost:3000/api/auth/github/callback
+    # Scopes requested: read:user user:email repo
+    github_client_id:     Optional[str] = None
+    github_client_secret: Optional[str] = None
+    github_redirect_uri:  str = "http://localhost:3000/api/auth/github/callback"
+    # Fernet key for encrypting GitHub access tokens at rest.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Leave blank in dev — tokens will be stored unencrypted (acceptable for local only).
+    github_token_encryption_key: Optional[str] = None
+
     # ── Redis ────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
 

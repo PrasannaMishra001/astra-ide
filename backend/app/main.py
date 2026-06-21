@@ -25,7 +25,10 @@ def _ensure_columns() -> None:
     insp = inspect(engine)
     wanted = {
         "users":      [("avatar_url", "VARCHAR(512)"),
-                       ("is_admin", "BOOLEAN DEFAULT FALSE")],
+                       ("is_admin", "BOOLEAN DEFAULT FALSE"),
+                       ("github_id", "BIGINT"),
+                       ("github_login", "VARCHAR(128)"),
+                       ("github_access_token", "VARCHAR(2048)")],
         "workspaces": [("forked_from_id", "INTEGER"),
                        ("frozen", "BOOLEAN DEFAULT FALSE"),
                        ("shared_excludes", "TEXT DEFAULT ''")],

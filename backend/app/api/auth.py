@@ -160,3 +160,111 @@ def google_callback(request: Request, code: str | None = None, state: str | None
     token = create_access_token(subject=user.id)
     # Hand the JWT to the SPA on the SAME origin the user came from.
     return RedirectResponse(f"{base}/oauth/callback?token={token}")
+
+
+# ── GitHub OAuth (Sign in with GitHub + repo access) ────────────────────────
+
+from app.services import github_service  # noqa: E402 (after router definition)
+
+
+def _github_redirect_uri(request: Request) -> str:
+    return f"{_public_base(request)}/api/auth/github/callback"
+
+
+@router.get("/github/login")
+def github_login(request: Request) -> RedirectResponse:
+    """Kick off the GitHub OAuth flow — redirect to GitHub's consent page."""
+    base = _public_base(request)
+    if not github_service.is_configured():
+        return RedirectResponse(f"{base}/login?error=github_not_configured")
+    state = github_service.make_state()
+    resp = RedirectResponse(github_service.build_auth_url(state, _github_redirect_uri(request)))
+    resp.set_cookie("github_oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return resp
+
+
+@router.get("/github/callback")
+def github_callback(
+    request: Request,
+    code:    str | None = None,
+    state:   str | None = None,
+    error:   str | None = None,
+    db:      Session = Depends(get_db),
+):
+    """
+    Handle GitHub's redirect: exchange the code, find/create the user,
+    store the encrypted GitHub token, mint a JWT, redirect to the SPA.
+    """
+    base = _public_base(request)
+    if error or not code:
+        return RedirectResponse(f"{base}/login?error=github_denied")
+    if not github_service.is_configured():
+        return RedirectResponse(f"{base}/login?error=github_not_configured")
+
+    try:
+        profile = github_service.exchange_code(code, _github_redirect_uri(request))
+    except (httpx.HTTPError, ValueError):
+        return RedirectResponse(f"{base}/login?error=github_exchange_failed")
+
+    github_id    = profile["id"]
+    github_login = profile["login"]
+    email        = (profile.get("email") or "").lower() or None
+    avatar_url   = profile.get("avatar_url")
+    raw_token    = profile["access_token"]
+    enc_token    = github_service.encrypt_token(raw_token)
+
+    # 1. Look up by GitHub ID (returning user who connected via GitHub)
+    user = db.query(User).filter(User.github_id == github_id).first()
+
+    # 2. Fall back to matching by email (merge with existing password/Google account)
+    if user is None and email:
+        user = db.query(User).filter(User.email == email).first()
+
+    # 3. Brand-new user — create one
+    if user is None:
+        if not email:
+            return RedirectResponse(f"{base}/login?error=github_no_email")
+        user = User(
+            email=email,
+            username=_unique_username(db, github_login),
+            hashed_password=hash_password(secrets.token_urlsafe(32)),
+            avatar_url=avatar_url,
+        )
+        db.add(user)
+        db.flush()  # get id before commit
+
+    # Always refresh GitHub fields
+    user.github_id           = github_id
+    user.github_login        = github_login
+    user.github_access_token = enc_token
+    if avatar_url and not user.avatar_url:
+        user.avatar_url = avatar_url
+
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(subject=user.id)
+    return RedirectResponse(f"{base}/oauth/callback?token={token}")
+
+
+@router.get("/github/status")
+def github_status(current_user: User = Depends(get_current_user)):
+    """Return whether the current user has a linked GitHub account."""
+    return {
+        "connected":    current_user.github_login is not None,
+        "github_login": current_user.github_login,
+        "avatar_url":   current_user.avatar_url,
+    }
+
+
+@router.delete("/github/disconnect", status_code=status.HTTP_204_NO_CONTENT)
+def github_disconnect(
+    db:           Session = Depends(get_db),
+    current_user: User    = Depends(get_current_user),
+) -> None:
+    """Remove the stored GitHub token and unlink the account."""
+    current_user.github_id           = None
+    current_user.github_login        = None
+    current_user.github_access_token = None
+    db.commit()
+
