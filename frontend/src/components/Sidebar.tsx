@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, Boxes, BarChart3, LayoutGrid as PlatformIcon, Activity, Container,
-  PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield,
+  PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield, Github,
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth';
@@ -20,6 +20,7 @@ import ThemeToggle from './ThemeToggle';
 import Tooltip from './ui/Tooltip';
 import { Avatar } from './AvatarInline';
 import { cn } from '../lib/utils';
+import GitHubPanel from './GitHubPanel';
 
 const NAV = [
   { href: '/dashboard',     label: 'Dashboard',     icon: LayoutDashboard },
@@ -42,12 +43,14 @@ export default function Sidebar() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [ghPanelOpen, setGhPanelOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   function toggle() {
     setOpen((v) => { localStorage.setItem(STORAGE_KEY, v ? '0' : '1'); return !v; });
   }
 
   const isAdmin = (user as any)?.is_admin;
+  const isGhConnected = !!user?.github_login;
 
   async function onAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -139,7 +142,59 @@ export default function Sidebar() {
           );
           return open ? item : <Tooltip content="Admin" side="right">{item}</Tooltip>;
         })()}
+
+        {/* GitHub entry */}
+        {(() => {
+          const ghItem = (
+            <button
+              type="button"
+              onClick={() => setGhPanelOpen((v) => !v)}
+              className={cn(
+                'relative w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
+                ghPanelOpen
+                  ? 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-200 font-medium'
+                  : 'text-muted hover:bg-raised hover:text-ink',
+                !open && 'justify-center',
+              )}
+            >
+              {ghPanelOpen && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-zinc-400" aria-hidden="true" />}
+              <span className="relative shrink-0">
+                <Github size={18} />
+                {isGhConnected && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-surface" />
+                )}
+              </span>
+              {open && <span className="whitespace-nowrap">GitHub</span>}
+            </button>
+          );
+          return open
+            ? ghItem
+            : <Tooltip content={`GitHub${isGhConnected ? ' (connected)' : ''}`} side="right">{ghItem}</Tooltip>;
+        })()}
       </nav>
+
+      {/* GitHub flyout panel */}
+      <AnimatePresence>
+        {ghPanelOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.18 }}
+            className="fixed z-50 top-0 bottom-0 glass border-r border-edge shadow-pop overflow-hidden flex flex-col"
+            style={{ left: open ? 240 : 68, width: 300 }}
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-edge shrink-0">
+              <span className="text-xs font-semibold">GitHub</span>
+              <button type="button" onClick={() => setGhPanelOpen(false)}
+                className="btn-ghost p-1 text-xs text-muted">✕</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <GitHubPanel />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom: theme + account */}
       <div className="border-t border-edge p-2.5 space-y-1">

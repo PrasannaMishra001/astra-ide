@@ -22,6 +22,7 @@ class UserOut(BaseModel):
     preferred_lang: str
     avatar_url:     Optional[str] = None
     is_admin:       bool = False
+    github_login:   Optional[str] = None  # None means GitHub not linked
 
     class Config:
         from_attributes = True

@@ -19,7 +19,10 @@ WORKSPACE_DATA_ROOT = Path(
     os.getenv("ASTRA_WORKSPACE_DATA", Path(__file__).resolve().parents[2] / "workspace_data")
 )
 MAX_FILE_BYTES = 1 * 1024 * 1024            # 1 MB per file read/write
+# Public repos: strict allowlist of git hosts.
 _ALLOWED_GIT = re.compile(r"^https://(github\.com|gitlab\.com|bitbucket\.org)/[\w.\-]+/[\w.\-]+(\.git)?/?$")
+# Authenticated clones (token@github.com) are allowed from internal callers only.
+_ALLOWED_GIT_AUTH = re.compile(r"^https://[^@]+@(github\.com|gitlab\.com|bitbucket\.org)/[\w.\-]+/[\w.\-]+(\.git)?/?$")
 _SKIP_DIRS = {".git", "node_modules", "__pycache__", ".next", "dist", "build", "venv", ".venv"}
 
 
@@ -50,21 +53,34 @@ class ImportResult:
     file_count: int = 0
 
 
-def import_repo(workspace_id: int, git_url: str) -> ImportResult:
-    """Shallow-clone a public git repo into the workspace (replacing its contents)."""
+def import_repo(workspace_id: int, git_url: str, branch: str | None = None) -> ImportResult:
+    """Shallow-clone a git repo into the workspace (replacing its contents).
+
+    Accepts:
+    - Public HTTPS repos (github/gitlab/bitbucket)
+    - Authenticated HTTPS URLs (token@host/…) — used internally by the GitHub
+      integration for private-repo clones. Never called with user-provided URLs.
+    An optional `branch` narrows the clone to that branch.
+    """
     git_url = git_url.strip()
-    if not _ALLOWED_GIT.match(git_url):
-        return ImportResult(False, "only public https github/gitlab/bitbucket repos are allowed")
+    is_public = _ALLOWED_GIT.match(git_url)
+    is_auth   = _ALLOWED_GIT_AUTH.match(git_url)
+    if not is_public and not is_auth:
+        return ImportResult(False, "only https github/gitlab/bitbucket repos are allowed")
     base = _ws_dir(workspace_id)
     # clone into a temp sibling then move contents in (keeps base stable)
     tmp = base.parent / f".clone-{workspace_id}"
     shutil.rmtree(tmp, ignore_errors=True)
     try:
-        r = subprocess.run(
-            ["git", "clone", "--depth", "1", git_url, str(tmp)],
-            capture_output=True, text=True, timeout=120)
+        cmd = ["git", "clone", "--depth", "1"]
+        if branch:
+            cmd += ["--branch", branch]
+        cmd += [git_url, str(tmp)]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         if r.returncode != 0:
-            return ImportResult(False, f"clone failed: {(r.stderr or '')[-200:]}")
+            # Strip token from error messages before returning
+            err = re.sub(r"https://[^@]+@", "https://***@", r.stderr or "")
+            return ImportResult(False, f"clone failed: {err[-200:]}")
         # wipe workspace + move cloned files in (drop .git)
         for child in base.iterdir():
             shutil.rmtree(child, ignore_errors=True) if child.is_dir() else child.unlink()
@@ -72,7 +88,7 @@ def import_repo(workspace_id: int, git_url: str) -> ImportResult:
         for child in tmp.iterdir():
             shutil.move(str(child), str(base / child.name))
         n = sum(1 for _ in base.rglob("*") if _.is_file())
-        return ImportResult(True, f"imported {git_url}", n)
+        return ImportResult(True, f"imported {git_url.split('@')[-1]}", n)
     except subprocess.TimeoutExpired:
         return ImportResult(False, "clone timed out (repo too large?)")
     except FileNotFoundError:

@@ -40,6 +40,7 @@ export interface User {
   preferred_lang: string;
   avatar_url?: string | null;
   is_admin?: boolean;
+  github_login?: string | null;  // null = GitHub not linked
 }
 
 export interface TokenResponse {
@@ -503,3 +504,79 @@ export async function uploadFiles(workspaceId: number, files: FileList | File[],
 }
 
 export default api;
+
+// ── GitHub integration ────────────────────────────────────────────────────────
+
+export interface GitHubRepo {
+  id:               number;
+  name:             string;
+  full_name:        string;
+  private:          boolean;
+  description?:     string | null;
+  default_branch:   string;
+  clone_url:        string;
+  html_url:         string;
+  updated_at?:      string | null;
+  language?:        string | null;
+  stargazers_count: number;
+  forks_count:      number;
+}
+
+export interface GitHubBranch {
+  name: string;
+  sha:  string;
+}
+
+export interface GitHubStatus {
+  connected:    boolean;
+  github_login: string | null;
+  avatar_url?:  string | null;
+}
+
+export async function getGitHubStatus(): Promise<GitHubStatus> {
+  const { data } = await api.get<GitHubStatus>('/github/status');
+  return data;
+}
+
+export async function disconnectGitHub(): Promise<void> {
+  await api.delete('/github/disconnect');
+}
+
+export async function listGitHubRepos(page = 1, perPage = 50): Promise<GitHubRepo[]> {
+  const { data } = await api.get<{ repos: GitHubRepo[]; page: number; total: number }>(
+    `/github/repos?page=${page}&per_page=${perPage}`,
+  );
+  return data.repos;
+}
+
+export async function listGitHubBranches(owner: string, repo: string): Promise<GitHubBranch[]> {
+  const { data } = await api.get<{ branches: GitHubBranch[] }>(
+    `/github/repos/${owner}/${repo}/branches`,
+  );
+  return data.branches;
+}
+
+export async function createGitHubBranch(
+  owner: string, repo: string, newBranch: string, fromBranch: string,
+): Promise<GitHubBranch> {
+  const { data } = await api.post<GitHubBranch>(
+    `/github/repos/${owner}/${repo}/branches`,
+    { owner, repo, new_branch: newBranch, from_branch: fromBranch },
+  );
+  return data;
+}
+
+export async function cloneRepoToWorkspace(
+  workspaceId: number, owner: string, repo: string, branch?: string,
+): Promise<{ ok: boolean; detail: string; file_count: number; repo: string }> {
+  const { data } = await api.post('/github/clone', { workspace_id: workspaceId, owner, repo, branch });
+  return data;
+}
+
+export async function commitAndPush(
+  owner: string, repo: string, branch: string,
+  path: string, content: string, message: string,
+): Promise<{ ok: boolean; commit_sha: string; html_url: string }> {
+  const { data } = await api.post('/github/commit', { owner, repo, branch, path, content, message });
+  return data;
+}
