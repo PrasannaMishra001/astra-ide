@@ -164,7 +164,7 @@ export default function Sidebar() {
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-surface" />
                 )}
               </span>
-              {open && <span className="whitespace-nowrap">GitHub</span>}
+              {open && <span className="whitespace-nowrap">GitHub Integration</span>}
             </button>
           );
           return open
@@ -181,11 +181,11 @@ export default function Sidebar() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: 0.18 }}
-            className="fixed z-50 top-0 bottom-0 glass border-r border-edge shadow-pop overflow-hidden flex flex-col"
+            className="fixed z-50 top-0 bottom-0 bg-surface/95 backdrop-blur-2xl border-r border-edge-strong shadow-pop overflow-hidden flex flex-col"
             style={{ left: open ? 240 : 68, width: 300 }}
           >
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-edge shrink-0">
-              <span className="text-xs font-semibold">GitHub</span>
+              <span className="text-xs font-semibold">GitHub Integration</span>
               <button type="button" onClick={() => setGhPanelOpen(false)}
                 className="btn-ghost p-1 text-xs text-muted">✕</button>
             </div>
