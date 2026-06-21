@@ -133,3 +133,11 @@ docs/PRESENTATION-SCRIPT.md
 docs/ARCHITECTURE-DIAGRAMS.md
 docs/OAUTH-SETUP.md
 docs/TECH-STACK-STATUS.md
+
+# Personal/working docs — keep local, never commit
+changesmade.md
+docs/DATASETS.md
+docs/MEETING-GUIDE-2026-06-19.md
+docs/REAL-DATASETS-PLAN.md
+docs/RUN-IT-YOURSELF.md
+ml/scheduler/pfmppo/TRAINING.md
