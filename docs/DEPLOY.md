@@ -29,16 +29,16 @@ Stop with `docker compose down`. Volumes are preserved unless you add `-v`.
 Run data plane in Docker, app code natively:
 
 ```bash
-# Terminal 1 — data plane
+# Terminal 1, data plane
 docker compose -f deploy/docker-compose.dev.yml up -d
 
-# Terminal 2 — backend (hot reload)
+# Terminal 2, backend (hot reload)
 cd backend
 python -m venv venv && source venv/bin/activate   # (Windows: venv\Scripts\activate)
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Terminal 3 — frontend (hot reload)
+# Terminal 3, frontend (hot reload)
 cd frontend
 npm install
 npm run dev
@@ -48,15 +48,15 @@ npm run dev
 
 ## Mode 3: Production-like on Kubernetes
 
-### 3.1  Single-node k3s — choose your free provider
+### 3.1  Single-node k3s, choose your free provider
 
 **Recommended: Azure for Students** ($100 + 750 hr/mo B1s VM, no credit card)
 
 1. Sign in at https://portal.azure.com (Student account already provisioned).
 2. Create a VM:
    - Image: Ubuntu Server 24.04 LTS
-   - Size: **B2s** (2 vCPU, 4 GB RAM) — covered by the $100 credit
-     - Or **B1s** for free-tier-only (1 vCPU, 1 GB — k3s tight but works for demo)
+   - Size: **B2s** (2 vCPU, 4 GB RAM), covered by the $100 credit
+     - Or **B1s** for free-tier-only (1 vCPU, 1 GB, k3s tight but works for demo)
    - Authentication: SSH public key
    - Inbound ports: SSH (22), HTTP (80), HTTPS (443), 30000-32767 (NodePort range)
 3. SSH in:
@@ -87,7 +87,7 @@ npm run dev
    ```
 
 **Alternative: Oracle Cloud Always-Free**
-Free ARM Ampere A1 VM (4 OCPU, 24 GB RAM) forever — but **requires credit card for identity verification**. If your card is declined or you can't add one, use Azure instead.
+Free ARM Ampere A1 VM (4 OCPU, 24 GB RAM) forever, but **requires credit card for identity verification**. If your card is declined or you can't add one, use Azure instead.
 
 **Alternative: AWS Educate**
 $35 credit (or $100 if your college is a member). Sign up at aws.amazon.com/education/awseducate.
@@ -183,6 +183,6 @@ kubectl apply -f k8s/base/keda-scaledobject.yaml
    ELECTRICITY_MAPS_ZONE=DK-DK1   # or IN-NO for India, etc.
    ```
 3. The backend exposes `/api/v1/carbon/intensity?zone=...` for read access, and the PPO scheduler consumes the normalized value via `CarbonService.get_normalized()`.
-4. If the API is unreachable or the quota is hit, the service falls back to a built-in zone-average table (`_FALLBACK_BY_ZONE` in `carbon_service.py`) — training never breaks.
+4. If the API is unreachable or the quota is hit, the service falls back to a built-in zone-average table (`_FALLBACK_BY_ZONE` in `carbon_service.py`), training never breaks.
 
-**Never commit your `.env`** — it's gitignored. For CI, store the token as a GitHub Actions secret named `ELECTRICITY_MAPS_TOKEN`.
+**Never commit your `.env`**, it's gitignored. For CI, store the token as a GitHub Actions secret named `ELECTRICITY_MAPS_TOKEN`.

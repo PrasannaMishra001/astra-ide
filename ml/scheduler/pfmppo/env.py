@@ -164,12 +164,14 @@ if _GYM_AVAILABLE:
 
             if use_trace:
                 if self.trace_dataset is None:
-                    from ml.scheduler.pfmppo.google_trace_loader import GoogleTraceDataset
-                    self.trace_dataset = GoogleTraceDataset(
+                    # Shared, process-wide cache: all CTDE worker threads reuse ONE
+                    # parse instead of each re-parsing the multi-GB trace.
+                    from ml.scheduler.pfmppo.google_trace_loader import load_cached
+                    self.trace_dataset = load_cached(
                         data_dir=self.data_dir,
                         max_tasks_per_episode=self.num_tasks,
                         max_files=self.max_files,   # 0 = load the FULL trace
-                    ).load()
+                    )
                 self.dag, self.vms = self.trace_dataset.sample_episode(
                     rng=np.random.default_rng(int(dag_seed)),
                     vm_configs=self.vm_configs,

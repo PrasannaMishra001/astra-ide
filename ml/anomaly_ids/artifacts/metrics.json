@@ -18,32 +18,32 @@
     "window": 350
   },
   "astra_ids": {
-    "f1": 0.8287,
-    "precision": 0.9433,
-    "recall": 0.7389,
-    "fpr": 0.0444,
-    "threshold": -0.0059,
-    "roc_auc": 0.8686
+    "f1": 0.8159,
+    "precision": 0.9471,
+    "recall": 0.7167,
+    "fpr": 0.04,
+    "threshold": 0.0073,
+    "roc_auc": 0.8745
   },
   "baselines": {
     "stide": {
-      "f1": 0.7461,
-      "precision": 0.8561,
-      "recall": 0.6611,
-      "fpr": 0.1111,
-      "threshold": 0.0838,
-      "roc_auc": 0.8092
+      "f1": 0.7491,
+      "precision": 0.824,
+      "recall": 0.6867,
+      "fpr": 0.1467,
+      "threshold": 0.0665,
+      "roc_auc": 0.8184
     },
     "frequency_iforest": {
-      "f1": 0.7238,
-      "precision": 0.6333,
-      "recall": 0.8444,
-      "fpr": 0.4889,
-      "threshold": -0.122,
-      "roc_auc": 0.6942
+      "f1": 0.7257,
+      "precision": 0.635,
+      "recall": 0.8467,
+      "fpr": 0.4867,
+      "threshold": -0.1184,
+      "roc_auc": 0.7014
     }
   },
-  "astra_vs_best_baseline_f1_gain": 0.0826,
+  "astra_vs_best_baseline_f1_gain": 0.0668,
   "paper_reference": {
     "source": "Iacovazzi & Raza, IEEE CSR 2022",
     "f1_range": [

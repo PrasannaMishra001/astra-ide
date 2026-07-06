@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="ASTRA-IDE, a self-scheduling cloud IDE" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://astraide.tech"><b>astraide.tech</b></a>
+  &nbsp;&middot;&nbsp; Deep-RL scheduling &nbsp;&middot;&nbsp; gVisor sandboxing &nbsp;&middot;&nbsp; eBPF telemetry &nbsp;&middot;&nbsp; Kubernetes federation &nbsp;&middot;&nbsp; carbon-aware &nbsp;&middot;&nbsp; real-time collaboration
+</p>
+
 # ASTRA-IDE
 
 **A cloud development environment with a self-optimizing control plane.**
@@ -22,8 +31,8 @@ Monaco editor, FastAPI, Next.js.
 
 Cloud IDEs such as GitHub Codespaces, Gitpod, and Replit fix their scheduling, isolation, and
 placement policies. ASTRA-IDE treats each of those as a measurable optimization. The result is
-a working IDE — Monaco editor, real per-workspace containers, an integrated terminal, code
-execution, and live collaboration — sitting on top of seven research contributions, each with
+a working IDE (Monaco editor, real per-workspace containers, an integrated terminal, code
+execution, and live collaboration) sitting on top of seven research contributions, each with
 its own evaluation harness and a real-dataset benchmark.
 
 The platform runs today on a single host via Docker Compose and scales out to Kubernetes with
@@ -38,7 +47,7 @@ gVisor sandboxing, Karmada federation, and Tetragon-based eBPF telemetry.
   Trace 2011. It replaces round-robin and FIFO heuristics and falls back to a heuristic scorer
   automatically if the model is unavailable.
 - **Adaptive sandboxing.** A static risk model scores each workload and assigns the cheapest
-  isolation tier that is strong enough — runc, gVisor, or Firecracker — instead of paying the
+  isolation tier that is strong enough (runc, gVisor, or Firecracker) instead of paying the
   worst-case overhead for everyone.
 - **Graph-based intrusion detection.** A multi-scale syscall-graph anomaly detector flags
   container escapes and exploits from syscall behavior, trained on normal traffic only.

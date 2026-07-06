@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="ASTRA-IDE - Self-Scheduling Cloud IDE">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#04120c"/>
+      <stop offset="0.55" stop-color="#082a1c"/>
+      <stop offset="1" stop-color="#0b3a26"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#10b981" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#10b981" stroke-opacity="0.06" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#grid)"/>
+  <circle cx="1050" cy="120" r="360" fill="url(#glow)"/>
+
+  <!-- logo mark: orbit + node -->
+  <g transform="translate(120,160)">
+    <circle r="62" fill="none" stroke="url(#accent)" stroke-width="4" stroke-opacity="0.9"/>
+    <ellipse rx="62" ry="26" fill="none" stroke="#34d399" stroke-width="2.5" stroke-opacity="0.55" transform="rotate(-28)"/>
+    <circle r="20" fill="url(#accent)"/>
+    <circle cx="62" cy="0" r="7" fill="#a7f3d0" transform="rotate(-28)"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="228" y="150" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="86" font-weight="800" fill="#ecfdf5" letter-spacing="1">ASTRA<tspan fill="#34d399">-IDE</tspan></text>
+  <text x="230" y="196" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="30" font-weight="600" fill="#a7f3d0">Self-Scheduling Cloud IDE</text>
+  <text x="230" y="236" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19" font-weight="400" fill="#6ee7b7" opacity="0.85">Deep-RL scheduling · adaptive sandboxing · eBPF telemetry · Kubernetes federation · carbon-aware · real-time collaboration</text>
+
+  <!-- domain pill -->
+  <g transform="translate(230,262)">
+    <rect x="0" y="0" width="176" height="34" rx="17" fill="#10b981" fill-opacity="0.14" stroke="#34d399" stroke-opacity="0.5"/>
+    <text x="88" y="23" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#d1fae5">astraide.tech</text>
+  </g>
+</svg>

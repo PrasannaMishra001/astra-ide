@@ -4,7 +4,7 @@
 
 ```
 ┌──────────────────────┐     ┌──────────────────────┐
-│  Browser (Next.js)   │◄───►│ y-websocket Collab   │  <— Yjs CRDT sync + awareness
+│  Browser (Next.js)   │◄───►│ y-websocket Collab   │  <- Yjs CRDT sync + awareness
 │  Monaco + Yjs        │     │ Server               │
 └──────────┬───────────┘     └──────────────────────┘
            │

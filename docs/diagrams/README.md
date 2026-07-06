@@ -4,11 +4,11 @@ Editable source diagrams for the architecture and local setup, in draw.io (diagr
 
 ## Files
 
-- `architecture.drawio` — the full system: browser, Caddy, the three services, the control-plane
+- `architecture.drawio`, the full system: browser, Caddy, the three services, the control-plane
   decisions (risk scoring B4, PPO scheduler B1, carbon B6), the data plane, per-workspace
   containers, eBPF telemetry (B2), the anomaly IDS (B4), pre-warming (B3), and the
   Kubernetes/Karmada federation layer (B5).
-- `local-setup.drawio` — the `docker compose up` boot flow: which services start, their ports,
+- `local-setup.drawio`, the `docker compose up` boot flow: which services start, their ports,
   and how a developer reaches each one.
 
 ## How to open and edit

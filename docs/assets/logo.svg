@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" role="img" aria-label="ASTRA-IDE logo">
+  <defs>
+    <linearGradient id="lbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#082a1c"/>
+      <stop offset="1" stop-color="#0b3a26"/>
+    </linearGradient>
+    <linearGradient id="laccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="34" fill="url(#lbg)"/>
+  <g transform="translate(80,80)">
+    <circle r="46" fill="none" stroke="url(#laccent)" stroke-width="5"/>
+    <ellipse rx="46" ry="19" fill="none" stroke="#34d399" stroke-width="3" stroke-opacity="0.55" transform="rotate(-28)"/>
+    <circle r="15" fill="url(#laccent)"/>
+    <circle cx="46" cy="0" r="6" fill="#a7f3d0" transform="rotate(-28)"/>
+  </g>
+</svg>

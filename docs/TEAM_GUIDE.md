@@ -1,4 +1,4 @@
-# Team Guide — ASTRA-IDE
+# Team Guide, ASTRA-IDE
 
 > Technical reference: who owns what, what to ship each week, how to share VM
 > access + secrets, how to recover prod. For setup steps see the root `README.md`.
@@ -53,9 +53,9 @@ Lock conventions:
 
 ## 2. Week-by-week task split
 
-(See BTP report Sections 10–11 for the source-of-truth plan.)
+(See BTP report Sections 10-11 for the source-of-truth plan.)
 
-### Week 2 (May 13–19) — IDE polish + CRDT
+### Week 2 (May 13-19), IDE polish + CRDT
 
 | Person | Tickets |
 |---|---|
@@ -63,15 +63,15 @@ Lock conventions:
 | Udit     | Run `python -m ml.scheduler.train --timesteps 100000` against the simulated env. Save model, write `ml/scheduler/EVAL.md`. |
 | Yash     | xterm.js terminal panel in editor. File tree component (multi-file workspaces). |
 
-### Week 3 (May 20–26) — Sandboxing + scheduler skeleton
+### Week 3 (May 20-26), Sandboxing + scheduler skeleton
 
 | Person | Tickets |
 |---|---|
 | Prasanna | Install gVisor + Kata on a local k3s node. Validate `kubectl apply` with each `runtimeClassName`. |
 | Udit     | Tune PPO hyperparameters. Add carbon to reward function. First comparison chart for the report. |
-| Yash     | Workspace persistence — save buffer to MinIO on shutdown, restore on start. |
+| Yash     | Workspace persistence, save buffer to MinIO on shutdown, restore on start. |
 
-### Week 4 (May 27–Jun 2) — eBPF live + PPO online
+### Week 4 (May 27-Jun 2), eBPF live + PPO online
 
 | Person | Tickets |
 |---|---|
@@ -79,7 +79,7 @@ Lock conventions:
 | Udit     | Online fine-tuning loop: feed real telemetry into PPO via gRPC client. |
 | Yash     | LSP sidecars (pylsp for Python, clangd for C++). Monaco autocomplete integration. |
 
-### Week 5 (Jun 3–9) — LSTM + multi-cluster
+### Week 5 (Jun 3-9), LSTM + multi-cluster
 
 | Person | Tickets |
 |---|---|
@@ -87,7 +87,7 @@ Lock conventions:
 | Udit     | Train LSTM on synthetic dataset. Wire prediction into warm-pool controller. |
 | Yash     | Workspace sharing polish. User profile page. |
 
-### Week 6 (Jun 10–16) — Energy + integration
+### Week 6 (Jun 10-16), Energy + integration
 
 | Person | Tickets |
 |---|---|
@@ -95,7 +95,7 @@ Lock conventions:
 | Udit     | Ablation study: PPO with/without carbon, with/without eBPF. Write comparison section of paper. |
 | Yash     | End-to-end demo recording: register → create → collab → run → share. Polish error states. |
 
-### Week 7 (Jun 17–23) — Testing + paper
+### Week 7 (Jun 17-23), Testing + paper
 
 | Person | Tickets |
 |---|---|
@@ -138,17 +138,17 @@ docker compose up -d
 
 Never put secrets in the repo. Current secrets:
 
-- `JWT_SECRET` — backend signing key (regenerate per-deploy is fine)
-- `ELECTRICITY_MAPS_TOKEN` — carbon API key
+- `JWT_SECRET`, backend signing key (regenerate per-deploy is fine)
+- `ELECTRICITY_MAPS_TOKEN`, carbon API key
 
 Distribution options, in order of preference:
 
-1. **GitHub Secrets** (best for CI) — settings → secrets → actions. Add
+1. **GitHub Secrets** (best for CI), settings → secrets → actions. Add
    `ELECTRICITY_MAPS_TOKEN` so the Docker workflow can use it.
-2. **Shared Bitwarden / 1Password vault** (best for human use) — free tier
+2. **Shared Bitwarden / 1Password vault** (best for human use), free tier
    supports a 3-person org.
 3. **Each teammate generates their own electricityMaps free key** (5 min) and
-   stores it in their own local `backend/.env` — no sharing required. This is
+   stores it in their own local `backend/.env`, no sharing required. This is
    the path I'd recommend until we deploy multi-cluster.
 
 ---
@@ -183,11 +183,11 @@ git push origin main
 
 GitHub Actions runs on every push to `main`:
 
-- `CI` workflow (`.github/workflows/ci.yml`) — runs backend tests, ml tests,
+- `CI` workflow (`.github/workflows/ci.yml`), runs backend tests, ml tests,
   frontend build, collab server smoke test. ~1.5 min.
-- `Build & push images` (`.github/workflows/docker.yml`) — pushes 3 images
+- `Build & push images` (`.github/workflows/docker.yml`), pushes 3 images
   to GHCR (backend, frontend, collab-server). ~5 min.
 
 Latest runs: https://github.com/PrasannaMishra001/astra-ide/actions
 
-If CI is red on `main`, that's blocking — fix or revert before the next push.
+If CI is red on `main`, that's blocking, fix or revert before the next push.

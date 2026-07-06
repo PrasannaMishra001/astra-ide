@@ -8,8 +8,8 @@ python -m ml.scheduler.train --timesteps 100000 --num-nodes 4 --out runs/ppo
 ```
 
 Outputs:
-- `runs/ppo/model.zip`            — Stable-Baselines3 policy
-- `runs/ppo/tensorboard/`         — TensorBoard logs
+- `runs/ppo/model.zip`           , Stable-Baselines3 policy
+- `runs/ppo/tensorboard/`        , TensorBoard logs
 
 Visualize:
 ```bash
@@ -73,8 +73,8 @@ python -m ml.prewarming.train --users 100 --days 30 --epochs 20 --out runs/lstm
 ```
 
 Outputs:
-- `runs/lstm/model.pt`        — PyTorch weights
-- `runs/lstm/metrics.json`    — precision / recall / F1
+- `runs/lstm/model.pt`       , PyTorch weights
+- `runs/lstm/metrics.json`   , precision / recall / F1
 
 Architecture:
 ```
@@ -82,8 +82,8 @@ Architecture:
 ```
 
 Features per session:
-- sin(hour) — normalized
-- cos(hour) — normalized
+- sin(hour), normalized
+- cos(hour), normalized
 - weekday / 6
 - language_id / |vocab|
 
@@ -100,7 +100,7 @@ Pure-function, no training needed. Default thresholds:
 - `risk < 0.70`  → gvisor
 - `risk ≥ 0.70`  → firecracker
 
-Configurable via the `RiskScorer` dataclass — useful for ablation experiments
+Configurable via the `RiskScorer` dataclass, useful for ablation experiments
 where you sweep thresholds and weights.
 
 ---

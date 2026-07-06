@@ -150,3 +150,7 @@ docs-private/
 # raw datasets here — only the tiny trained outputs.
 !ml/**/artifacts/
 !ml/**/artifacts/**
+
+# Internal research + status docs (kept local, not public)
+docs/research/
+docs/TECH-STACK-STATUS.md
