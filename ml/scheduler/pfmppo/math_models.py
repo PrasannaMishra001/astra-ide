@@ -97,6 +97,12 @@ def pfmppo_reward(
     """
     Eq 30: PF-MPPO reward function.
     R = -(alpha1 * log(T_resp) + alpha2 * log(E) + alpha3 * log(LB))
+
+    Weight note (fidelity): the paper uses roughly equal weights (alpha ~0.34/0.33/
+    0.33). We deliberately weight response time higher (0.60/0.20/0.20) because for
+    an interactive cloud IDE, workspace start-up latency matters more to the user
+    than data-center energy or load balance. This is an intentional domain
+    adaptation, not the paper-exact setting.
     """
     log_resp = math.log(max(response_t, eps))
     log_energy = math.log(max(energy, eps))

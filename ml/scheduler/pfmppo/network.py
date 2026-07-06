@@ -1,8 +1,13 @@
 """
-PF-MPPO Neural Network architecture (paper Table 1).
+PF-MPPO Actor-Critic network (based on paper Table 1).
 
-5-hidden-layer shared network with separate Actor (Softmax) and Critic (value) heads.
+Shared MLP backbone (4 hidden layers) with separate Actor (Softmax over K pairs)
+and Critic (state value) heads.
 Architecture: Input(100) -> 32 -> 64 -> 32 -> 16 -> [Actor: K, Critic: 1]
+
+Note on fidelity: the paper's Table 1 lists 5 hidden layers; we use 4 (the state
+is already a compact 100-d hand-engineered summary, so a smaller head trains fast
+on CPU and matches our reported results). Kept intentionally; not a bug.
 """
 from __future__ import annotations
 

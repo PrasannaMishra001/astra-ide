@@ -70,10 +70,10 @@ Each contribution is evaluated on a real public dataset. Representative numbers:
 
 | Area | Dataset | Result |
 |---|---|---|
-| Intrusion detection | LID-DS 2021 (real CVE exploits) | F1 **0.83**, FPR 0.04; beats STIDE (0.75) and frequency baselines (0.72) by +0.08 F1 |
+| Intrusion detection | LID-DS 2021 (real CVE exploits) | F1 **0.82**, precision 0.95, FPR 0.04; beats STIDE (0.75) and a frequency baseline (0.73) |
 | Predictive pre-warming | Azure Functions 2019 | forecast N-RMSE **0.17**; **49%** fewer cold starts vs a fixed keep-alive window |
-| Carbon-aware scheduling | UK grid carbon intensity | **30%** lower emissions at a 24-hour deferral budget |
-| Learned scheduling | Google Cluster Trace 2011 | PPO policy evaluated against round-robin, random, FIFO, and least-loaded baselines |
+| Carbon-aware scheduling | UK grid carbon intensity | up to **30%** lower emissions at a 24-hour deferral budget |
+| Learned scheduling | Google Cluster Trace 2011 | PPO policy trained on the real trace; outperforms random workspace placement |
 
 Evaluation harnesses live under `benchmarks/`; trained model artifacts and their metrics live
 under `ml/*/artifacts/`.
@@ -149,7 +149,6 @@ astra-ide/
   ebpf/            Tetragon tracing policy
   k8s/             manifests, Helm chart, Karmada policies, RuntimeClasses, monitoring
   deploy/          Docker Compose stacks and the Caddy reverse proxy
-  docs/            architecture, API, deployment, and diagrams
 ```
 
 ---

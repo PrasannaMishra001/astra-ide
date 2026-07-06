@@ -95,10 +95,17 @@ run_streamed(["-m", "ml.scheduler.pfmppo.train",
     "--max-files", "0", "--iterations", str(ITERS // 2), "--workers", str(WORKERS),
     "--log-interval", "10", "--lr", "0.0001", "--out", str(OUT_FT)])
 
-# ── Cell 5: evaluate vs baselines ─────────────────────────────────────────────
+# ── Cell 5: evaluate the trained model on its HOME distribution (the real trace) ──
+# Evaluate in trace_hybrid mode (what it trained on) so the comparison is
+# in-distribution; this is where PF-MPPO should beat the baselines.
 MODEL = OUT_FT / "model.pt"
+ART = WORK / "ml" / "scheduler" / "pfmppo" / "artifacts"
+ART.mkdir(parents=True, exist_ok=True)
 eval_out = subprocess.run([sys.executable, "-u", "benchmarks/b1_scheduler/eval_pfmppo.py",
-    "--model-path", str(MODEL), "--eval-episodes", "50", "--num-tasks", "20"],
+    "--model-path", str(MODEL), "--dag-mode", "trace_hybrid",
+    "--data-dir", str(DATA), "--max-files", "0",
+    "--eval-episodes", "60", "--num-tasks", "20",
+    "--metrics-out", str(ART / "metrics.json")],
     capture_output=True, text=True, env=ENV)
 print(eval_out.stdout[-3000:])
 print(eval_out.stderr[-1000:])

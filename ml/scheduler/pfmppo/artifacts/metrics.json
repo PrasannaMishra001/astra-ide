@@ -1,0 +1,21 @@
+{
+  "dataset": "Google-Cluster-Trace-2011 (clusterdata-2011-2)",
+  "task_parts_used": 4,
+  "iterations_pretrain": 3000,
+  "iterations_finetune": 1500,
+  "config": "4_nodes",
+  "dag_mode": "trace_hybrid",
+  "eval_stdout_tail": "",
+  "note": "paste the eval table numbers (PPO vs RR/Random/FIFO/Least-Loaded) here",
+  "eval": {
+    "dag_mode": "random",
+    "eval_episodes": 80,
+    "mean_reward": {
+      "pfmppo": -68.796,
+      "greedy_priority": -59.196,
+      "random": -70.496
+    },
+    "pfmppo_invalid_action_rate": 0.0,
+    "note": "higher reward is better (reward = -cost); PF-MPPO vs env baselines"
+  }
+}

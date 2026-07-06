@@ -4,6 +4,14 @@ docs/ASCII_LOGO.md
 docs/EVAL_*.md
 docs-private/
 notes-*.md
+# Developer docs kept local — the public repo stays product-facing (README + assets only)
+docs/API.md
+docs/ARCHITECTURE.md
+docs/DEPLOY.md
+docs/DEVELOPMENT.md
+docs/ML.md
+docs/USER-WALKTHROUGH.md
+docs/diagrams/
 
 # Research paper PDFs — too big for git, fetched manually via docs/research/papers/README.md
 docs/research/papers/*.pdf
