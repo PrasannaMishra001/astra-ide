@@ -154,3 +154,8 @@ docs-private/
 # Internal research + status docs (kept local, not public)
 docs/research/
 docs/TECH-STACK-STATUS.md
+
+# Developer/internal docs + diagram sources (kept local, repo stays product-facing)
+docs/diagrams/
+docs/LEARNING_AND_TASKS.md
+docs/TEAM_GUIDE.md

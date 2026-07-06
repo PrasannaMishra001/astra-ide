@@ -89,8 +89,9 @@ service relays CRDT document updates for collaboration. PostgreSQL holds durable
 provides caching, and MinIO stores workspace files. At cluster scale the same workloads run as
 Kubernetes pods federated by Karmada, observed by Tetragon, and isolated by gVisor.
 
-See `docs/diagrams/architecture.drawio` for the full system diagram and
-`docs/diagrams/local-setup.drawio` for the local boot flow.
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="ASTRA-IDE system architecture" width="100%">
+</p>
 
 ---
 
@@ -129,7 +130,9 @@ carbon-intensity data) activate when their credentials are set in `backend/.env`
 the platform falls back gracefully. Stop with `docker compose down`, or
 `docker compose down -v` to also remove data.
 
-For native development with hot reload, and for the Kubernetes deployment, see `docs/`.
+<p align="center">
+  <img src="docs/assets/setup.png" alt="ASTRA-IDE local setup with Docker Compose" width="90%">
+</p>
 
 ---
 
