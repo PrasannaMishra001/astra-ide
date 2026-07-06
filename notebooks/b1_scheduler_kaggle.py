@@ -70,7 +70,7 @@ print("trace subset ready:", DATA, flush=True)
 
 # ── Cell 3: SMOKE TEST (proves it runs; ~1-2 min, you see reward numbers) ──────
 CFG     = "ml/scheduler/pfmppo/configs/4_nodes.json"
-WORKERS = min(4, os.cpu_count() or 2)     # Kaggle has ~4 CPUs; more just contends
+WORKERS = 9     # paper Table 2 / Fig 12: 9 workers is optimal for convergence
 run_streamed(["-m", "ml.scheduler.pfmppo.train",
     "--mode", "pretrain", "--config", CFG,
     "--dag-mode", "trace_hybrid", "--data-dir", str(DATA), "--max-files", "0",
@@ -79,7 +79,7 @@ run_streamed(["-m", "ml.scheduler.pfmppo.train",
     "--out", str(WORK / "runs" / "pfmppo_smoke")])
 
 # ── Cell 4: real training with LIVE PROGRESS + ETA ────────────────────────────
-ITERS = 800               # ~30-60 min on Kaggle CPU. Raise to 3000+ for the final model.
+ITERS = 2000              # paper Table 2: N = 2000 iterations (rewards stabilize ~250)
 OUT    = WORK / "runs" / "pfmppo_full"
 run_streamed(["-m", "ml.scheduler.pfmppo.train",
     "--mode", "pretrain", "--config", CFG,

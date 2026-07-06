@@ -1,21 +1,25 @@
 {
-  "dataset": "Google-Cluster-Trace-2011 (clusterdata-2011-2)",
-  "task_parts_used": 4,
-  "iterations_pretrain": 3000,
-  "iterations_finetune": 1500,
-  "config": "4_nodes",
-  "dag_mode": "trace_hybrid",
-  "eval_stdout_tail": "",
-  "note": "paste the eval table numbers (PPO vs RR/Random/FIFO/Least-Loaded) here",
-  "eval": {
-    "dag_mode": "random",
-    "eval_episodes": 80,
-    "mean_reward": {
-      "pfmppo": -68.796,
-      "greedy_priority": -59.196,
-      "random": -70.496
-    },
-    "pfmppo_invalid_action_rate": 0.0,
-    "note": "higher reward is better (reward = -cost); PF-MPPO vs env baselines"
+  "status": "retrain_pending",
+  "note": "Code corrected to the paper (reward 0.34/0.33/0.33, 5 hidden layers, N=2000). The prior model was trained on the old config and was removed. Run notebooks/b1_scheduler_kaggle.py and recommit model.pt + this file.",
+  "hyperparameters": {
+    "discount_gamma": 0.9,
+    "ppo_clip": 0.2,
+    "learning_rate_pretrain": 0.001,
+    "learning_rate_finetune": 0.0001,
+    "hidden_layers": 5,
+    "mini_batch": 1000,
+    "iterations": 2000,
+    "workers": 9,
+    "reward_weights": {"alpha1_latency": 0.34, "alpha2_energy": 0.33, "alpha3_loadbalance": 0.33}
+  },
+  "dataset": {
+    "paper": "Alibaba Cluster-trace-v2018",
+    "ours": "Google Cluster Trace 2011 (clusterdata-2011-2)",
+    "note": "documented substitution of one real production trace for another"
+  },
+  "paper_reported_results": {
+    "latency_reduction_pct": [1.2, 28.4],
+    "energy_reduction_pct": [2.5, 40.1],
+    "source": "PF-MPPO, Future Generation Computer Systems, Elsevier 2025"
   }
 }

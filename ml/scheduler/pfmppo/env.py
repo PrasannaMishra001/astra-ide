@@ -94,9 +94,9 @@ if _GYM_AVAILABLE:
             max_deps_per_task: int = 3,
             vm_configs: Optional[List[Dict]] = None,
             seed: Optional[int] = None,
-            alpha1: float = 0.60,
-            alpha2: float = 0.20,
-            alpha3: float = 0.20,
+            alpha1: float = 0.34,   # paper Table 2: latency weight (0.34 = 1 - 0.33 - 0.33)
+            alpha2: float = 0.33,   # paper Table 2: energy weight
+            alpha3: float = 0.33,   # paper Table 2: load-balance weight
             dag_mode: str = "random",
             num_workspaces: Tuple[int, int] = (3, 8),
             language_weights: Optional[Dict[str, float]] = None,

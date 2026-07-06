@@ -89,20 +89,19 @@ def pfmppo_reward(
     response_t: float,
     energy: float,
     load_balance: float,
-    alpha1: float = 0.60,
-    alpha2: float = 0.20,
-    alpha3: float = 0.20,
+    alpha1: float = 0.34,
+    alpha2: float = 0.33,
+    alpha3: float = 0.33,
     eps: float = 1e-6,
 ) -> float:
     """
-    Eq 30: PF-MPPO reward function.
+    Eq 30: PF-MPPO reward function (matches the paper).
     R = -(alpha1 * log(T_resp) + alpha2 * log(E) + alpha3 * log(LB))
 
-    Weight note (fidelity): the paper uses roughly equal weights (alpha ~0.34/0.33/
-    0.33). We deliberately weight response time higher (0.60/0.20/0.20) because for
-    an interactive cloud IDE, workspace start-up latency matters more to the user
-    than data-center energy or load balance. This is an intentional domain
-    adaptation, not the paper-exact setting.
+    Weights are the paper's Table 2 values: alpha2 = alpha3 = 0.33 (energy, load
+    balance), with alpha1 = 0.34 (latency) so the three sum to 1. Larger alpha1
+    emphasizes minimizing completion time; larger alpha2/alpha3 emphasize energy
+    and load balancing (paper section 3.4).
     """
     log_resp = math.log(max(response_t, eps))
     log_energy = math.log(max(energy, eps))
