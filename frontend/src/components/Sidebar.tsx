@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, Boxes, BarChart3, LayoutGrid as PlatformIcon, Activity, Container,
-  PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield, Github,
+  PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield, Github, FlaskConical,
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth';
@@ -27,6 +27,7 @@ const NAV = [
   { href: '/pods',          label: 'Containers',    icon: Container },
   { href: '/clusters',      label: 'Clusters',      icon: Boxes },
   { href: '/benchmarks',    label: 'Benchmarks',    icon: BarChart3 },
+  { href: '/research',      label: 'Research',      icon: FlaskConical },
   { href: '/observability', label: 'Observability', icon: Activity },
   { href: '/platform',      label: 'Platform',      icon: PlatformIcon },
 ];
