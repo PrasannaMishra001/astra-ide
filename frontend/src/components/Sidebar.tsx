@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, Boxes, BarChart3, LayoutGrid as PlatformIcon, Activity, Container,
   PanelLeftClose, PanelLeftOpen, Camera, LogOut, User, Loader2, Shield, Github, FlaskConical,
+  HelpCircle,
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth';
@@ -197,8 +198,20 @@ export default function Sidebar() {
         )}
       </AnimatePresence>
 
-      {/* Bottom: theme + account */}
+      {/* Bottom: tour + theme + account */}
       <div className="border-t border-edge p-2.5 space-y-1">
+        {(() => {
+          const tourBtn = (
+            <button type="button"
+                    onClick={() => window.dispatchEvent(new Event('astra:open-tour'))}
+                    className={cn('w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-muted hover:bg-raised hover:text-ink transition-colors',
+                      !open && 'justify-center')}>
+              <HelpCircle size={18} className="shrink-0" />
+              {open && <span className="whitespace-nowrap">Take the tour</span>}
+            </button>
+          );
+          return open ? tourBtn : <Tooltip content="Take the tour" side="right">{tourBtn}</Tooltip>;
+        })()}
         <div className={cn('flex', open ? 'justify-start' : 'justify-center')}>
           <ThemeToggle />
         </div>
