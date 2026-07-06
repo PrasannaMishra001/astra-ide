@@ -141,3 +141,12 @@ docs/MEETING-GUIDE-2026-06-19.md
 docs/REAL-DATASETS-PLAN.md
 docs/RUN-IT-YOURSELF.md
 ml/scheduler/pfmppo/TRAINING.md
+
+# Personal make-it-real / viva prep — keep local, never commit
+docs-private/
+
+# Committed model artifacts: trained on real datasets, small (weights + metrics +
+# provenance only). These override the *.pt/*.joblib/*.onnx ignores above. NEVER put
+# raw datasets here — only the tiny trained outputs.
+!ml/**/artifacts/
+!ml/**/artifacts/**

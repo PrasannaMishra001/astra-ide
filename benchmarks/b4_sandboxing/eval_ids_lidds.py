@@ -133,6 +133,12 @@ def main() -> None:
     ap.add_argument("--threshold", type=float, default=0.0,
                     help="flag recording if frac-anomalous-windows > this (0 = any)")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--save-artifact", type=Path, default=None,
+                    help="persist the fitted ContainerIDS here (e.g. "
+                         "ml/anomaly_ids/artifacts/ids.joblib) so it can be committed + served")
+    ap.add_argument("--metrics-out", type=Path, default=None,
+                    help="write the real eval metrics as JSON here (e.g. "
+                         "ml/anomaly_ids/artifacts/metrics.json)")
     args = ap.parse_args()
     rng = random.Random(args.seed)
     vocab: dict = {}
@@ -208,6 +214,37 @@ def main() -> None:
     print(f"\nAggregate: precision={prec:.3f}  recall(TPR)={rec:.3f}  F1={f1:.3f}  "
           f"FPR={fpr_all:.3f}  ROC-AUC={auc:.3f}")
     print("Paper 3 reported: F1 0.78-0.99, FPR 0.024-0.071")
+
+    # ── Persist the fitted detector + the REAL metrics as committable artifacts ──
+    if args.save_artifact:
+        args.save_artifact.parent.mkdir(parents=True, exist_ok=True)
+        ids.save(str(args.save_artifact))
+        print(f"\nsaved fitted IDS -> {args.save_artifact}")
+    if args.metrics_out:
+        import json
+        metrics = {
+            "dataset": "LID-DS-2021",
+            "scenarios": [s.name for s in scenarios],
+            "vocab_size": len(vocab),
+            "precision": round(prec, 4),
+            "recall_tpr": round(rec, 4),
+            "f1": round(f1, 4),
+            "fpr": round(fpr_all, 4),
+            "roc_auc": None if auc != auc else round(auc, 4),   # NaN-safe
+            "per_scenario_tpr": {
+                s.name: round(float((atk_scores[s.name] > thr).mean()), 4)
+                        if len(atk_scores[s.name]) else 0.0
+                for s in scenarios
+            },
+            "params": {"walks": args.walks, "window": args.window, "stride": args.stride,
+                       "maxwin": args.maxwin, "maxlen": args.maxlen, "cap": args.cap,
+                       "threshold": thr, "seed": args.seed},
+            "paper_reference": {"source": "Iacovazzi & Raza, IEEE CSR 2022",
+                                "f1_range": [0.78, 0.99], "fpr_range": [0.024, 0.071]},
+        }
+        args.metrics_out.parent.mkdir(parents=True, exist_ok=True)
+        args.metrics_out.write_text(json.dumps(metrics, indent=2))
+        print(f"wrote metrics -> {args.metrics_out}")
 
 
 if __name__ == "__main__":

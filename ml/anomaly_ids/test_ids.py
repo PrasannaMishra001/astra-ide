@@ -125,5 +125,40 @@ class TestIDSPipeline(unittest.TestCase):
         self.assertEqual(res.rf_class, "data_analytics")
 
 
+class TestIDSPersistence(unittest.TestCase):
+    """A fitted detector saved to disk and reloaded predicts identically — this is
+    the artifact path (train offline on real data → commit ids.joblib → serve)."""
+
+    def test_save_load_round_trip(self):
+        import tempfile, os
+        rng = random.Random(7)
+        cyc = {"a": [1, 2, 3], "b": [4, 5, 6, 7]}
+        by_class = {
+            name: _embed_many([_structured_trace(c, 60, 0.05, rng) for _ in range(20)],
+                              seed0=100 + i * 100)
+            for i, (name, c) in enumerate(cyc.items())
+        }
+        ids = ContainerIDS(seed=42).fit(by_class)
+        sample = anonymous_walk_embedding(_structured_trace([1, 2, 3], 60, 0.02, rng), seed=11)
+        before = ids.predict(sample)
+
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "ids.joblib")
+            ids.save(path)
+            self.assertTrue(os.path.exists(path))
+            loaded = ContainerIDS.load(path)
+
+        after = loaded.predict(sample)
+        self.assertEqual(loaded.classes_, ids.classes_)
+        self.assertEqual(after.decision, before.decision)
+        self.assertEqual(after.rf_class, before.rf_class)
+
+    def test_save_before_fit_raises(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(RuntimeError):
+                ContainerIDS(seed=1).save(os.path.join(d, "x.joblib"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

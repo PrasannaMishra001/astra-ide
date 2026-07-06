@@ -1,0 +1,40 @@
+{
+  "dataset": "LID-DS-2021",
+  "scenarios": [
+    "Bruteforce_CWE-307",
+    "CVE-2012-2122",
+    "CVE-2014-0160"
+  ],
+  "vocab_size": 56,
+  "precision": 0.7778,
+  "recall_tpr": 0.4667,
+  "f1": 0.5833,
+  "fpr": 0.1333,
+  "roc_auc": 0.6815,
+  "per_scenario_tpr": {
+    "Bruteforce_CWE-307": 0.8833,
+    "CVE-2012-2122": 0.2833,
+    "CVE-2014-0160": 0.2333
+  },
+  "params": {
+    "walks": 500,
+    "window": 500,
+    "stride": 250,
+    "maxwin": 8,
+    "maxlen": 6000,
+    "cap": 60,
+    "threshold": 0.3,
+    "seed": 42
+  },
+  "paper_reference": {
+    "source": "Iacovazzi & Raza, IEEE CSR 2022",
+    "f1_range": [
+      0.78,
+      0.99
+    ],
+    "fpr_range": [
+      0.024,
+      0.071
+    ]
+  }
+}
