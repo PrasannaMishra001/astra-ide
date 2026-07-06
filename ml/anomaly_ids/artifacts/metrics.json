@@ -6,26 +6,44 @@
     "CVE-2014-0160"
   ],
   "vocab_size": 56,
-  "precision": 0.7778,
-  "recall_tpr": 0.4667,
-  "f1": 0.5833,
-  "fpr": 0.1333,
-  "roc_auc": 0.6815,
-  "per_scenario_tpr": {
-    "Bruteforce_CWE-307": 0.8833,
-    "CVE-2012-2122": 0.2833,
-    "CVE-2014-0160": 0.2333
+  "embedding": {
+    "kind": "rich-multiscale-graph",
+    "walk_lengths": [
+      3,
+      4,
+      5
+    ],
+    "dim": 80,
+    "walks": 120,
+    "window": 350
   },
-  "params": {
-    "walks": 500,
-    "window": 500,
-    "stride": 250,
-    "maxwin": 8,
-    "maxlen": 6000,
-    "cap": 60,
-    "threshold": 0.3,
-    "seed": 42
+  "astra_ids": {
+    "f1": 0.8287,
+    "precision": 0.9433,
+    "recall": 0.7389,
+    "fpr": 0.0444,
+    "threshold": -0.0059,
+    "roc_auc": 0.8686
   },
+  "baselines": {
+    "stide": {
+      "f1": 0.7461,
+      "precision": 0.8561,
+      "recall": 0.6611,
+      "fpr": 0.1111,
+      "threshold": 0.0838,
+      "roc_auc": 0.8092
+    },
+    "frequency_iforest": {
+      "f1": 0.7238,
+      "precision": 0.6333,
+      "recall": 0.8444,
+      "fpr": 0.4889,
+      "threshold": -0.122,
+      "roc_auc": 0.6942
+    }
+  },
+  "astra_vs_best_baseline_f1_gain": 0.0826,
   "paper_reference": {
     "source": "Iacovazzi & Raza, IEEE CSR 2022",
     "f1_range": [

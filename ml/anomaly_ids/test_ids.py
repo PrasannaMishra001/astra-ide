@@ -12,7 +12,7 @@ import unittest
 
 from ml.anomaly_ids.embedding import (
     generate_anonymous_walks, anonymous_walk_embedding, build_syscall_graph,
-    EMBED_DIM,
+    rich_embedding, rich_embed_dim, graph_stats, EMBED_DIM,
 )
 from ml.anomaly_ids.detector import ContainerIDS, Decision
 
@@ -46,6 +46,28 @@ class TestAnonymousWalkMath(unittest.TestCase):
         self.assertEqual(g[1][2], 2)   # bigram (1->2) occurs twice
         self.assertEqual(g[2][1], 1)
         self.assertEqual(g[2][3], 1)
+
+    def test_embedding_length_is_generalized(self):
+        # Regression: passing length != 4 must give a Bell(length)-dim distribution,
+        # not silently fall back to the length-4 vocabulary (all-zeros bug).
+        seq = [1, 2, 3, 2, 1, 4, 5, 4, 2, 3, 1, 2, 3, 4, 5, 1, 2, 1, 3, 2]
+        self.assertEqual(len(anonymous_walk_embedding(seq, length=3, n_walks=300, seed=0)), 5)
+        self.assertEqual(len(anonymous_walk_embedding(seq, length=5, n_walks=300, seed=0)), 52)
+        v5 = anonymous_walk_embedding(seq, length=5, n_walks=300, seed=0)
+        self.assertAlmostEqual(sum(v5), 1.0, places=6)   # a real distribution, not zeros
+
+    def test_graph_stats_fixed_size_bounded(self):
+        s = graph_stats([1, 2, 3, 2, 1, 4, 5, 4, 2, 3, 1, 2])
+        self.assertEqual(len(s), 8)
+        self.assertTrue(all(0.0 <= x <= 1.0 for x in s))
+
+    def test_rich_embedding_dim_and_deterministic(self):
+        seq = [1, 2, 3, 2, 1, 4, 5, 4, 2, 3, 1, 2, 3, 4, 5, 1, 2, 1, 3, 2]
+        a = rich_embedding(seq, n_walks=200, seed=3)
+        b = rich_embedding(seq, n_walks=200, seed=3)
+        self.assertEqual(len(a), rich_embed_dim())       # 72 walks + 8 stats + 32 freq = 112
+        self.assertEqual(len(a), 112)
+        self.assertEqual(a, b)                            # deterministic given seed
 
 
 # ── Synthetic syscall workloads for the pipeline test ─────────────────────────

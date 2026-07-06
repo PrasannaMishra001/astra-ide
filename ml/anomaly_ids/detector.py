@@ -141,7 +141,9 @@ class ContainerIDS:
     # ── Persistence (train-offline → commit artifact → serve) ──────────────────
     def save(self, path) -> None:
         """Persist the fitted detector (RF + per-class IFs + metadata) so it can be
-        committed as an artifact and loaded live. Raises if not yet fitted."""
+        committed as an artifact and loaded live. `embed_config` (how the input
+        vectors were produced, e.g. {"kind":"rich","lengths":[3,4,5],"walks":120})
+        is stored so a live loop embeds syscalls identically. Raises if not fitted."""
         import joblib
         if self._rf is None:
             raise RuntimeError("nothing to save; call fit() first")
@@ -153,6 +155,7 @@ class ContainerIDS:
             "n_estimators":  self.n_estimators,
             "contamination": self.contamination,
             "seed":          self.seed,
+            "embed_config":  getattr(self, "embed_config", None),
         }, path)
 
     @classmethod
@@ -166,4 +169,5 @@ class ContainerIDS:
         ids._rf         = blob["rf"]
         ids._ifs        = blob["ifs"]
         ids._thresholds = blob["thresholds"]
+        ids.embed_config = blob.get("embed_config")
         return ids
