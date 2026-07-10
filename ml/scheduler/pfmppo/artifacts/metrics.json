@@ -1,9 +1,11 @@
 {
   "status": "retrain_pending",
-  "note": "Code corrected to the paper (reward 0.34/0.33/0.33, 5 hidden layers, N=2000). The prior model was trained on the old config and was removed. Run notebooks/b1_scheduler_kaggle.py and recommit model.pt + this file.",
+  "note": "Code corrected to the paper (reward 0.34/0.33/0.33, 5 hidden layers, N=2000) and training strengthened (GAE advantages, entropy bonus to prevent policy collapse, load-balance log floor). A full retrain on the larger real trace with these fixes is in progress; the eval table (PF-MPPO vs HEFT/Min-Min/Greedy/Random) is written here by benchmarks/b1_scheduler/eval_pfmppo.py once the retrained model is committed.",
   "hyperparameters": {
     "discount_gamma": 0.9,
+    "gae_lambda": 0.95,
     "ppo_clip": 0.2,
+    "entropy_coeff": 0.05,
     "learning_rate_pretrain": 0.001,
     "learning_rate_finetune": 0.0001,
     "hidden_layers": 5,
@@ -17,6 +19,7 @@
     "ours": "Google Cluster Trace 2011 (clusterdata-2011-2)",
     "note": "documented substitution of one real production trace for another"
   },
+  "baselines": ["HEFT", "Min-Min", "Greedy (priority)", "Random"],
   "paper_reported_results": {
     "latency_reduction_pct": [1.2, 28.4],
     "energy_reduction_pct": [2.5, 40.1],
