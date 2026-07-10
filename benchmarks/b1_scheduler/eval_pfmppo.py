@@ -24,6 +24,7 @@ from ml.scheduler.pfmppo.env import PFMPPOEnv
 from ml.scheduler.pfmppo.multi_agent import CTDETrainer
 from ml.scheduler.pfmppo.ppo_agent import PPOAgent
 from ml.scheduler.pfmppo.network import PFMPPONetwork
+from ml.scheduler.pfmppo.math_models import computation_time
 
 
 def evaluate_agent(agent: PPOAgent, env_config: dict, episodes: int, deterministic: bool = True):
@@ -120,6 +121,63 @@ def evaluate_greedy(env_config: dict, episodes: int):
     return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
 
 
+def _est_finish(task, vm) -> float:
+    """Estimated completion time of a task on a VM (compute + duration). Heterogeneity
+    enters via vm.proc_rate_mbps: faster VMs finish sooner."""
+    return computation_time(task.data_size_mb, vm.proc_rate_mbps) + task.t_dur
+
+
+def evaluate_minmin(env_config: dict, episodes: int):
+    """Min-Min heuristic: among ALL admissible (task, VM) pairs, pick the one with the
+    minimum estimated completion time (classic list-scheduling baseline, used by the paper)."""
+    env = PFMPPOEnv(**env_config)
+    all_rewards = []
+    for ep in range(episodes):
+        obs, info = env.reset(seed=ep + 200)
+        mask = info["valid_mask"]
+        ep_reward = 0.0
+        for _ in range(env_config["max_steps"]):
+            valid = np.where(mask > 0)[0]
+            if len(valid) == 0:
+                break
+            pairs = env.admissible_pairs
+            action = min(valid, key=lambda i: _est_finish(*pairs[i]))
+            obs, reward, terminated, truncated, info = env.step(int(action))
+            mask = info["valid_mask"]
+            ep_reward += reward
+            if terminated or truncated:
+                break
+        all_rewards.append(ep_reward)
+    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
+
+
+def evaluate_heft(env_config: dict, episodes: int):
+    """HEFT heuristic: process tasks in upward-rank order (the env already priority-sorts
+    the admissible pairs, Algorithm 2), and assign the highest-priority ready task to the
+    VM that gives it the earliest finish time (the paper's HEFT baseline)."""
+    env = PFMPPOEnv(**env_config)
+    all_rewards = []
+    for ep in range(episodes):
+        obs, info = env.reset(seed=ep + 200)
+        mask = info["valid_mask"]
+        ep_reward = 0.0
+        for _ in range(env_config["max_steps"]):
+            valid = np.where(mask > 0)[0]
+            if len(valid) == 0:
+                break
+            pairs = env.admissible_pairs
+            top_task = pairs[valid[0]][0].task_id        # highest-priority ready task
+            cand = [i for i in valid if pairs[i][0].task_id == top_task]
+            action = min(cand, key=lambda i: _est_finish(*pairs[i]))
+            obs, reward, terminated, truncated, info = env.step(int(action))
+            mask = info["valid_mask"]
+            ep_reward += reward
+            if terminated or truncated:
+                break
+        all_rewards.append(ep_reward)
+    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate PF-MPPO against baselines")
     parser.add_argument("--train-iterations", type=int, default=500)
@@ -156,8 +214,11 @@ def main():
     print("=" * 70)
     print(f"  Tasks/DAG: {args.num_tasks}")
     print(f"  VMs:       {args.num_vms}")
-    print(f"  Training:  {args.train_iterations} iterations, {args.workers} workers")
-    print(f"  Eval:      {args.eval_episodes} episodes")
+    if args.model_path:
+        print(f"  Model:     {args.model_path} (loaded, not trained here)")
+    else:
+        print(f"  Training:  {args.train_iterations} iterations, {args.workers} workers")
+    print(f"  Eval:      {args.eval_episodes} episodes  |  DAG mode: {args.dag_mode}")
     print()
 
     # Load a committed model, or train a fresh one.
@@ -190,34 +251,38 @@ def main():
     print("[2/4] Evaluating PF-MPPO (deterministic)...")
     pfmppo_results = evaluate_agent(agent, env_config, args.eval_episodes)
 
-    print("[3/4] Evaluating baselines...")
-    random_results = evaluate_random(env_config, args.eval_episodes)
+    print("[3/4] Evaluating baselines (HEFT, Min-Min, Greedy, Random)...")
+    heft_results = evaluate_heft(env_config, args.eval_episodes)
+    minmin_results = evaluate_minmin(env_config, args.eval_episodes)
     greedy_results = evaluate_greedy(env_config, args.eval_episodes)
+    random_results = evaluate_random(env_config, args.eval_episodes)
 
-    # Results table
+    # Results table (higher reward is better; reward = -cost)
+    baselines = {
+        "HEFT": heft_results,
+        "Min-Min": minmin_results,
+        "Greedy (Priority)": greedy_results,
+        "Random": random_results,
+    }
     print()
     print("[4/4] RESULTS")
     print("-" * 70)
     print(f"{'Algorithm':<20} {'Mean Reward':>12} {'Std':>8} {'Invalid%':>10}")
     print("-" * 70)
     print(f"{'PF-MPPO':<20} {pfmppo_results['mean_reward']:>12.2f} {pfmppo_results['std_reward']:>8.2f} {pfmppo_results['invalid_action_rate']*100:>9.1f}%")
-    print(f"{'Greedy (Priority)':<20} {greedy_results['mean_reward']:>12.2f} {greedy_results['std_reward']:>8.2f} {'N/A':>10}")
-    print(f"{'Random':<20} {random_results['mean_reward']:>12.2f} {random_results['std_reward']:>8.2f} {'N/A':>10}")
+    for name, res in baselines.items():
+        print(f"{name:<20} {res['mean_reward']:>12.2f} {res['std_reward']:>8.2f} {'N/A':>10}")
     print("-" * 70)
     print()
 
-    # Summary
-    if pfmppo_results["mean_reward"] > random_results["mean_reward"]:
-        improvement = ((pfmppo_results["mean_reward"] - random_results["mean_reward"])
-                      / abs(random_results["mean_reward"]) * 100)
-        print(f"PF-MPPO outperforms Random by {improvement:.1f}%")
-    else:
-        print("PF-MPPO did not outperform Random (more training may be needed)")
-
-    if pfmppo_results["mean_reward"] > greedy_results["mean_reward"]:
-        improvement = ((pfmppo_results["mean_reward"] - greedy_results["mean_reward"])
-                      / abs(greedy_results["mean_reward"]) * 100)
-        print(f"PF-MPPO outperforms Greedy by {improvement:.1f}%")
+    # Summary: PF-MPPO vs each baseline (the paper compares vs HEFT/Min-Min/DRL).
+    ppo = pfmppo_results["mean_reward"]
+    for name, res in baselines.items():
+        b = res["mean_reward"]
+        if ppo > b:
+            print(f"PF-MPPO outperforms {name} by {(ppo - b) / abs(b) * 100:.1f}%")
+        else:
+            print(f"PF-MPPO trails {name} by {(b - ppo) / abs(b) * 100:.1f}%")
 
     # Save results
     out_dir = Path("benchmarks/results")
@@ -225,8 +290,10 @@ def main():
     import json
     results = {
         "pfmppo": pfmppo_results,
-        "random": random_results,
+        "heft": heft_results,
+        "minmin": minmin_results,
         "greedy": greedy_results,
+        "random": random_results,
         "config": env_config,
         "train_iterations": args.train_iterations,
         "train_time_s": round(train_time, 1),
@@ -250,16 +317,21 @@ def main():
                 base = json.loads(mp.read_text())
             except ValueError:
                 base = {}
+        best_baseline = max(b["mean_reward"] for b in baselines.values())
         base["eval"] = {
             "dag_mode": args.dag_mode,
             "eval_episodes": args.eval_episodes,
+            "num_tasks": args.num_tasks,
             "mean_reward": {
                 "pfmppo": round(float(pfmppo_results["mean_reward"]), 3),
+                "heft": round(float(heft_results["mean_reward"]), 3),
+                "minmin": round(float(minmin_results["mean_reward"]), 3),
                 "greedy_priority": round(float(greedy_results["mean_reward"]), 3),
                 "random": round(float(random_results["mean_reward"]), 3),
             },
+            "pfmppo_beats_best_baseline": bool(pfmppo_results["mean_reward"] > best_baseline),
             "pfmppo_invalid_action_rate": round(float(pfmppo_results["invalid_action_rate"]), 4),
-            "note": "higher reward is better (reward = -cost); PF-MPPO vs env baselines",
+            "note": "higher reward is better (reward = -cost); baselines are the paper's HEFT/Min-Min + Greedy/Random",
         }
         mp.parent.mkdir(parents=True, exist_ok=True)
         mp.write_text(json.dumps(base, indent=2))
