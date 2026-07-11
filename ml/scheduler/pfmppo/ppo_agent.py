@@ -253,8 +253,12 @@ class PPOAgent:
                 surr2 = torch.clamp(ratio, 1.0 - self.epsilon, 1.0 + self.epsilon) * batch_advantages
                 actor_loss = -torch.min(surr1, surr2).mean()
 
-                # Critic loss (Eq 33)
-                critic_loss = nn.functional.mse_loss(state_values, batch_returns)
+                # Critic loss (Eq 33). Huber (smooth L1) instead of plain MSE: the
+                # value targets are episode-scale and occasionally large, and MSE
+                # squared those into a critic loss in the thousands that never
+                # settled, corrupting the GAE advantages. Huber is linear in the
+                # tail, so the critic converges and the advantages stay meaningful.
+                critic_loss = nn.functional.smooth_l1_loss(state_values, batch_returns)
 
                 # Total loss
                 loss = actor_loss + self.value_coeff * critic_loss - self.entropy_coeff * entropy
