@@ -442,6 +442,22 @@ export async function getBenchmarkHistory(limit = 20): Promise<BenchmarkRunLog[]
   return data;
 }
 
+// ── Scheduler comparison ─────────────────────────────────────────────────────
+export interface SchedulerChoice {
+  algorithm: string; label: string; cluster_id: string; node_name: string;
+  score: number; reasoning: string;
+}
+export interface SchedulerCompareResponse {
+  workload: { cpu: number; memory: number; tier: string; language: string };
+  results: SchedulerChoice[];
+}
+export async function compareSchedulers(
+  p: { cpu: number; memory: number; tier: string; language: string },
+): Promise<SchedulerCompareResponse> {
+  const { data } = await api.get<SchedulerCompareResponse>('/scheduler/compare', { params: p });
+  return data;
+}
+
 // ── Admin ──────────────────────────────────────────────────────────────────
 export interface AdminWorkspace {
   id: number; name: string; language: string; sandbox_tier: string; status: string;
