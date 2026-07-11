@@ -55,6 +55,7 @@ class WorkerAgent:
             template_ratio=env_config.get("template_ratio", 0.7),
             data_dir=env_config.get("data_dir"),
             max_files=env_config.get("max_files", 10),
+            reward_mode=env_config.get("reward_mode", "paper"),
         )
 
     def collect_trajectory(self, steps: int) -> RolloutBuffer:

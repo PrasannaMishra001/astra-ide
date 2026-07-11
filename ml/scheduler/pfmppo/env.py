@@ -103,6 +103,7 @@ if _GYM_AVAILABLE:
             template_ratio: float = 0.7,
             data_dir: Optional[str] = None,
             max_files: int = 10,
+            reward_mode: str = "paper",
         ):
             super().__init__()
             self.max_files = max_files
@@ -116,6 +117,14 @@ if _GYM_AVAILABLE:
             self.alpha2 = alpha2
             self.alpha3 = alpha3
             self.dag_mode = dag_mode
+            # "paper"  = Eq 30 per-step log reward (paper-faithful).
+            # "shaped" = objective-aligned reward: each step pays the schedule time
+            #   it consumed plus the task's energy (both normalized), so the episode
+            #   return is a direct proxy for -(makespan, energy) — the quantities the
+            #   paper actually reports. Decima (SIGCOMM'19) style time-cost shaping;
+            #   fixes the mismatch where per-task log rewards don't compose into the
+            #   episode objective and spread-happy random placement scores well.
+            self.reward_mode = reward_mode
             self.num_workspaces = num_workspaces
             self.language_weights = language_weights
             self.template_ratio = template_ratio
@@ -144,6 +153,7 @@ if _GYM_AVAILABLE:
             self.step_count: int = 0
             self.admissible_pairs: List[Tuple[Task, VM]] = []
             self.valid_mask: np.ndarray = np.zeros(k_pairs, dtype=np.float32)
+            self.total_energy: float = 0.0     # accumulated task energy (episode metric)
 
         def reset(self, *, seed: Optional[int] = None, options=None):
             super().reset(seed=seed)
@@ -208,6 +218,7 @@ if _GYM_AVAILABLE:
             self.task_finish_times = {}
             self.current_time = 0.0
             self.step_count = 0
+            self.total_energy = 0.0
 
             self._update_admissible_pairs()
             obs = encode_state(self.admissible_pairs, self.k_pairs)
@@ -299,6 +310,10 @@ if _GYM_AVAILABLE:
             start_time = self.current_time + wait + transfer
             finish_time = start_time + compute + task.t_dur
 
+            # Makespan BEFORE this placement (max finish over already-scheduled tasks).
+            prev_makespan = max((self.task_finish_times[t] for t in self.task_assignments
+                                 if t != task.task_id), default=0.0)
+
             self.task_assignments[task.task_id] = vm.node_id
             self.task_finish_times[task.task_id] = finish_time
 
@@ -306,10 +321,25 @@ if _GYM_AVAILABLE:
             resp_t = response_time(wait, transfer, compute + task.t_dur)
             power = dynamic_power(vm.power_static_w, vm.power_max_w, vm.current_utilization)
             energy = task_energy(power, start_time, finish_time)
+            self.total_energy += energy
             utilizations = [v.current_utilization for v in self.vms]
             lb = load_balance_metric(utilizations)
 
-            reward = pfmppo_reward(resp_t, energy, lb, self.alpha1, self.alpha2, self.alpha3)
+            if self.reward_mode == "shaped":
+                # Objective-aligned reward (Decima-style): pay the MARGINAL makespan
+                # this placement added plus its energy, each normalized to a task-scale
+                # so the two objectives are commensurate. Summed over the episode this
+                # telescopes to -(final makespan + total energy) - exactly what a good
+                # schedule minimizes, so a spread-happy random placer no longer wins by
+                # accident. Small load-balance nudge keeps VMs from starving.
+                d_makespan = max(0.0, finish_time - prev_makespan)
+                norm_t = 30.0                       # ~ one task's compute+duration scale
+                norm_e = max(vm.power_max_w, 1.0)   # ~ one task-second of peak power
+                reward = -(self.alpha1 * (d_makespan / norm_t)
+                           + self.alpha2 * (energy / norm_e)
+                           + self.alpha3 * lb)
+            else:
+                reward = pfmppo_reward(resp_t, energy, lb, self.alpha1, self.alpha2, self.alpha3)
             return reward
 
         def _advance_time(self):

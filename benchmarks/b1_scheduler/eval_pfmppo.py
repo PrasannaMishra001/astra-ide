@@ -13,6 +13,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
+from typing import Tuple
 
 # Ensure project root is on path when running as script
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -27,11 +28,17 @@ from ml.scheduler.pfmppo.network import PFMPPONetwork
 from ml.scheduler.pfmppo.math_models import computation_time
 
 
+def _episode_makespan_energy(env) -> Tuple[float, float]:
+    """Objective metrics of the completed episode: makespan (max task finish time)
+    and total energy consumed — the quantities the paper actually reports."""
+    makespan = max(env.task_finish_times.values(), default=0.0)
+    return makespan, float(getattr(env, "total_energy", 0.0))
+
+
 def evaluate_agent(agent: PPOAgent, env_config: dict, episodes: int, deterministic: bool = True):
     """Evaluate a trained agent over multiple episodes."""
     env = PFMPPOEnv(**env_config)
-    all_rewards = []
-    all_steps = []
+    all_rewards, all_steps, makespans, energies = [], [], [], []
     invalid_actions = 0
     total_actions = 0
 
@@ -60,65 +67,18 @@ def evaluate_agent(agent: PPOAgent, env_config: dict, episodes: int, determinist
 
         all_rewards.append(ep_reward)
         all_steps.append(steps)
+        mk, en = _episode_makespan_energy(env)
+        makespans.append(mk)
+        energies.append(en)
 
     return {
         "mean_reward": np.mean(all_rewards),
         "std_reward": np.std(all_rewards),
         "mean_steps": np.mean(all_steps),
+        "mean_makespan": np.mean(makespans),
+        "mean_energy": np.mean(energies),
         "invalid_action_rate": invalid_actions / max(total_actions, 1),
     }
-
-
-def evaluate_random(env_config: dict, episodes: int):
-    """Evaluate random baseline."""
-    env = PFMPPOEnv(**env_config)
-    all_rewards = []
-
-    for ep in range(episodes):
-        obs, info = env.reset(seed=ep + 200)
-        mask = info["valid_mask"]
-        ep_reward = 0.0
-
-        for _ in range(env_config["max_steps"]):
-            valid = np.where(mask > 0)[0]
-            if len(valid) == 0:
-                break
-            action = np.random.choice(valid)
-            obs, reward, terminated, truncated, info = env.step(action)
-            mask = info["valid_mask"]
-            ep_reward += reward
-            if terminated or truncated:
-                break
-
-        all_rewards.append(ep_reward)
-
-    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
-
-
-def evaluate_greedy(env_config: dict, episodes: int):
-    """Evaluate greedy baseline (always pick first valid action = highest priority)."""
-    env = PFMPPOEnv(**env_config)
-    all_rewards = []
-
-    for ep in range(episodes):
-        obs, info = env.reset(seed=ep + 200)
-        mask = info["valid_mask"]
-        ep_reward = 0.0
-
-        for _ in range(env_config["max_steps"]):
-            valid = np.where(mask > 0)[0]
-            if len(valid) == 0:
-                break
-            action = valid[0]  # Always pick first (highest priority from Algorithm 2)
-            obs, reward, terminated, truncated, info = env.step(action)
-            mask = info["valid_mask"]
-            ep_reward += reward
-            if terminated or truncated:
-                break
-
-        all_rewards.append(ep_reward)
-
-    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
 
 
 def _est_finish(task, vm) -> float:
@@ -127,11 +87,11 @@ def _est_finish(task, vm) -> float:
     return computation_time(task.data_size_mb, vm.proc_rate_mbps) + task.t_dur
 
 
-def evaluate_minmin(env_config: dict, episodes: int):
-    """Min-Min heuristic: among ALL admissible (task, VM) pairs, pick the one with the
-    minimum estimated completion time (classic list-scheduling baseline, used by the paper)."""
+def _run_baseline(env_config: dict, episodes: int, pick):
+    """Run a heuristic that chooses an action index from the valid set each step, and
+    report reward + makespan + energy uniformly (same seeds as evaluate_agent)."""
     env = PFMPPOEnv(**env_config)
-    all_rewards = []
+    all_rewards, makespans, energies = [], [], []
     for ep in range(episodes):
         obs, info = env.reset(seed=ep + 200)
         mask = info["valid_mask"]
@@ -140,42 +100,54 @@ def evaluate_minmin(env_config: dict, episodes: int):
             valid = np.where(mask > 0)[0]
             if len(valid) == 0:
                 break
-            pairs = env.admissible_pairs
-            action = min(valid, key=lambda i: _est_finish(*pairs[i]))
-            obs, reward, terminated, truncated, info = env.step(int(action))
+            action = int(pick(env, valid))
+            obs, reward, terminated, truncated, info = env.step(action)
             mask = info["valid_mask"]
             ep_reward += reward
             if terminated or truncated:
                 break
         all_rewards.append(ep_reward)
-    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
+        mk, en = _episode_makespan_energy(env)
+        makespans.append(mk)
+        energies.append(en)
+    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards),
+            "mean_makespan": np.mean(makespans), "mean_energy": np.mean(energies)}
 
 
-def evaluate_heft(env_config: dict, episodes: int):
-    """HEFT heuristic: process tasks in upward-rank order (the env already priority-sorts
-    the admissible pairs, Algorithm 2), and assign the highest-priority ready task to the
-    VM that gives it the earliest finish time (the paper's HEFT baseline)."""
-    env = PFMPPOEnv(**env_config)
-    all_rewards = []
-    for ep in range(episodes):
-        obs, info = env.reset(seed=ep + 200)
-        mask = info["valid_mask"]
-        ep_reward = 0.0
-        for _ in range(env_config["max_steps"]):
-            valid = np.where(mask > 0)[0]
-            if len(valid) == 0:
-                break
-            pairs = env.admissible_pairs
-            top_task = pairs[valid[0]][0].task_id        # highest-priority ready task
-            cand = [i for i in valid if pairs[i][0].task_id == top_task]
-            action = min(cand, key=lambda i: _est_finish(*pairs[i]))
-            obs, reward, terminated, truncated, info = env.step(int(action))
-            mask = info["valid_mask"]
-            ep_reward += reward
-            if terminated or truncated:
-                break
-        all_rewards.append(ep_reward)
-    return {"mean_reward": np.mean(all_rewards), "std_reward": np.std(all_rewards)}
+def _pick_random(env, valid):
+    return np.random.choice(valid)
+
+
+def _pick_greedy(env, valid):
+    return valid[0]                                   # highest-priority ready pair (Algorithm 2)
+
+
+def _pick_minmin(env, valid):
+    pairs = env.admissible_pairs                      # global min estimated completion time
+    return min(valid, key=lambda i: _est_finish(*pairs[i]))
+
+
+def _pick_heft(env, valid):
+    pairs = env.admissible_pairs                      # top task -> earliest-finish VM
+    top_task = pairs[valid[0]][0].task_id
+    cand = [i for i in valid if pairs[i][0].task_id == top_task]
+    return min(cand, key=lambda i: _est_finish(*pairs[i]))
+
+
+def evaluate_random(env_config, episodes):
+    return _run_baseline(env_config, episodes, _pick_random)
+
+
+def evaluate_greedy(env_config, episodes):
+    return _run_baseline(env_config, episodes, _pick_greedy)
+
+
+def evaluate_minmin(env_config, episodes):
+    return _run_baseline(env_config, episodes, _pick_minmin)
+
+
+def evaluate_heft(env_config, episodes):
+    return _run_baseline(env_config, episodes, _pick_heft)
 
 
 def main():
@@ -195,6 +167,10 @@ def main():
     parser.add_argument("--max-files", type=int, default=0)
     parser.add_argument("--metrics-out", type=str, default=None,
                         help="append the PPO-vs-baselines table to this metrics.json")
+    parser.add_argument("--reward-mode", type=str, default="shaped",
+                        choices=["paper", "shaped"],
+                        help="'shaped' = objective-aligned reward (makespan+energy); "
+                             "'paper' = Eq 30 log reward")
     args = parser.parse_args()
 
     env_config = {
@@ -207,6 +183,7 @@ def main():
         "dag_mode": args.dag_mode,
         "data_dir": args.data_dir,
         "max_files": args.max_files,
+        "reward_mode": args.reward_mode,
     }
 
     print("=" * 70)
@@ -275,14 +252,24 @@ def main():
     print("-" * 70)
     print()
 
-    # Summary: PF-MPPO vs each baseline (the paper compares vs HEFT/Min-Min/DRL).
-    ppo = pfmppo_results["mean_reward"]
+    # Objective metrics the paper actually reports: makespan + energy (lower is better).
+    print()
+    print("Makespan / Energy (lower is better) - the paper's reported objectives:")
+    print(f"{'Algorithm':<20} {'Makespan':>12} {'Energy':>12}")
+    print("-" * 46)
+    print(f"{'PF-MPPO':<20} {pfmppo_results['mean_makespan']:>12.2f} {pfmppo_results['mean_energy']:>12.1f}")
     for name, res in baselines.items():
-        b = res["mean_reward"]
-        if ppo > b:
-            print(f"PF-MPPO outperforms {name} by {(ppo - b) / abs(b) * 100:.1f}%")
+        print(f"{name:<20} {res['mean_makespan']:>12.2f} {res['mean_energy']:>12.1f}")
+    print()
+
+    # Summary: PF-MPPO vs each baseline on makespan (the headline scheduling metric).
+    ppo_mk = pfmppo_results["mean_makespan"]
+    for name, res in baselines.items():
+        b = res["mean_makespan"]
+        if ppo_mk < b:
+            print(f"PF-MPPO beats {name} on makespan by {(b - ppo_mk) / b * 100:.1f}%")
         else:
-            print(f"PF-MPPO trails {name} by {(b - ppo) / abs(b) * 100:.1f}%")
+            print(f"PF-MPPO trails {name} on makespan by {(ppo_mk - b) / b * 100:.1f}%")
 
     # Save results
     out_dir = Path("benchmarks/results")
