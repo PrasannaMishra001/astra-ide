@@ -300,9 +300,10 @@ export default function HomePage() {
           <div className="mt-8">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-6 text-center">Team</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {TEAM.map((m) => (
+              {TEAM.map((m, i) => (
                 <ThreeDCard key={m.roll} intensity={10}>
-                  <div className="p-5 card text-center">
+                  <div className="p-5 card neon-hover text-center"
+                       style={{ ['--neon' as any]: ['168 85 247', '34 211 238', '244 114 182'][i % 3] }}>
                     <TeamPhoto src={m.img} alt={m.name} size={96} />
                     <div className="font-semibold mt-3">{m.name}</div>
                     <div className="text-xs text-faint mt-0.5 font-mono">{m.roll}</div>
