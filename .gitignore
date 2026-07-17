@@ -171,3 +171,6 @@ docs/logs.txt
 
 # Multi-cluster demo capture outputs (regenerated on the VM)
 k8s/demo/captures/
+
+# Local, unpublished research paper - never commit
+paper/
