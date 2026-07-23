@@ -47,12 +47,13 @@ class PlacementDecision:
 
 
 ALGORITHMS = [
-    "heuristic", "pfmppo", "heft", "minmin",
+    "heuristic", "cp_ppo", "pfmppo", "heft", "minmin",
     "least_loaded", "carbon_aware", "round_robin", "random",
 ]
 
 ALGORITHM_LABELS = {
     "heuristic":    "Multi-objective heuristic",
+    "cp_ppo":       "CP-PPO (critical-path RL)",
     "pfmppo":       "PF-MPPO (deep RL)",
     "heft":         "HEFT (earliest finish)",
     "minmin":       "Min-Min",
@@ -122,6 +123,12 @@ def _choose(workspace: Workspace, algorithm: str, prefer_low_carbon: bool = True
     if not cands:
         return None
 
+    if algorithm == "cp_ppo":
+        res = _try_cp_ppo(workspace)
+        if res is not None:
+            return res
+        algorithm = "heuristic"        # graceful fallback, recorded in reasoning below
+
     if algorithm == "pfmppo":
         res = _try_pfmppo(workspace)
         if res is not None:
@@ -163,6 +170,20 @@ def _choose(workspace: Workspace, algorithm: str, prefer_low_carbon: bool = True
 
     scored.sort(key=lambda t: t[2], reverse=True)
     return scored[0]
+
+
+def _try_cp_ppo(workspace: Workspace) -> Optional[Tuple[str, str, float, str]]:
+    try:
+        from app.services.cp_ppo_inference import get_inference_service
+        service = get_inference_service()
+        if service is None:
+            return None
+        result = service.decide_placement(workspace)
+        if result is None:
+            return None
+        return result.cluster_id, result.node_name, result.score, result.reasoning
+    except Exception:
+        return None
 
 
 def _try_pfmppo(workspace: Workspace) -> Optional[Tuple[str, str, float, str]]:
