@@ -81,7 +81,12 @@ class CPPPOInferenceService:
             return
         path = Path(model_path)
         if not path.is_absolute():
-            path = Path(__file__).resolve().parents[3] / path
+            # Resolve a repo-relative path against both layouts: parents[2] is /app
+            # in the container image (where ml/ is copied to /app/ml), parents[3] is
+            # the repo root when running the backend straight from a checkout.
+            here = Path(__file__).resolve()
+            candidates = [here.parents[2] / model_path, here.parents[3] / model_path]
+            path = next((c for c in candidates if c.exists()), candidates[0])
         if not path.exists():
             logger.info("CP-PPO model not found (%s); using heuristic fallback", path)
             return
