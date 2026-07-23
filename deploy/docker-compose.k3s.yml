@@ -27,5 +27,9 @@ services:
       ASTRA_CLUSTER_ZONE: "IN-NO"
       ASTRA_CLUSTER_LOCATION: "Mumbai, India"
       KUBECONFIG: "/etc/astra/kubeconfig.yaml"
+      # The UI is served from Vercel while this backend stays on the VM, so the
+      # browser opens cross-origin WebSockets (terminal, collab) against it.
+      # Override CORS_ORIGINS on the VM if the Vercel domain differs.
+      CORS_ORIGINS: '["https://astraide.tech","https://www.astraide.tech","https://34-14-181-224.sslip.io","http://localhost:3000"]'
     volumes:
       - /etc/astra/k3s-backend.yaml:/etc/astra/kubeconfig.yaml:ro
