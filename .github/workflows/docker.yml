@@ -25,10 +25,10 @@ jobs:
             dockerfile: backend/Dockerfile
           - service: frontend
             context: ./frontend
-            dockerfile: Dockerfile
+            dockerfile: frontend/Dockerfile
           - service: collab-server
             context: ./collab-server
-            dockerfile: Dockerfile
+            dockerfile: collab-server/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
