@@ -32,7 +32,11 @@ export default function BackendStatus({ className }: { className?: string }) {
     const controller = new AbortController();
     const abort = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-      const res = await fetch('/api/v1/health', {
+      // Note the path: the Next.js rewrite maps /api/:path* -> BACKEND_URL/api/v1/:path*,
+      // so the client asks for /api/health and the backend receives /api/v1/health.
+      // Using /api/v1/health here would double the prefix and 404 on Vercel (it only
+      // appears to work on the VM because Caddy proxies /api/v1/* straight through).
+      const res = await fetch('/api/health', {
         signal: controller.signal,
         cache: 'no-store',
       });
