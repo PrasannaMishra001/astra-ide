@@ -107,8 +107,23 @@ def _public_base(request: Request) -> str:
     return f"{proto}://{host}"
 
 
+def _configured(uri: str) -> bool:
+    """True when a redirect URI has been pinned to a real public domain.
+
+    A front-end hosted separately (Vercel) proxies /api/* server-side, so the
+    request the backend sees carries the backend's own host, not the domain the
+    user typed. Deriving the callback from that host would pin OAuth to whatever
+    IP the VM currently has and break every time it changes. When an explicit
+    URI is configured we use it; otherwise we fall back to the request-derived
+    one, which is what local development relies on.
+    """
+    return bool(uri) and "localhost" not in uri
+
+
 def _redirect_uri(request: Request) -> str:
     # Browser-facing callback path (Caddy/Next proxy /api -> backend /api/v1).
+    if _configured(settings.google_redirect_uri):
+        return settings.google_redirect_uri
     return f"{_public_base(request)}/api/auth/google/callback"
 
 
@@ -168,6 +183,8 @@ from app.services import github_service  # noqa: E402 (after router definition)
 
 
 def _github_redirect_uri(request: Request) -> str:
+    if _configured(settings.github_redirect_uri):
+        return settings.github_redirect_uri
     return f"{_public_base(request)}/api/auth/github/callback"
 
 
