@@ -15,7 +15,8 @@
   "cold_start_reduction_pct": {
     "lstm_adaptive_vs_fixed10": 49.4,
     "shahrad_hybrid_vs_fixed10": 73.5,
-    "oracle_ceiling": 96.5
+    "oracle_ceiling": 96.5,
+    "note": "The histogram row is a baseline IN THE STYLE OF Shahrad et al. (95th percentile of observed idle gaps), not a faithful reproduction: the original sets keep-alive from the 99th percentile of a range-limited histogram, adds a 5th-percentile pre-warming window, and falls back to a fixed window or ARIMA when the idle-time distribution is unstable or out of range."
   },
   "paper_reference": {
     "source": "Transformer cold-start paper (LSTM baseline) + Shahrad ATC'20",

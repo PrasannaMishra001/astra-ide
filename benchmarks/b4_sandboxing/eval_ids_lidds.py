@@ -37,7 +37,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
-from ml.anomaly_ids.embedding import rich_embedding, RICH_LENGTHS  # noqa: E402
+from ml.anomaly_ids.embedding import rich_embedding, RICH_LENGTHS, rich_embed_dim  # noqa: E402
 from ml.anomaly_ids.detector import ContainerIDS, Decision          # noqa: E402
 
 try:
@@ -297,7 +297,7 @@ def main() -> None:
             "scenarios": [s.name for s in scenarios],
             "vocab_size": len(vocab),
             "embedding": {"kind": "rich-multiscale-graph",
-                          "walk_lengths": list(RICH_LENGTHS), "dim": 80,
+                          "walk_lengths": list(RICH_LENGTHS), "dim": rich_embed_dim(),
                           "walks": args.walks, "window": args.window},
             "astra_ids": {k: (None if ours[k] != ours[k] else round(ours[k], 4)) for k in ours},
             "baselines": {

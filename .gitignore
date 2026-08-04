@@ -174,3 +174,7 @@ k8s/demo/captures/
 
 # Local, unpublished research paper - never commit
 paper/
+
+# Local provisioning scripts (private)
+deploy/gcp-provision.sh
+deploy/node-setup/bootstrap.sh

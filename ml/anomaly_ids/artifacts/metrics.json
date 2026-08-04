@@ -13,7 +13,8 @@
       4,
       5
     ],
-    "dim": 80,
+    "dim": 112,
+    "dim_breakdown": {"walks_B3_B4_B5": 72, "graph_stats": 8, "hashed_freq_buckets": 32},
     "walks": 120,
     "window": 350
   },
@@ -45,14 +46,15 @@
   },
   "astra_vs_best_baseline_f1_gain": 0.0668,
   "paper_reference": {
-    "source": "Iacovazzi & Raza, IEEE CSR 2022",
+    "source": "Iacovazzi & Raza, IEEE CSR 2022 (extended: arXiv:2306.14750)",
     "f1_range": [
-      0.78,
-      0.99
+      0.649,
+      0.991
     ],
     "fpr_range": [
       0.024,
       0.071
-    ]
+    ],
+    "note": "F1 spans 0.649 (brute-force login) to 0.991 (cryptomining); FPR 0.024-0.071. Our F1 0.816 sits within their reported spread."
   }
 }

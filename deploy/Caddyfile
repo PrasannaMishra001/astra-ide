@@ -9,9 +9,15 @@
 #                           name is the first path segment the collab server expects)
 #   everything else -> frontend (Next.js, which server-side proxies /api -> backend)
 
-# Serves both the free sslip.io host and the real domain astraide.tech once its
-# DNS A-record points at this VM (Caddy auto-issues a Let's Encrypt cert per name).
-34-14-181-224.sslip.io, astraide.tech, www.astraide.tech {
+# The hostname comes from $DOMAIN (set in deploy/.env, written by the bootstrap
+# script as <public-ip-with-dashes>.sslip.io). Templating it means the same
+# Caddyfile works on any host without editing, and Caddy auto-issues a Let's
+# Encrypt certificate for whatever name is supplied.
+#
+# Only names whose DNS actually points at THIS machine belong here. astraide.tech
+# is served by Vercel, so listing it would make Caddy fail the ACME challenge
+# for it on every renewal.
+{$DOMAIN:localhost} {
 	encode zstd gzip
 
 	handle /api/v1/* {

@@ -12,6 +12,9 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    environment:
+      # Consumed by {$DOMAIN} in the Caddyfile. Set in deploy/.env.
+      DOMAIN: ${DOMAIN:-localhost}
     ports:
       - "80:80"
       - "443:443"
@@ -34,8 +37,10 @@ services:
 
   backend:
     environment:
-      FRONTEND_URL: https://astraide.tech
-      CORS_ORIGINS: '["https://astraide.tech","https://www.astraide.tech","https://34-14-181-224.sslip.io","http://34.14.181.224:3000","http://localhost:3000"]'
+      # Both default to the templated host so a fresh deployment needs no edits;
+      # override either in deploy/.env (e.g. to add a Vercel origin).
+      FRONTEND_URL: ${FRONTEND_URL:-https://${DOMAIN:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["https://${DOMAIN:-localhost}","http://localhost:3000"]'}
 
 volumes:
   caddy_data:
