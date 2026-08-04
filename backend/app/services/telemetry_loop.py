@@ -128,7 +128,10 @@ def _refresh_carbon() -> None:
     for cluster in cluster_state.all_clusters():
         try:
             reading = svc.get_intensity(cluster.zone)
-            cluster_state.set_carbon_intensity(cluster.id, reading.carbon_intensity)
+            # Record where the number came from so the dashboard can label a
+            # historical average as such instead of showing it as a live reading.
+            cluster_state.set_carbon_intensity(
+                cluster.id, reading.carbon_intensity, getattr(reading, "source", "api"))
         except Exception as e:
             logger.warning("Carbon refresh failed for %s: %s", cluster.zone, e)
 

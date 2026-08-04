@@ -178,3 +178,4 @@ paper/
 # Local provisioning scripts (private)
 deploy/gcp-provision.sh
 deploy/node-setup/bootstrap.sh
+deploy/node-setup/member-bootstrap.sh

@@ -27,10 +27,15 @@ services:
       ASTRA_CLUSTER_ZONE: "IN-NO"
       ASTRA_CLUSTER_LOCATION: "Mumbai, India"
       KUBECONFIG: "/etc/astra/kubeconfig.yaml"
+      # Registry of every cluster this backend federates over. Absent = single
+      # cluster via KUBECONFIG above.
+      ASTRA_CLUSTERS_FILE: "/etc/astra/clusters.json"
       # The UI may be served from Vercel while this backend stays on the VM, so
       # the browser opens cross-origin WebSockets (terminal, collab) against it.
       # Defaults to this host; set CORS_ORIGINS in deploy/.env to add the Vercel
       # origin, e.g. ["https://astraide.tech","https://<host>.sslip.io"].
       CORS_ORIGINS: ${CORS_ORIGINS:-'["https://${DOMAIN:-localhost}","http://localhost:3000"]'}
     volumes:
-      - /etc/astra/k3s-backend.yaml:/etc/astra/kubeconfig.yaml:ro
+      # Whole directory: the local kubeconfig plus clusters.json and the
+      # per-member kubeconfigs it points at.
+      - /etc/astra:/etc/astra:ro

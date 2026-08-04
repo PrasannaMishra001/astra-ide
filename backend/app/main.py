@@ -59,12 +59,41 @@ def _bootstrap_admins() -> None:
         pass
 
 
+def _reconcile_workspace_status() -> None:
+    """Mark workspaces RUNNING-in-the-database but not actually running as STOPPED.
+
+    A workspace row records the state of a real container. Restoring a database
+    onto a different host (or an unclean shutdown) leaves rows claiming RUNNING
+    while nothing is running there, so the dashboard reports capacity that does
+    not exist. Reconciling at startup keeps the displayed state honest.
+    """
+    import logging
+    from sqlalchemy import text
+    from app.services import container_service
+    if not container_service.available():
+        return
+    try:
+        with engine.begin() as conn:
+            rows = conn.execute(text(
+                "SELECT id FROM workspaces WHERE status = 'RUNNING'")).fetchall()
+            stale = [r[0] for r in rows if not container_service.is_running(r[0])]
+            for ws_id in stale:
+                conn.execute(text(
+                    "UPDATE workspaces SET status = 'STOPPED' WHERE id = :i"), {"i": ws_id})
+        if stale:
+            logging.getLogger(__name__).info(
+                "reconciled %d workspace(s) marked RUNNING with no live container", len(stale))
+    except Exception as e:
+        logging.getLogger(__name__).warning("workspace reconcile skipped: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables on startup (for dev — use Alembic in production)
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
     _bootstrap_admins()
+    _reconcile_workspace_status()
     # Kick off the background telemetry/event simulator
     await telemetry_loop.start()
     try:

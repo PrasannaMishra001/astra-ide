@@ -52,6 +52,10 @@ class Cluster:
     zone:         str        # electricityMaps zone code
     nodes:        Dict[str, Node]
     carbon_gco2:  float = 200.0   # cached, refreshed by carbon service
+    # Provenance of the number above, so the UI never presents an estimate as a
+    # live measurement. "api" = live reading, "fallback" = documented historical
+    # average for the zone, "unknown" = not fetched yet.
+    carbon_source: str = "unknown"
 
 
 # ── Singleton store ──────────────────────────────────────────────────────────
@@ -116,10 +120,11 @@ def get_node(cluster_id: str, node_name: str) -> Optional[Node]:
     return c.nodes.get(node_name)
 
 
-def set_carbon_intensity(cluster_id: str, value: float) -> None:
+def set_carbon_intensity(cluster_id: str, value: float, source: str = "api") -> None:
     with _lock:
         if cluster_id in _CLUSTERS:
             _CLUSTERS[cluster_id].carbon_gco2 = value
+            _CLUSTERS[cluster_id].carbon_source = source
 
 
 def increment_pods(cluster_id: str, node_name: str, delta: int = 1) -> None:
@@ -199,28 +204,65 @@ def _parse_mem(q: str) -> float:
     return float(q) / (1024 * 1024)   # bare bytes
 
 
-def refresh_from_kubernetes() -> bool:
-    """Rebuild the store from live node capacity (CoreV1) + usage (metrics.k8s.io).
-    Returns True if it refreshed real data, False to fall back to the simulator."""
+CLUSTERS_FILE = os.getenv("ASTRA_CLUSTERS_FILE", "/etc/astra/clusters.json")
+
+
+def load_cluster_registry() -> List[dict]:
+    """Clusters this deployment federates over.
+
+    A registry file lets one backend watch several real clusters in different
+    regions, each with its own kubeconfig and carbon zone:
+
+        [{"id": "mumbai", "location": "Mumbai, India", "zone": "IN-WE",
+          "kubeconfig": "/etc/astra/clusters/mumbai.yaml"}, ...]
+
+    With no registry we fall back to the single in-cluster/default kubeconfig,
+    which is what a one-node deployment uses.
+    """
+    import json
     try:
-        from kubernetes import client, config
-    except ImportError:
-        return False
+        with open(CLUSTERS_FILE) as fh:
+            entries = json.load(fh)
+        if isinstance(entries, list) and entries:
+            return entries
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.warning("cluster registry unreadable (%s): %s", CLUSTERS_FILE, e)
+    return [{
+        "id": "cluster-local",
+        "location": os.getenv("ASTRA_CLUSTER_LOCATION", "on-cluster"),
+        "zone": os.getenv("ASTRA_CLUSTER_ZONE", "IN-NO"),
+        "kubeconfig": None,
+    }]
+
+
+def _read_cluster(entry: dict) -> Optional[Cluster]:
+    """Read live node capacity + usage for one cluster. None if unreachable."""
+    from kubernetes import client, config
+
+    cid = entry["id"]
+    kubeconfig = entry.get("kubeconfig")
     try:
-        try:
-            config.load_incluster_config()
-        except Exception:
-            config.load_kube_config()
-        core = client.CoreV1Api()
-        custom = client.CustomObjectsApi()
+        if kubeconfig:
+            cfg = client.Configuration()
+            config.load_kube_config(config_file=kubeconfig, client_configuration=cfg)
+            api = client.ApiClient(cfg)
+        else:
+            try:
+                config.load_incluster_config()
+            except Exception:
+                config.load_kube_config()
+            api = client.ApiClient()
+        core = client.CoreV1Api(api)
+        custom = client.CustomObjectsApi(api)
         nodes = core.list_node().items
         usage = {i["metadata"]["name"]: i["usage"] for i in
                  custom.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")["items"]}
     except Exception as e:
-        logger.warning("k8s metrics read failed, using simulator: %s", e)
-        return False
+        logger.warning("cluster %s unreachable: %s", cid, e)
+        return None
 
-    zone = os.getenv("ASTRA_CLUSTER_ZONE", "IN-NO")
     new_nodes: Dict[str, Node] = {}
     for n in nodes:
         name = n.metadata.name
@@ -238,19 +280,42 @@ def refresh_from_kubernetes() -> bool:
         if labels.get("sandbox.astra-ide.io/firecracker") == "true":
             tiers.append("firecracker")
         new_nodes[name] = Node(
-            cluster_id="cluster-local", name=name,
+            cluster_id=cid, name=name,
             cpu_util=clip(cpu_used / cpu_cap if cpu_cap else 0.0, 0.0, 1.0),
             memory_util=clip(mem_used / mem_cap if mem_cap else 0.0, 0.0, 1.0),
             sandboxes=tiers, cpu_cap=cpu_cap, mem_cap=mem_cap,
         )
     if not new_nodes:
+        return None
+
+    # Carry the carbon reading forward; the carbon service owns that number and
+    # refreshes it per zone. Never invent one here.
+    prev = _CLUSTERS.get(cid)
+    return Cluster(id=cid, location=entry.get("location", cid),
+                   zone=entry.get("zone", "IN-NO"), nodes=new_nodes,
+                   carbon_gco2=prev.carbon_gco2 if prev else 0.0,
+                   carbon_source=prev.carbon_source if prev else "unknown")
+
+
+def refresh_from_kubernetes() -> bool:
+    """Rebuild the store from live node capacity (CoreV1) + usage (metrics.k8s.io)
+    across every registered cluster. True if at least one cluster answered."""
+    try:
+        import kubernetes  # noqa: F401
+    except ImportError:
+        return False
+
+    fresh: Dict[str, Cluster] = {}
+    for entry in load_cluster_registry():
+        cluster = _read_cluster(entry)
+        if cluster is not None:
+            fresh[cluster.id] = cluster
+
+    if not fresh:
         return False
     with _lock:
-        carbon = _CLUSTERS.get("cluster-local").carbon_gco2 if "cluster-local" in _CLUSTERS else 500.0
         _CLUSTERS.clear()
-        _CLUSTERS["cluster-local"] = Cluster(
-            id="cluster-local", location=os.getenv("ASTRA_CLUSTER_LOCATION", "on-cluster"),
-            zone=zone, nodes=new_nodes, carbon_gco2=carbon)
+        _CLUSTERS.update(fresh)
     return True
 
 
@@ -264,6 +329,7 @@ def snapshot() -> Dict[str, dict]:
                 "location":     c.location,
                 "zone":         c.zone,
                 "carbon_gco2":  c.carbon_gco2,
+                "carbon_source": c.carbon_source,
                 "total_pods":   sum(n.active_pods for n in c.nodes.values()),
                 "nodes": [
                     {
