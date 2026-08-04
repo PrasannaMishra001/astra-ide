@@ -40,10 +40,20 @@ async def telemetry_main_loop() -> None:
     try:
         events_service.record(
             kind="system", title="ASTRA-IDE scheduler online",
-            detail="PPO policy loaded |eBPF probes attached |activity stream live",
+            detail="CP-PPO policy loaded |cluster telemetry live |activity stream live",
         )
     except Exception as e:
         logger.warning("Could not write startup event: %s", e)
+
+    # Prime the state before the loop starts. Without this the cluster list is
+    # empty and every carbon figure reads 0 until the first refresh interval
+    # elapses, which looks like a broken dashboard after each restart.
+    try:
+        if cluster_state._use_k8s():
+            cluster_state.refresh_from_kubernetes()
+        _refresh_carbon()
+    except Exception as e:
+        logger.warning("Initial telemetry priming failed: %s", e)
 
     last_drift  = 0.0
     last_event  = 0.0
