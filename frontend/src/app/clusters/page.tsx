@@ -23,13 +23,9 @@ import { cn } from '../../lib/utils';
 
 const METRICS_POLL_MS = 4000;
 
-// Region metadata for the demo federation (4 Karmada members).
-const CLUSTER_META: Record<string, { region: string; flagLabel: string }> = {
-  'cluster-a': { region: 'Denmark (west)',  flagLabel: 'low-carbon grid' },
-  'cluster-b': { region: 'India (north)',   flagLabel: 'fossil-heavy grid' },
-  'cluster-c': { region: 'California (US)',  flagLabel: 'mixed grid' },
-  'cluster-d': { region: 'Singapore',       flagLabel: 'mixed grid' },
-};
+// Region names come from the backend cluster registry, which reads the real
+// clusters this deployment is connected to. Nothing here is hardcoded, so the
+// page can never show a region that is not actually running.
 
 export default function ClustersPage() {
   const router = useRouter();
@@ -66,12 +62,18 @@ export default function ClustersPage() {
           <div>
             <h1 className="t-h1">Clusters</h1>
             <p className="text-sm text-muted mt-1">
-              Live federation telemetry, the exact input the PPO scheduler learns from (refreshed every {METRICS_POLL_MS / 1000}s).
+              Live cluster telemetry, the exact input the CP-PPO scheduler places from (refreshed every {METRICS_POLL_MS / 1000}s).
             </p>
           </div>
-          <span className="chip py-1" title="Workloads are propagated across member clusters with Karmada">
-            <Layers size={12} /> Karmada federation
-          </span>
+          {metrics?.federation?.enabled ? (
+            <span className="chip py-1" title={`Workloads are propagated across member clusters with ${metrics.federation.controller}`}>
+              <Layers size={12} /> {metrics.federation.controller} federation
+            </span>
+          ) : (
+            <span className="chip py-1" title="The scheduler places workspaces directly on these clusters">
+              <Layers size={12} /> {metrics?.clusters.length ?? 0} clusters
+            </span>
+          )}
         </div>
 
         {/* Top stats */}
@@ -79,7 +81,7 @@ export default function ClustersPage() {
           <Stat icon={<Boxes size={16} className="text-astra-600 dark:text-astra-400" />}
                 label="Workspaces" value={workspaces.length} sub={`${running} running`} />
           <Stat icon={<Globe2 size={16} className="text-purple-600 dark:text-purple-400" />}
-                label="Clusters" value={metrics?.clusters.length ?? 4} sub="federated regions" />
+                label="Clusters" value={metrics?.clusters.length ?? 0} sub="real regions" />
           <Stat icon={<Server size={16} className="text-emerald-600 dark:text-emerald-400" />}
                 label="Nodes" value={metrics ? metrics.clusters.reduce((s, c) => s + c.nodes.length, 0) : '...'}
                 sub="reporting telemetry" />
@@ -90,7 +92,7 @@ export default function ClustersPage() {
         </div>
 
         {/* Federation topology */}
-        {metrics && <FederationTopology clusters={metrics.clusters} />}
+        {metrics && <FederationTopology clusters={metrics.clusters} federation={metrics.federation} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Cluster cards */}
@@ -102,8 +104,8 @@ export default function ClustersPage() {
             ))}
             <p className="text-xs text-faint leading-relaxed px-1">
               Greener regions are preferred by the carbon-aware policy: deferrable workloads shift
-              toward the cluster with the lower grid intensity. If a cluster fails, Karmada
-              reschedules its workloads onto the survivors (verified live with a 2-cluster kill test).
+              toward the cluster with the lower grid intensity. Figures marked * are published
+              historical averages for that grid zone rather than live readings.
             </p>
           </div>
 
@@ -116,8 +118,11 @@ export default function ClustersPage() {
 }
 
 function ClusterCard({ cluster, podsHere }: { cluster: ClusterMetrics; podsHere: number }) {
-  const meta = CLUSTER_META[cluster.cluster_id] ?? { region: cluster.location, flagLabel: '' };
   const carbon = cluster.carbon_gco2;
+  const live = cluster.carbon_source === 'api';
+  const carbonLabel = live ? 'live grid reading'
+    : cluster.carbon_source === 'fallback' ? 'published historical average for this grid zone'
+    : 'not yet fetched';
   const carbonTone =
     carbon < 150 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
     : carbon < 400 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
@@ -132,11 +137,11 @@ function ClusterCard({ cluster, podsHere }: { cluster: ClusterMetrics; podsHere:
         </span>
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-sm">{cluster.cluster_id}</h2>
-          <p className="text-xs text-faint">{meta.region}</p>
+          <p className="text-xs text-faint">{cluster.location}</p>
         </div>
         <span className={cn('text-[11px] px-2 py-1 rounded-md border font-medium inline-flex items-center gap-1.5', carbonTone)}
-              title={`Live grid carbon intensity (${meta.flagLabel})`}>
-          <Leaf size={11} /> {carbon.toFixed(0)} gCO2/kWh
+              title={`Grid carbon intensity — ${carbonLabel}`}>
+          <Leaf size={11} /> {carbon.toFixed(0)} gCO2/kWh{live ? '' : '*'}
         </span>
         <span className="chip py-1" title="Workspaces currently placed on this cluster">
           {podsHere} workspaces, {cluster.total_pods} pods

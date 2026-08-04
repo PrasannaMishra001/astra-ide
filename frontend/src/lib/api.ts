@@ -395,13 +395,23 @@ export interface ClusterMetrics {
   cluster_id:   string;
   location:     string;
   carbon_gco2:  number;
+  // 'api' = live reading, 'fallback' = published historical average for the
+  // zone, 'unknown' = not fetched yet.
+  carbon_source?: 'api' | 'fallback' | 'unknown' | string;
   total_pods:   number;
   nodes:        NodeMetrics[];
 }
 
+export interface FederationStatus {
+  enabled:    boolean;
+  controller: string | null;
+  members:    number;
+}
+
 export interface MetricsSnapshot {
-  timestamp: string;
-  clusters:  ClusterMetrics[];
+  timestamp:   string;
+  clusters:    ClusterMetrics[];
+  federation?: FederationStatus;
 }
 
 export async function getNodeMetrics(): Promise<MetricsSnapshot> {

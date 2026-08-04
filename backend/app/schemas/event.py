@@ -1,6 +1,6 @@
 """Pydantic schemas for the events + metrics APIs."""
 from datetime import datetime, timezone
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel, field_serializer
 
 
@@ -45,13 +45,26 @@ class ClusterMetrics(BaseModel):
     cluster_id:   str
     location:     str
     carbon_gco2:  float
+    # "api" = live reading, "fallback" = published historical average for the
+    # zone, "unknown" = not fetched yet. Lets the UI avoid presenting an
+    # estimate as a measurement.
+    carbon_source: str = "unknown"
     nodes:        List[NodeMetrics]
     total_pods:   int
 
 
+class FederationStatus(BaseModel):
+    """Whether a real federation control plane is running, so the dashboard can
+    only claim federation behaviour when it is actually there."""
+    enabled:    bool = False
+    controller: Optional[str] = None      # e.g. "karmada"
+    members:    int = 0
+
+
 class MetricsSnapshot(BaseModel):
-    timestamp: datetime
-    clusters:  List[ClusterMetrics]
+    timestamp:  datetime
+    clusters:   List[ClusterMetrics]
+    federation: FederationStatus = FederationStatus()
 
 
 class BenchmarkRow(BaseModel):

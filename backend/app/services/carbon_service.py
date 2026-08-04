@@ -38,6 +38,10 @@ _FALLBACK_BY_ZONE: dict[str, float] = {
     "GB":     180.0,    # United Kingdom
     "DE":     380.0,    # Germany
     "DK-DK1": 100.0,    # Denmark West (lots of wind)
+    "BE":     145.0,    # Belgium (majority nuclear, growing wind)
+    "NL":     270.0,    # Netherlands
+    "FI":     110.0,    # Finland
+    "SE":      40.0,    # Sweden (hydro + nuclear)
     "FR":      55.0,    # France (mostly nuclear)
     "NO":      30.0,    # Norway (hydro)
     "default": 500.0,
@@ -142,8 +146,16 @@ class CarbonService:
     # ── Internals ─────────────────────────────────────────────────────────────
 
     def _fallback(self, zone: str, reason: str) -> CarbonReading:
-        value = _FALLBACK_BY_ZONE.get(zone, _FALLBACK_BY_ZONE["default"])
-        logger.info("Carbon fallback for %s: %.0f gCO2/kWh (%s)", zone, value, reason)
+        value = _FALLBACK_BY_ZONE.get(zone)
+        if value is None:
+            # No published average for this zone. Warn loudly rather than let a
+            # generic number pass as a figure for a specific grid.
+            value = _FALLBACK_BY_ZONE["default"]
+            logger.warning(
+                "No carbon average for zone %s; using generic default %.0f gCO2/kWh. "
+                "Add the zone to _FALLBACK_BY_ZONE for an accurate figure.", zone, value)
+        else:
+            logger.info("Carbon fallback for %s: %.0f gCO2/kWh (%s)", zone, value, reason)
         return CarbonReading(
             zone=zone,
             carbon_intensity=value,

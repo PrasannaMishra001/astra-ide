@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.api.deps import get_current_user
 from app.models import User
-from app.schemas.event import MetricsSnapshot, ClusterMetrics, NodeMetrics
+from app.schemas.event import MetricsSnapshot, ClusterMetrics, NodeMetrics, FederationStatus
 from app.services import cluster_state
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
@@ -23,6 +23,7 @@ def get_node_metrics(_user: User = Depends(get_current_user)) -> MetricsSnapshot
             cluster_id  = c["id"],
             location    = c["location"],
             carbon_gco2 = c["carbon_gco2"],
+            carbon_source = c.get("carbon_source", "unknown"),
             total_pods  = c["total_pods"],
             nodes=[
                 NodeMetrics(
@@ -37,7 +38,11 @@ def get_node_metrics(_user: User = Depends(get_current_user)) -> MetricsSnapshot
                 for n in c["nodes"]
             ],
         ))
-    return MetricsSnapshot(timestamp=datetime.now(timezone.utc), clusters=clusters)
+    return MetricsSnapshot(
+        timestamp=datetime.now(timezone.utc),
+        clusters=clusters,
+        federation=FederationStatus(**cluster_state.federation_status()),
+    )
 
 
 # ── Sandbox observability (B4 runtime cost per isolation tier) ───────────────

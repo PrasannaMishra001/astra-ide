@@ -297,6 +297,36 @@ def _read_cluster(entry: dict) -> Optional[Cluster]:
                    carbon_source=prev.carbon_source if prev else "unknown")
 
 
+def federation_status() -> dict:
+    """Whether a real federation control plane is reachable.
+
+    The dashboard may only claim federation behaviour (propagation, member
+    failover) when this reports enabled; otherwise it describes plain
+    multi-cluster placement. Detection is by asking the Karmada aggregated API
+    for its member clusters, so a control plane that is installed but not
+    answering counts as disabled.
+    """
+    kubeconfig = os.getenv("KARMADA_KUBECONFIG", "/etc/astra/karmada.yaml")
+    if not os.path.exists(kubeconfig):
+        return {"enabled": False, "controller": None, "members": 0}
+    try:
+        from kubernetes import client, config
+        cfg = client.Configuration()
+        config.load_kube_config(config_file=kubeconfig, client_configuration=cfg)
+        api = client.CustomObjectsApi(client.ApiClient(cfg))
+        items = api.list_cluster_custom_object(
+            "cluster.karmada.io", "v1alpha1", "clusters").get("items", [])
+        ready = 0
+        for c in items:
+            conds = (c.get("status") or {}).get("conditions") or []
+            if any(x.get("type") == "Ready" and x.get("status") == "True" for x in conds):
+                ready += 1
+        return {"enabled": ready > 0, "controller": "karmada", "members": ready}
+    except Exception as e:
+        logger.info("Karmada not reachable: %s", e)
+        return {"enabled": False, "controller": None, "members": 0}
+
+
 def refresh_from_kubernetes() -> bool:
     """Rebuild the store from live node capacity (CoreV1) + usage (metrics.k8s.io)
     across every registered cluster. True if at least one cluster answered."""
