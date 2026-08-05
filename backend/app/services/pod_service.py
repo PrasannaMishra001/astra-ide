@@ -124,10 +124,17 @@ def _workspace_manifest(ws, target: Target) -> dict:
     # manifest is shaped for one-shot enforcement runs.
     spec["restartPolicy"] = "Always"
 
-    # nodeName is chosen from the home cluster's node list, so it is meaningless
-    # in another region — keeping it would leave the pod permanently Pending.
-    if target.is_remote:
-        spec.pop("nodeName", None)
+    # Never pin a node. CP-PPO's decision is *which cluster*; picking the node
+    # inside it is kube-scheduler's job, and the tier nodeSelector below still
+    # gates gVisor/Firecracker onto capable nodes.
+    #
+    # This must not be conditional on the target being remote. Workspace rows
+    # carry node names invented by the old in-memory simulator ("node-a-2",
+    # "dev-node-0"), which exist in no cluster — including the home one. A pod
+    # pinned to a nonexistent node is admitted but never scheduled, so it sat
+    # Pending until the readiness wait expired and every start silently fell
+    # back to a local container after a multi-minute hang.
+    spec.pop("nodeName", None)
 
     # The image needs a shell and the language toolchain; the enforcement default
     # (code-server) is a full IDE we do not need here.
@@ -221,7 +228,7 @@ def _delete_via_karmada(ws_id: int) -> None:
             pass
 
 
-def _wait_ready(target: Target, pod: str, appear_s: int = 90, ready_s: int = 240) -> bool:
+def _wait_ready(target: Target, pod: str, appear_s: int = 45, ready_s: int = 120) -> bool:
     """Wait for a pod to exist on the member cluster, then to become Ready.
 
     Two phases, because `kubectl wait` treats a missing object as an error and
