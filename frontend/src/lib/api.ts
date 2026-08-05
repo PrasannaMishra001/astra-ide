@@ -360,7 +360,10 @@ export async function getCarbonIntensity(zone: string): Promise<CarbonReading> {
 export interface SchedulerEvent {
   id:           number;
   timestamp:    string;
-  kind:         'scheduler' | 'sandbox' | 'ebpf' | 'carbon' | 'prewarm' | 'collab' | 'system';
+  // 'node' is live per-node telemetry from metrics-server. 'ebpf' / 'prewarm' /
+  // 'collab' remain in the type for stored history, but the live deployment
+  // emits none of them: no Tetragon collector or pre-warmer runs here.
+  kind:         'scheduler' | 'sandbox' | 'node' | 'ebpf' | 'carbon' | 'prewarm' | 'collab' | 'system';
   title:        string;
   detail:       string;
   workspace_id: number;

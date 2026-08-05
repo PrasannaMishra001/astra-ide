@@ -46,9 +46,10 @@ def get_node_metrics(_user: User = Depends(get_current_user)) -> MetricsSnapshot
 
 
 # ── Sandbox observability (B4 runtime cost per isolation tier) ───────────────
-# Grounded in the B4 runtime benchmark profile (RUNTIME_TESTING.md): runc ~0%
+# These are the measured B4 benchmark profile (RUNTIME_TESTING.md): runc ~0%
 # overhead, gVisor ~18% syscall overhead, Firecracker microVM boots <125ms with
-# its own kernel. We add small live jitter so the dashboard streams.
+# its own kernel. A small variation is applied per request so the dashboard
+# animates — it is NOT a live per-tier measurement, and the note below says so.
 
 class SandboxTierMetric(BaseModel):
     tier: str
@@ -85,6 +86,7 @@ def get_sandbox_metrics(_user: User = Depends(get_current_user)) -> SandboxMetri
     ]
     return SandboxMetrics(
         timestamp=datetime.now(timezone.utc), tiers=tiers,
-        note="Per-tier runtime cost from the B4 isolation benchmark, with live jitter. "
+        note="Measured B4 isolation-benchmark profile (not a live reading): figures "
+             "come from the offline runtime benchmark and vary slightly per request. "
              "Higher tiers trade a little speed for stronger isolation.",
     )

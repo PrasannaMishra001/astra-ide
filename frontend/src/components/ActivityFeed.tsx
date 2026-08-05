@@ -1,6 +1,6 @@
 'use client';
 // Live activity feed: polls /api/v1/events every 3s. The backend telemetry
-// loop pushes scheduler / eBPF / sandbox / carbon events continuously.
+// loop pushes scheduler / node-telemetry / sandbox / carbon events continuously.
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -13,6 +13,7 @@ const ICON_FOR: Record<SchedulerEvent['kind'], React.ReactNode> = {
   scheduler: <Brain    size={14} />,
   sandbox:   <Shield   size={14} />,
   carbon:    <Leaf     size={14} />,
+  node:      <Network  size={14} />,
   ebpf:      <Network  size={14} />,
   prewarm:   <Cpu      size={14} />,
   collab:    <Activity size={14} />,
@@ -23,6 +24,7 @@ const COLOR_FOR: Record<SchedulerEvent['kind'], string> = {
   scheduler: 'text-astra-600 dark:text-astra-400 bg-astra-500/10 border-astra-500/30',
   sandbox:   'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30',
   carbon:    'text-lime-600 dark:text-lime-400 bg-lime-500/10 border-lime-500/30',
+  node:      'text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
   ebpf:      'text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
   prewarm:   'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30',
   collab:    'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30',

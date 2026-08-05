@@ -18,7 +18,7 @@ import { cn } from '../../lib/utils';
 
 const BREAKTHROUGHS = [
   {
-    id: 'B1', title: 'DRL-PPO scheduler', icon: <Brain size={16} />,
+    id: 'B1', title: 'CP-PPO scheduler', icon: <Brain size={16} />,
     paper: 'Xu et al., 2024 (arXiv:2403.07905)',
     result: '+112% reward vs best classical baseline; 0.57% SLA violations',
     detail: 'PPO agent (stable-baselines3) trained in a custom Gymnasium cluster environment; learns placement from live telemetry instead of static heuristics.',

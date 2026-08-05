@@ -14,6 +14,7 @@ const TIERS = ['runc', 'gvisor', 'firecracker'];
 const LANGS = ['python', 'javascript', 'cpp', 'go', 'rust', 'bash'];
 
 const ACCENT: Record<string, string> = {
+  cp_ppo: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300',
   pfmppo: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300',
   heft: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
   minmin: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',

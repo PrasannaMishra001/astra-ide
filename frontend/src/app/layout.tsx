@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   },
   description:
     'Adaptive Scheduling & Telemetry-driven Resource-aware Cloud IDE. ' +
-    'DRL-PPO scheduling, eBPF observability, adaptive sandboxing, ' +
+    'CP-PPO scheduling, eBPF observability, adaptive sandboxing, ' +
     'LSTM prewarming, multi-cluster federation, and Yjs CRDT collaboration.',
   applicationName: 'ASTRA-IDE',
   keywords: [

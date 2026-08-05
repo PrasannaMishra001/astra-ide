@@ -1,24 +1,35 @@
 'use client';
-// Scheduler comparison: the eight selectable placement algorithms and how they
-// compare on makespan (from benchmarks/b1_scheduler, lower is better). Honest by
-// design - the classical heuristics lead on makespan, the RL policy is
-// competitive and beats random. Bars animate in on scroll. No external assets.
+// Scheduler comparison: the selectable placement algorithms and how they compare
+// on makespan (benchmarks/b1_scheduler, lower is better). Bars animate in on
+// scroll. No external assets.
+//
+// These are the CORRECTED numbers. The earlier set was produced before two
+// defects in the scheduling environment were fixed - one that let a task be
+// scheduled repeatedly and leak its resources, and one whose time model made
+// makespan nearly independent of placement. Under that broken environment the
+// RL policy scored 106.3 against HEFT's 29.7 and the page reported that the
+// heuristics led. On the corrected environment CP-PPO leads at 15 tasks.
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 
-// Real numbers from the makespan/energy evaluation (template workloads, 40 eps).
+// 15 tasks / 4 VMs, 100 identical DAGs at a fixed seed (mean +/- sd across DAGs).
+// Rows marked best-of-32 get the same rollout budget, so the comparison isolates
+// the learned prior from the value of search.
 const MAKESPAN: { name: string; value: number; kind: 'rl' | 'heuristic' | 'naive' }[] = [
-  { name: 'HEFT',            value: 29.7,  kind: 'heuristic' },
-  { name: 'Greedy',         value: 30.6,  kind: 'heuristic' },
-  { name: 'Min-Min',        value: 32.8,  kind: 'heuristic' },
-  { name: 'PF-MPPO (RL)',   value: 106.3, kind: 'rl' },
-  { name: 'Random',         value: 247.3, kind: 'naive' },
+  { name: 'CP-PPO (best-of-32)',  value: 68.5,  kind: 'rl' },
+  { name: 'HEFT + best-of-32',    value: 70.2,  kind: 'heuristic' },
+  { name: 'CP-PPO (greedy)',      value: 71.3,  kind: 'rl' },
+  { name: 'HEFT (upward rank)',   value: 72.7,  kind: 'heuristic' },
+  { name: 'Min-Min + best-of-32', value: 76.8,  kind: 'heuristic' },
+  { name: 'Max-Min',              value: 86.0,  kind: 'heuristic' },
+  { name: 'Min-Min',              value: 88.2,  kind: 'heuristic' },
+  { name: 'Random',               value: 131.1, kind: 'naive' },
 ];
-const MAX = 247.3;
+const MAX = 131.1;
 
 const ALGOS = [
-  'Multi-objective heuristic', 'PF-MPPO (deep RL)', 'HEFT', 'Min-Min',
+  'Multi-objective heuristic', 'CP-PPO (deep RL)', 'HEFT', 'Min-Min',
   'Least loaded', 'Carbon-aware', 'Round robin', 'Random',
 ];
 
@@ -61,9 +72,10 @@ export default function SchedulerCompare() {
           ))}
         </div>
         <p className="text-xs text-faint mt-5 leading-relaxed">
-          Honest result: on makespan the list-scheduling heuristics (HEFT, Min-Min) lead;
-          the PF-MPPO deep-RL policy is competitive and clearly beats random, but does not
-          dominate the strong heuristics. We expose the trade-off instead of hiding it.
+          Honest result: at 15 tasks CP-PPO leads both with and without rollout search,
+          beating HEFT by 5.8% and by 2.5% when HEFT is given the same search budget. At
+          40 tasks that margin disappears and an equal-budget HEFT edges it out
+          (169.6 vs 170.5). We report both scales rather than only the flattering one.
         </p>
       </div>
 
@@ -88,8 +100,9 @@ export default function SchedulerCompare() {
           ))}
         </div>
         <p className="text-[11px] text-faint mt-4">
-          benchmarks/b1_scheduler, template workloads. Evaluated vs the paper's HEFT and
-          Min-Min baselines plus greedy and random.
+          benchmarks/b1_scheduler - 15 tasks, 4 VMs, 100 identical DAGs at a fixed seed.
+          The priority-order Greedy rule (243.2) is omitted from the chart: it serialises
+          the DAG onto one VM, which also gives it the lowest energy.
         </p>
       </div>
     </div>

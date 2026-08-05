@@ -2,14 +2,17 @@
 Background telemetry loop — runs as an asyncio task started from the FastAPI
 lifespan. Every few seconds it:
 
-  1. Drifts per-node metrics in cluster_state
-  2. Emits a small batch of `ebpf`/`carbon`/`prewarm`/`collab` events
-     into the SchedulerEvent table for the activity feed
-  3. Periodically refreshes carbon intensity from the live electricityMaps API
+  1. Reads live per-node metrics from every registered cluster (metrics-server),
+     falling back to an in-memory drift only when no cluster is reachable
+  2. Records those readings, and per-zone grid carbon, into the SchedulerEvent
+     table for the activity feed
+  3. Periodically refreshes carbon intensity from the electricityMaps API
   4. Prunes the event log so it stays small (keeps the most recent 500)
 
-When real Tetragon + electricityMaps integrations land (Phase 3+), this loop
-either disappears or becomes a thin consumer of those real streams.
+The feed carries only measurements this deployment actually takes. Tetragon
+syscall capture, the LSTM pre-warmer and the intrusion detector are evaluated
+offline in `benchmarks/` and are NOT running here, so this loop must not emit
+events attributed to them.
 """
 from __future__ import annotations
 
@@ -80,7 +83,7 @@ async def telemetry_main_loop() -> None:
                 last_drift = t
 
             if t - last_event > TICK_EVENT_EMIT_S:
-                _emit_random_event()
+                _emit_node_event()
                 last_event = t
 
             if t - last_carbon > TICK_CARBON_REFRESH_S:
@@ -98,43 +101,46 @@ async def telemetry_main_loop() -> None:
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _emit_random_event() -> None:
+def _emit_node_event() -> None:
+    """Report one node's current telemetry into the activity feed.
+
+    Only things we actually measure. This used to also emit "LSTM prewarmer |
+    scoring active users" with a random probability, a Yjs awareness flush with
+    a random client count, and label node metrics as `ebpf` — none of which were
+    real: no prewarmer or Tetragon collector runs in this deployment. Inventing
+    plausible lines for components that do not exist is worse than a quiet feed,
+    because it is indistinguishable from the real entries beside it.
+
+    What remains is genuine: node CPU/memory/run-queue/network read from
+    metrics-server, and grid carbon read per zone.
+    """
     nodes = cluster_state.all_nodes()
     if not nodes:
         return
     node = _rng.choice(nodes)
     cluster = cluster_state.get_cluster(node.cluster_id)
-    assert cluster is not None
+    if cluster is None:
+        return
 
-    r = _rng.random()
-    if r < 0.5:
+    if _rng.random() < 0.75:
         events_service.record(
-            kind="ebpf",
-            title=f"sched_switch |{node.name}",
+            kind="node",
+            title=f"node telemetry |{node.name}",
             detail=(
                 f"cpu={node.cpu_util:.2f} mem={node.memory_util:.2f} "
                 f"runq={node.run_queue_len:.1f} net={node.network_kbps:.0f}KiB/s"
             ),
             cluster_id=cluster.id, node_name=node.name,
         )
-    elif r < 0.75:
-        events_service.record(
-            kind="prewarm",
-            title="LSTM prewarmer |scoring active users",
-            detail=f"top probability {_rng.uniform(0.62, 0.94):.2f} |warmed pods=2",
-        )
-    elif r < 0.9:
+    else:
+        source = getattr(cluster, "carbon_source", "unknown")
+        label = "live" if source == "api" else "historical avg"
         events_service.record(
             kind="carbon",
             title=f"Carbon read |{cluster.zone}",
-            detail=f"{cluster.carbon_gco2:.0f} gCO2/kWh |{_carbon_grade(cluster.carbon_gco2)}",
+            detail=(f"{cluster.carbon_gco2:.0f} gCO2/kWh |"
+                    f"{_carbon_grade(cluster.carbon_gco2)} |{label}"),
             cluster_id=cluster.id,
-        )
-    else:
-        events_service.record(
-            kind="collab",
-            title="Yjs awareness flush",
-            detail=f"rooms updated |clients={_rng.randint(1, 8)}",
         )
 
 

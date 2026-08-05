@@ -41,7 +41,7 @@ const ALGO_COLOR: Record<string, string> = {
 // the paper and dataset behind each number). Kept consistent with the committed
 // artifacts under ml/*/artifacts/metrics.json.
 const RESEARCH = [
-  { k: 'B1', label: 'DRL-PPO scheduler', metric: 'real trace', sub: 'outperforms random placement', dataset: 'Google Cluster Trace 2011', tone: 'astra' },
+  { k: 'B1', label: 'CP-PPO scheduler', metric: '-5.8% makespan', sub: 'beats HEFT at 15 tasks; ties at 40', dataset: 'Google Cluster Trace 2011', tone: 'astra' },
   { k: 'B3', label: 'LSTM prewarming',   metric: '49%',        sub: 'fewer cold starts (N-RMSE 0.17)', dataset: 'Azure Functions 2019 trace', tone: 'emerald' },
   { k: 'B4', label: 'Syscall IDS',       metric: 'F1 0.82',    sub: 'LID-DS CVEs, beats STIDE and frequency', dataset: 'LID-DS 2021', tone: 'rose' },
   { k: 'B6', label: 'Carbon-aware',      metric: '30%',        sub: 'CO2 cut at a 24h deferral budget', dataset: 'UK Carbon Intensity API (live)', tone: 'purple' },
@@ -95,7 +95,7 @@ export default function BenchmarksPage() {
               Scheduler benchmarks
             </h1>
             <p className="text-sm text-muted mt-1 max-w-2xl">
-              Research results on real datasets, plus a live, reproducible replay of ASTRA PPO
+              Research results on real datasets, plus a live, reproducible replay of ASTRA CP-PPO
               against classical baselines on the current cluster snapshot.
             </p>
           </div>

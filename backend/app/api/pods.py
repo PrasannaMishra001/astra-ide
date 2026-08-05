@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User, Workspace
-from app.services import runtime
+from app.services import cluster_target, runtime
 
 router = APIRouter(prefix="/pods", tags=["pods"])
 
@@ -100,22 +100,24 @@ def pod_logs(workspace_id: int, user: User = Depends(get_current_user),
     pod = ws.pod_name or f"ws-{ws.id}-{ws.language[:3]}"
     rt = _RUNTIME_CLASS.get(ws.sandbox_tier, ws.sandbox_tier)
     ts = datetime.utcnow().strftime("%H:%M:%S")
+
+    # Real logs from the sandbox, wherever it runs (local container or a pod in
+    # another region). Previously this returned a scripted kubelet/tetragon
+    # transcript with real logs merely appended, which read as live output from
+    # components that are not running — Tetragon in particular is not deployed.
+    real = runtime.logs(ws.id, tail=40) if ws.status == "RUNNING" else []
+    if real:
+        return PodLogs(pod_name=pod, lines=real)
+
+    # No stream available: state what we actually know instead of inventing one.
+    where = cluster_target.for_workspace(ws)
     lines = [
-        f"[{ts}] kubelet      Pulling image \"{_IMAGE.get(ws.language, 'astra/base:1')}\"",
-        f"[{ts}] kubelet      Created container with runtimeClassName={ws.sandbox_tier}",
-        f"[{ts}] {rt:<18} sandbox initialised (risk={ws.risk_score:.2f})",
-        f"[{ts}] scheduler    placed on node {ws.node_name or 'node-a-1'} (cluster {ws.cluster_id or 'local'})",
+        f"[{ts}] workspace {ws.id} is {ws.status.lower()}",
+        f"[{ts}] tier={ws.sandbox_tier} runtimeClass={rt} risk={ws.risk_score:.2f}",
+        f"[{ts}] cluster={where.id} ({where.location})",
     ]
     if ws.status == "RUNNING":
-        lines += [
-            f"[{ts}] {rt:<18} workspace ready — shell + editor attached",
-            f"[{ts}] tetragon     eBPF telemetry streaming (sched_switch, syscalls)",
-            f"[{ts}] healthz      OK — cpu {ws.cpu_request} cores / mem {ws.memory_request} MiB",
-        ]
-        # Append REAL container logs if the per-workspace container is up.
-        real = runtime.logs(ws.id, tail=30)
-        if real:
-            lines += [f"[{ts}] --- container stdout ---"] + real
+        lines.append(f"[{ts}] sandbox has produced no output yet")
     else:
-        lines += [f"[{ts}] kubelet      container is {ws.status.lower()}"]
+        lines.append(f"[{ts}] start the workspace to attach a shell and stream logs")
     return PodLogs(pod_name=pod, lines=lines)

@@ -13,9 +13,11 @@ from app.db.session import Base
 
 # Event kinds map to UI icons + colors (see ActivityFeed.tsx)
 EVENT_KINDS = (
-    "scheduler",   # PPO placement decision
+    "scheduler",   # CP-PPO placement decision
     "sandbox",     # Sandbox tier assigned
-    "ebpf",        # eBPF telemetry tick
+    "node",        # Live node telemetry read from metrics-server
+    "ebpf",        # Tetragon syscall event (kept for the offline harness; the
+                   # live deployment runs no collector and emits none)
     "carbon",      # Carbon intensity update
     "prewarm",     # LSTM prewarming decision
     "collab",      # Collaboration / Yjs event
