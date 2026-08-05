@@ -25,7 +25,7 @@ from app.services import sharing_service
 from app.services import executor_service
 from app.services import workspace_files
 from app.services import object_store
-from app.services import container_service
+from app.services import runtime
 from app.services.terminal_service import TerminalProcess
 from pydantic import BaseModel, Field
 
@@ -148,7 +148,7 @@ def start_workspace(
     # Best-effort: spin up the real per-workspace container (no-op if Docker
     # isn't available — status still flips so the UI/terminal-fallback work).
     try:
-        container_service.start(workspace)
+        runtime.start(workspace)
     except Exception:
         pass
     workspace_service.transition_status(db, workspace, "RUNNING")
@@ -165,7 +165,7 @@ def stop_workspace(
     if workspace is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     try:
-        container_service.stop(workspace_id)
+        runtime.stop(workspace_id)
     except Exception:
         pass
     workspace_service.transition_status(db, workspace, "STOPPED")
@@ -455,8 +455,8 @@ def workspace_ports(workspace_id: int, token: str | None = None,
     user_id = decode_access_token(token) if token else None
     if user_id is None or not sharing_service.user_can_access(db, workspace_id, int(user_id)):
         raise HTTPException(status_code=403, detail="Forbidden")
-    from app.services import container_service
-    return {"ports": container_service.list_listening_ports(workspace_id)}
+    from app.services import runtime
+    return {"ports": runtime.list_listening_ports(workspace_id)}
 
 
 @router.get("/{workspace_id}/proxy/{port}/{path:path}")
@@ -469,8 +469,8 @@ def workspace_proxy(workspace_id: int, port: int, path: str = "",
     user_id = decode_access_token(token) if token else None
     if user_id is None or not sharing_service.user_can_access(db, workspace_id, int(user_id)):
         raise HTTPException(status_code=403, detail="Forbidden")
-    from app.services import container_service
-    res = container_service.fetch_port(workspace_id, port, path)
+    from app.services import runtime
+    res = runtime.fetch_port(workspace_id, port, path)
     if res is None:
         raise HTTPException(status_code=502,
                             detail=f"No server responding on port {port} in this workspace")
@@ -573,8 +573,8 @@ async def terminal_ws(websocket: WebSocket, workspace_id: int, token: str | None
     cwd = workspace_files.workspace_dir(workspace_id)
     # If a real per-workspace container is running, attach the shell INSIDE it;
     # otherwise fall back to a shell rooted in the workspace's files.
-    if container_service.is_running(workspace_id):
-        term = TerminalProcess(cwd, argv=container_service.exec_argv(workspace_id))
+    if runtime.is_running(workspace_id):
+        term = TerminalProcess(cwd, argv=runtime.exec_argv(workspace_id))
     else:
         term = TerminalProcess(cwd)
     loop = asyncio.get_event_loop()

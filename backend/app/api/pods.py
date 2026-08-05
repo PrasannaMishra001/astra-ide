@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User, Workspace
-from app.services import container_service
+from app.services import runtime
 
 router = APIRouter(prefix="/pods", tags=["pods"])
 
@@ -57,7 +57,7 @@ class PodInfo(BaseModel):
 def _stats(ws: Workspace) -> PodInfo:
     running = ws.status == "RUNNING"
     # Prefer REAL container stats when the per-workspace container is up.
-    real = container_service.stats(ws.id) if running else None
+    real = runtime.stats(ws.id) if running else None
     if real is not None:
         cpu, mem_mb = real["cpu_pct"], real["mem_mb"]
     elif running:
@@ -113,7 +113,7 @@ def pod_logs(workspace_id: int, user: User = Depends(get_current_user),
             f"[{ts}] healthz      OK — cpu {ws.cpu_request} cores / mem {ws.memory_request} MiB",
         ]
         # Append REAL container logs if the per-workspace container is up.
-        real = container_service.logs(ws.id, tail=30)
+        real = runtime.logs(ws.id, tail=30)
         if real:
             lines += [f"[{ts}] --- container stdout ---"] + real
     else:

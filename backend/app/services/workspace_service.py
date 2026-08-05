@@ -183,17 +183,33 @@ def transition_status(db: Session, workspace: Workspace, new_status: str) -> Wor
     # (no cluster in dev); real gVisor/Firecracker launch happens on the cluster
     # when ASTRA_K8S_APPLY=1. The decision is always audited in the activity feed.
     if new_status == "RUNNING" and previous != "RUNNING":
-        from app.services import sandbox_runtime, events_service
-        res = sandbox_runtime.apply_workspace_pod(workspace)
-        events_service.record(
-            kind="sandbox",
-            title=f'{"Launched" if res.applied else "Planned"} pod {res.pod_name} '
-                  f'({res.runtime_class})',
-            detail=f"runtimeClassName={res.runtime_class}; {res.reason}",
-            workspace_id=workspace.id,
-            cluster_id=workspace.cluster_id,
-            node_name=workspace.node_name,
-        )
+        from app.services import cluster_target, events_service, pod_service, sandbox_runtime
+        if pod_service.available():
+            # The pod IS the workspace here — pod_service already applied the
+            # tier-enforcing manifest on the chosen cluster. Applying it a second
+            # time would create a duplicate pod under a different name.
+            target = cluster_target.for_workspace(workspace)
+            placed = pod_service.is_running(workspace.id)
+            events_service.record(
+                kind="sandbox",
+                title=f'{"Running" if placed else "Pending"} pod {pod_service._name(workspace.id)} '
+                      f'({workspace.sandbox_tier}) in {target.location}',
+                detail=f"runtimeClassName={workspace.sandbox_tier}; cluster={target.id}",
+                workspace_id=workspace.id,
+                cluster_id=target.id,
+                node_name=workspace.node_name,
+            )
+        else:
+            res = sandbox_runtime.apply_workspace_pod(workspace)
+            events_service.record(
+                kind="sandbox",
+                title=f'{"Launched" if res.applied else "Planned"} pod {res.pod_name} '
+                      f'({res.runtime_class})',
+                detail=f"runtimeClassName={res.runtime_class}; {res.reason}",
+                workspace_id=workspace.id,
+                cluster_id=workspace.cluster_id,
+                node_name=workspace.node_name,
+            )
 
     # If the workspace stopped or was archived, release the node slot
     if new_status in ("STOPPED", "ARCHIVED", "FAILED") and previous == "RUNNING":

@@ -24,6 +24,14 @@ RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.
     && rm -rf /tmp/docker /tmp/docker.tgz \
     && docker --version
 
+# kubectl — the backend drives workspaces that live on OTHER clusters through it
+# (pod_service / remote_files): creating the pod, exec'ing the terminal in, and
+# reading files inside it. Pinned to the k3s server version the fleet runs.
+RUN curl -fsSL https://dl.k8s.io/release/v1.31.4/bin/linux/amd64/kubectl \
+      -o /usr/local/bin/kubectl \
+    && chmod +x /usr/local/bin/kubectl \
+    && kubectl version --client=true
+
 # Build context is the REPO ROOT (see docker-compose / CI) so the ml/ package is
 # reachable. This is required for real model serving: pfmppo_inference and
 # cp_ppo_inference import ml.scheduler.pfmppo.* at runtime.

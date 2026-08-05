@@ -32,6 +32,36 @@ def _ws_dir(workspace_id: int) -> Path:
     return d
 
 
+def _remote(workspace_id: int):
+    """`remote_files` when this workspace's pod is in another region, else None.
+
+    A workspace placed abroad has no directory on this host, so its files have to
+    be read from inside the pod. Imported lazily to avoid a cycle
+    (container_service imports this module) and to keep the local path free of
+    any Kubernetes dependency.
+    """
+    try:
+        from app.services import pod_service
+        if not pod_service.available():
+            return None
+        from app.services import cluster_target, remote_files
+        target = cluster_target.resolve(
+            pod_service._TARGET_CACHE.get(int(workspace_id)))
+        if target is None:
+            from app.db.session import SessionLocal
+            from app.models import Workspace
+            db = SessionLocal()
+            try:
+                cid = db.query(Workspace.cluster_id).filter(
+                    Workspace.id == workspace_id).scalar()
+            finally:
+                db.close()
+            target = cluster_target.resolve(cid)
+        return remote_files if (target is not None and target.is_remote) else None
+    except Exception:
+        return None            # never let placement lookup break file access
+
+
 def workspace_dir(workspace_id: int) -> Path:
     """Public accessor for the workspace's on-disk directory (used by the terminal)."""
     return _ws_dir(workspace_id)
@@ -100,6 +130,9 @@ def import_repo(workspace_id: int, git_url: str, branch: str | None = None) -> I
 
 def list_tree(workspace_id: int, max_entries: int = 2000) -> list[dict]:
     """Flat list of files/dirs (relative paths) for the workspace, skipping noise."""
+    r = _remote(workspace_id)
+    if r:
+        return r.list_tree(workspace_id, max_entries)
     base = _ws_dir(workspace_id)
     out: list[dict] = []
     for root, dirs, files in os.walk(base):
@@ -121,6 +154,9 @@ def list_tree(workspace_id: int, max_entries: int = 2000) -> list[dict]:
 
 
 def read_file(workspace_id: int, rel: str) -> str:
+    r = _remote(workspace_id)
+    if r:
+        return r.read_file(workspace_id, rel)
     p = _safe_path(workspace_id, rel)
     if not p.is_file():
         raise FileNotFoundError(rel)
@@ -130,6 +166,9 @@ def read_file(workspace_id: int, rel: str) -> str:
 
 
 def write_file(workspace_id: int, rel: str, content: str) -> int:
+    r = _remote(workspace_id)
+    if r:
+        return r.write_file(workspace_id, rel, content)
     if len(content.encode("utf-8", errors="replace")) > MAX_FILE_BYTES:
         raise ValueError("file too large to save")
     p = _safe_path(workspace_id, rel)
@@ -140,6 +179,9 @@ def write_file(workspace_id: int, rel: str, content: str) -> int:
 
 def write_bytes_file(workspace_id: int, rel: str, data: bytes) -> int:
     """Write raw bytes (uploaded file) into the workspace. 8 MB cap."""
+    r = _remote(workspace_id)
+    if r:
+        return r.write_bytes_file(workspace_id, rel, data)
     if len(data) > 8 * 1024 * 1024:
         raise ValueError("file too large to upload (max 8 MB)")
     p = _safe_path(workspace_id, rel)
@@ -150,12 +192,18 @@ def write_bytes_file(workspace_id: int, rel: str, data: bytes) -> int:
 
 def make_dir(workspace_id: int, rel: str) -> None:
     """Create a folder (and parents) inside the workspace."""
+    r = _remote(workspace_id)
+    if r:
+        return r.make_dir(workspace_id, rel)
     p = _safe_path(workspace_id, rel)
     p.mkdir(parents=True, exist_ok=True)
 
 
 def delete_path(workspace_id: int, rel: str) -> None:
     """Delete a file or folder (recursively) inside the workspace."""
+    r = _remote(workspace_id)
+    if r:
+        return r.delete_path(workspace_id, rel)
     p = _safe_path(workspace_id, rel)
     base = _ws_dir(workspace_id).resolve()
     if p == base:
@@ -171,6 +219,9 @@ def delete_path(workspace_id: int, rel: str) -> None:
 def read_bytes(workspace_id: int, rel: str) -> tuple[bytes, str]:
     """Return (raw bytes, guessed content-type) for a file — used to serve images."""
     import mimetypes
+    r = _remote(workspace_id)
+    if r:
+        return r.read_bytes(workspace_id, rel)
     p = _safe_path(workspace_id, rel)
     if not p.is_file():
         raise FileNotFoundError(rel)
@@ -184,6 +235,9 @@ def search(workspace_id: int, query: str, max_results: int = 200) -> list[dict]:
     """Plain-text search across workspace files (VS Code-style results)."""
     if not query:
         return []
+    r = _remote(workspace_id)
+    if r:
+        return r.search(workspace_id, query, max_results)
     base = _ws_dir(workspace_id)
     q = query.lower()
     out: list[dict] = []

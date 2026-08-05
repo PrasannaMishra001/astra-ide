@@ -69,14 +69,14 @@ def _reconcile_workspace_status() -> None:
     """
     import logging
     from sqlalchemy import text
-    from app.services import container_service
-    if not container_service.available():
+    from app.services import runtime
+    if not runtime.available():
         return
     try:
         with engine.begin() as conn:
             rows = conn.execute(text(
                 "SELECT id FROM workspaces WHERE status = 'RUNNING'")).fetchall()
-            stale = [r[0] for r in rows if not container_service.is_running(r[0])]
+            stale = [r[0] for r in rows if not runtime.is_running(r[0])]
             for ws_id in stale:
                 conn.execute(text(
                     "UPDATE workspaces SET status = 'STOPPED' WHERE id = :i"), {"i": ws_id})

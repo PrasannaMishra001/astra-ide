@@ -179,3 +179,4 @@ paper/
 deploy/gcp-provision.sh
 deploy/node-setup/bootstrap.sh
 deploy/node-setup/member-bootstrap.sh
+deploy/vm-up.sh

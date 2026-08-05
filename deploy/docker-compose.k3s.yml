@@ -22,6 +22,12 @@ services:
     environment:
       ASTRA_USE_K8S_METRICS: "1"        # dashboard reads real node metrics
       ASTRA_K8S_APPLY: "1"              # workspaces become real Pods
+      # Workspaces run as Pods on the cluster CP-PPO picked — including the
+      # remote regions — instead of Docker containers on this host. The terminal
+      # and file I/O then go through `kubectl exec` against that cluster.
+      ASTRA_K8S_WORKSPACES: "1"
+      ASTRA_HOME_CLUSTER: "mumbai"      # cluster this backend itself runs on
+      KARMADA_KUBECONFIG: "/etc/astra/karmada.yaml"
       SCHEDULER_ALGORITHM: "cp_ppo"     # serve the trained CP-PPO policy
       CP_PPO_MODEL_PATH: "ml/scheduler/pfmppo/artifacts/cp_ppo.pt"
       ASTRA_CLUSTER_ZONE: "IN-NO"
