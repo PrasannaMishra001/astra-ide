@@ -1,13 +1,15 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Github } from 'lucide-react';
+
+import { getPublicTopology, type PublicTopology } from '../lib/api';
 
 import Navbar              from '../components/Navbar';
 import AuroraBackground    from '../components/ui/AuroraBackground';
 import ThreeDCard          from '../components/ui/ThreeDCard';
 import HoverBorderGradient from '../components/ui/HoverBorderGradient';
-import CanvasText          from '../components/ui/CanvasText';
 import TextHoverEffect     from '../components/ui/TextHoverEffect';
 import TeamPhoto           from '../components/ui/TeamPhoto';
 import AnimatedTerminal, { type TerminalLine } from '../components/ui/AnimatedTerminal';
@@ -18,7 +20,6 @@ import NoiseBackground     from '../components/ui/NoiseBackground';
 import BigFooter           from '../components/ui/BigFooter';
 import CountUp             from '../components/ui/CountUp';
 import GoToTop             from '../components/ui/GoToTop';
-import { useTheme }        from '../lib/theme';
 import { Brain, Cpu, Eye, Shield, Network, Leaf, Users } from 'lucide-react';
 
 const GithubGlobe = dynamic(() => import('../components/ui/GithubGlobe'), { ssr: false });
@@ -33,7 +34,7 @@ const DEMO_TERMINAL: TerminalLine[] = [
   { kind: 'out', text: '-> final risk = 0.80 -> sandbox = firecracker' },
   { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'kubectl apply -f workspace.yaml' },
   { kind: 'out', text: 'runtimeClassName=firecracker' },
-  { kind: 'ok',  text: 'x pod ws-7-a2c3 scheduled on node-eu-2 (lowest carbon)' },
+  { kind: 'ok',  text: 'x pod ws-7-a2c3 -> cluster belgium (145 gCO2/kWh)' },
   { kind: 'cmd', prompt: 'user@iiitm:~$', text: 'tetragon trace --pod ws-7-a2c3' },
   { kind: 'out', text: 'sched_switch  cpu=2  run_q=3   net=124KiB/s' },
 ];
@@ -41,9 +42,9 @@ const DEMO_TERMINAL: TerminalLine[] = [
 const FEATURE_CARDS: GridCard[] = [
   {
     id: 'ppo', accent: 'astra', span: 'md:col-span-2', icon: <Brain size={28} />,
-    title: 'DRL-PPO Scheduler',
+    title: 'CP-PPO Scheduler',
     blurb: 'A reinforcement-learning agent decides which machine runs your workspace.',
-    what: 'Instead of the default Kubernetes scheduler, ASTRA uses a Proximal Policy Optimization (PPO) agent. It reads a 40-number snapshot of the whole cluster (CPU, memory, queue length, carbon, latency) and learns from experience where to place each workspace so the cluster stays fast and full without overloading any node.',
+    what: 'Instead of the default Kubernetes scheduler, ASTRA uses a critical-path-guided Proximal Policy Optimization agent. It scores every (task, machine) pair from 16 features — wait time, transfer cost, compute cost, earliest finish time, HEFT upward rank and the gap to the best alternative — and learns where to place each workspace so the cluster stays fast and full without overloading any node.',
     how: [
       'Create a workspace — placement is automatic, you do nothing.',
       'Open the Platform page to watch the agent\'s live decisions and reward.',
@@ -87,11 +88,11 @@ const FEATURE_CARDS: GridCard[] = [
     id: 'multi', accent: 'amber', icon: <Network size={28} />,
     title: 'Multi-Cluster',
     blurb: 'Three regions act as one pool the scheduler sees globally.',
-    what: 'Karmada federates cluster-a (Denmark), cluster-b (India) and cluster-c (US). Workspaces are routed to the nearest healthy region, and if a cluster fails its workloads are rescheduled to a survivor in seconds.',
+    what: 'Karmada federates three real clusters — Mumbai (asia-south1), Belgium (europe-west1) and N. Virginia (us-east4) — each running its own k3s with all three sandbox runtimes. CP-PPO chooses the region; Karmada propagates the workload there with a policy pinned to that cluster.',
     how: [
-      'You connect to the closest region automatically — lowest latency.',
-      'Watch live region health on the Clusters page.',
-      'If a region goes down, your workspaces fail over on their own.',
+      'Create a workspace — the scheduler picks the region for you.',
+      'Watch live region health and grid carbon on the Clusters page.',
+      'If a region goes unreachable it is marked down and placement avoids it.',
     ],
   },
   {
@@ -109,7 +110,7 @@ const FEATURE_CARDS: GridCard[] = [
     id: 'crdt', accent: 'cyan', span: 'md:col-span-2', icon: <Users size={28} />,
     title: 'Yjs CRDT Collaboration',
     blurb: 'Edit the same file together in real time — like Google Docs for code.',
-    what: 'Monaco is wired to a Yjs CRDT so multiple people can type in the same file at once with no merge conflicts. Awareness shows every collaborator\'s cursor and selection, and sync latency stays under 20ms over WebSocket.',
+    what: 'Monaco is wired to a Yjs CRDT so multiple people can type in the same file at once with no merge conflicts. Awareness shows every collaborator\'s cursor and selection, synced over a WebSocket connection to a shared room.',
     how: [
       'Open a workspace and click Share to invite teammates by username.',
       'Open the Editor tab — you\'ll see their live cursors and names.',
@@ -125,12 +126,6 @@ const TEAM = [
 ];
 
 export default function HomePage() {
-  const [theme] = useTheme();
-  // Dot-matrix headline colours: dark greens on the light pastel hero,
-  // light sage/pastels on the dark hero.
-  const grad1: [string, string, string] = theme === 'dark' ? ['#9CB080', '#cddafd', '#fde2e4'] : ['#273338', '#2B5748', '#618764'];
-  const grad2: [string, string, string] = theme === 'dark' ? ['#cddafd', '#9CB080', '#fad2e1'] : ['#2B5748', '#618764', '#9CB080'];
-
   return (
     <main className="min-h-screen overflow-x-hidden">
       {/* HERO */}
@@ -140,19 +135,22 @@ export default function HomePage() {
         <section className="relative z-10 max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
           <div className="lg:col-span-3 space-y-7">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-astra-700 dark:text-astra-300 mb-3">
+              <p className="text-sm uppercase tracking-[0.2em] text-faint mb-4">
                 Cloud IDE
               </p>
-              <CanvasText text="The cloud IDE" height={130} fontSize={104} gradient={grad1} />
-              <CanvasText text="that schedules itself." height={130} fontSize={92} gradient={grad2} />
+              {/* Real text, not a canvas particle effect: it is selectable,
+                  searchable, readable by screen readers, and scales properly. */}
+              <h1 className="t-hero text-[3.25rem] sm:text-7xl lg:text-[5.5rem]">
+                The cloud IDE
+                <br />
+                <span className="text-muted">that schedules itself.</span>
+              </h1>
             </div>
 
-            <p className="text-muted text-lg leading-relaxed max-w-2xl">
-              <span className="text-astra-700 dark:text-astra-300 font-semibold">DRL-PPO</span> scheduling,{' '}
-              <span className="text-blossom-600 dark:text-blossom-300 font-semibold">eBPF</span> telemetry,{' '}
-              <span className="text-astra-600 dark:text-astra-200 font-semibold">adaptive sandboxing</span>,{' '}
-              <span className="text-blossom-500 dark:text-blossom-200 font-semibold">LSTM prewarming</span>, multi-cluster
-              federation, and conflict-free collaboration, in one open research platform.
+            <p className="text-muted text-lg sm:text-xl leading-relaxed max-w-2xl">
+              CP-PPO scheduling, eBPF telemetry, adaptive sandboxing, LSTM prewarming,
+              multi-cluster federation, and conflict-free collaboration, in one open
+              research platform.
             </p>
 
             <div className="flex flex-wrap gap-3">
@@ -169,10 +167,14 @@ export default function HomePage() {
               </a>
             </div>
 
+            {/* Every figure here is one we measured. The previous set claimed
+                "78%+ utilization" (0.78 was the paper's target, our result is
+                0.712), a "predicted" cold start, and a collab latency that was
+                never benchmarked at all. */}
             <div className="pt-6 grid grid-cols-3 gap-6 max-w-xl text-sm">
-              <Stat prefix="< " value={2}  suffix="s"  label="Cold start (predicted)" />
-              <Stat value={78} suffix="%+" label="Resource utilization" />
-              <Stat prefix="< " value={20} suffix="ms" label="Collab latency" />
+              <Stat value={125} suffix="ms" label="Firecracker microVM boot" />
+              <Stat value={71}  suffix="%"  label="Resource utilization" />
+              <Stat value={3}               label="Regions, 3 continents" />
             </div>
           </div>
 
@@ -185,34 +187,16 @@ export default function HomePage() {
 
       {/* GLOBE - text left, globe right (partially clipped) */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#6366f1" b="#38bdf8" c="#22d3ee" />
+        <SectionBlobs />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div className="space-y-6">
-              <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400">Live globe</p>
-              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight t-liquid leading-tight">
-                Workspaces around the world
-              </h2>
-              <p className="text-muted leading-relaxed max-w-lg">
-                Every user connects to the nearest cluster. The PPO scheduler watches global state and
-                routes workspaces across four federated regions:{' '}
-                <span className="text-astra-600 dark:text-astra-300 font-medium">Denmark</span>,{' '}
-                <span className="text-blossom-500 dark:text-blossom-300 font-medium">India</span>,{' '}
-                <span className="text-astra-500 dark:text-astra-400 font-medium">California</span> and{' '}
-                <span className="text-blossom-400 dark:text-blossom-200 font-medium">Singapore</span>.
-                Drag the globe to rotate it.
-              </p>
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                <MiniStat label="Clusters" value="4" />
-                <MiniStat label="Regions" value="EU / IN / US / SG" />
-                <MiniStat label="Failover" value="< 10s" />
-              </div>
-            </div>
+            <LiveGlobeCopy />
             <div className="relative lg:-mr-24 xl:-mr-32">
               <GithubGlobe />
               <div className="flex items-center justify-center gap-5 mt-2 text-[11px] text-faint">
-                <Legend color="#e08e9b" label="User cities" />
-                <Legend color="#9CB080" label="Clusters" />
+                <Legend color="#8a94a6" label="Traffic origins" />
+                <Legend color="#3f8f6b" label="Cluster up" />
+                <Legend color="#d1495b" label="Cluster down" />
               </div>
             </div>
           </div>
@@ -221,7 +205,7 @@ export default function HomePage() {
 
       {/* DEMO TERMINAL */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#2dd4bf" b="#f472b6" c="#818cf8" />
+        <SectionBlobs />
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="mb-10 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Live demo</p>
@@ -239,7 +223,7 @@ export default function HomePage() {
 
       {/* FEATURE LAYOUT GRID (click a card to expand + learn) */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#818cf8" b="#38bdf8" c="#f472b6" />
+        <SectionBlobs />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="mb-12 text-center">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-3">Seven breakthroughs</p>
@@ -291,7 +275,7 @@ export default function HomePage() {
 
       {/* TEXT HOVER + TEAM */}
       <section className="relative bg-bg py-14 border-t border-edge overflow-hidden">
-        <SectionBlobs a="#f472b6" b="#818cf8" c="#38bdf8" />
+        <SectionBlobs />
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="h-52 md:h-72">
             <TextHoverEffect text="ASTRA-IDE" />
@@ -300,10 +284,9 @@ export default function HomePage() {
           <div className="mt-8">
             <p className="text-xs uppercase tracking-widest text-astra-600 dark:text-astra-400 mb-6 text-center">Team</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {TEAM.map((m, i) => (
+              {TEAM.map((m) => (
                 <ThreeDCard key={m.roll} intensity={10}>
-                  <div className="p-5 card neon-hover text-center"
-                       style={{ ['--neon' as any]: ['168 85 247', '34 211 238', '244 114 182'][i % 3] }}>
+                  <div className="p-5 card text-center">
                     <TeamPhoto src={m.img} alt={m.name} size={96} />
                     <div className="font-semibold mt-3">{m.name}</div>
                     <div className="text-xs text-faint mt-0.5 font-mono">{m.roll}</div>
@@ -338,6 +321,63 @@ export default function HomePage() {
       <BigFooter />
       <GoToTop />
     </main>
+  );
+}
+
+// Reads the same public topology the globe does, so the prose and the counts
+// describe the deployment that is actually running. Previously this section
+// named four regions that did not exist.
+function LiveGlobeCopy() {
+  const [topo, setTopo] = useState<PublicTopology | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => getPublicTopology()
+      .then((t) => { if (!cancelled) setTopo(t); })
+      .catch(() => { /* logged-out page still renders without it */ });
+    load();
+    const id = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const clusters = topo?.clusters ?? [];
+  const up = clusters.filter((c) => c.healthy);
+  const names = clusters.map((c) => c.location.split(',')[0].trim());
+  const greenest = up.length
+    ? up.reduce((a, b) => (a.carbon_gco2 && a.carbon_gco2 < b.carbon_gco2 ? a : b))
+    : null;
+
+  return (
+    <div className="space-y-6">
+      <p className="text-xs uppercase tracking-widest text-faint">Live topology</p>
+      <h2 className="t-liquid text-3xl md:text-5xl leading-tight">
+        Workspaces around the world
+      </h2>
+      <p className="text-muted leading-relaxed max-w-lg">
+        {clusters.length ? (
+          <>
+            The CP-PPO scheduler places each workspace across{' '}
+            {clusters.length} real cluster{clusters.length === 1 ? '' : 's'} —{' '}
+            <span className="text-ink font-medium">{names.join(', ')}</span> — using live
+            node telemetry and each region&apos;s grid carbon intensity. Markers turn red when a
+            cluster is unreachable. Drag the globe to rotate it.
+          </>
+        ) : (
+          <>
+            The CP-PPO scheduler places each workspace across the clusters this deployment
+            runs on, using live node telemetry and grid carbon intensity. Connecting to the
+            control plane…
+          </>
+        )}
+      </p>
+      <div className="grid grid-cols-3 gap-4 pt-2">
+        <MiniStat label="Clusters" value={clusters.length ? `${up.length}/${clusters.length} up` : '—'} />
+        <MiniStat label="Placement"
+                  value={topo?.federated ? (topo.controller ?? 'federated') : 'direct'} />
+        <MiniStat label="Greenest"
+                  value={greenest ? `${greenest.carbon_gco2.toFixed(0)} gCO₂` : '—'} />
+      </div>
+    </div>
   );
 }
 

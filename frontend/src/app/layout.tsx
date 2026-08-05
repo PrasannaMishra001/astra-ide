@@ -60,13 +60,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Apply the saved theme before first paint (prevents light/dark flash). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
-        {/* Typography system (MongoDB-style: geometric sans + serif display +
-            Source Code Pro for code). Loaded at runtime to keep Docker builds
-            offline-safe. */}
+        {/* Body and headings use the platform's own UI font (see --font-sans),
+            so no webfont is fetched for them and text paints immediately.
+            Source Serif 4 / Source Code Pro are still loaded for the serif
+            display and code faces; `display=swap` keeps them non-blocking. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Source+Code+Pro:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Source+Code+Pro:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
       </head>

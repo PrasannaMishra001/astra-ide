@@ -419,6 +419,31 @@ export async function getNodeMetrics(): Promise<MetricsSnapshot> {
   return data;
 }
 
+// ── Public topology (no auth) ────────────────────────────────────────────────
+// Used by the globe on the logged-out homepage. Returns only region, grid
+// carbon and health — never node or workspace detail.
+
+export interface PublicCluster {
+  id:            string;
+  location:      string;
+  lat:           number | null;
+  lon:           number | null;
+  carbon_gco2:   number;
+  carbon_source: string;
+  healthy:       boolean;
+}
+
+export interface PublicTopology {
+  clusters:   PublicCluster[];
+  federated:  boolean;
+  controller: string | null;
+}
+
+export async function getPublicTopology(): Promise<PublicTopology> {
+  const { data } = await api.get<PublicTopology>('/system/topology');
+  return data;
+}
+
 // ── Benchmarks ─────────────────────────────────────────────────────────────
 
 export interface BenchmarkRow {

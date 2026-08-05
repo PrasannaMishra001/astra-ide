@@ -6,21 +6,21 @@
    Light is the default; `.dark` on <html> flips the palette. Values are RGB
    triplets so Tailwind alpha modifiers work (bg-surface/60 etc).            */
 /* ── Palettes ───────────────────────────────────────────────────────────────
-   LIGHT — soft pastels (linen / lavender / mint / blush / periwinkle) with
-   near-black text. DARK — sage→deep-slate greens (#9CB080 #618764 #2B5748
-   #273338) with light text. Green is the shared brand accent (see tailwind
-   `astra`). Surfaces are glassy (see .card / .glass).                        */
+   LIGHT — near-white and neutral greys, the way Apple's product pages are set:
+   colour is carried by content and a single soft backdrop wash, not by the
+   page. DARK — sage→deep-slate greens (#9CB080 #618764 #2B5748 #273338) with
+   light text. Green stays the shared brand accent (see tailwind `astra`).    */
 :root {
-  --c-bg:          243 241 245;   /* lavender-mist / parchment blend */
-  --c-surface:     255 255 255;   /* white (cards use translucent glass) */
-  --c-raised:      234 228 233;   /* eae4e9 lavender mist */
-  --c-edge:        226 222 232;   /* soft lavender border */
-  --c-edge-strong: 205 218 253;   /* cddafd periwinkle */
-  --c-ink:         20  20  24;    /* near-black text */
-  --c-muted:       74  78  88;    /* dark slate-grey */
-  --c-faint:       130 133 145;   /* mid grey */
-  --scroll-track:  234 228 233;
-  --scroll-thumb:  205 218 253;
+  --c-bg:          251 251 253;   /* fbfbfd — near-white page */
+  --c-surface:     255 255 255;   /* white cards */
+  --c-raised:      242 242 245;   /* subtle fill for bars/wells */
+  --c-edge:        226 226 231;   /* hairline border */
+  --c-edge-strong: 199 199 206;   /* neutral, not periwinkle */
+  --c-ink:         29  29  31;    /* 1d1d1f — near-black text */
+  --c-muted:       92  92  99;    /* secondary text */
+  --c-faint:       134 134 142;   /* tertiary text */
+  --scroll-track:  242 242 245;
+  --scroll-thumb:  199 199 206;
   /* accent pastels for decoration */
   --p-blush:       253 226 228;
   --p-mint:        226 236 233;
@@ -41,7 +41,13 @@
 }
 
 :root {
-  --font-sans:  'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* The platform's own UI face: SF Pro on Apple, Segoe UI Variable on Windows,
+     Roboto on Android. Text renders in the font the reader's OS already draws
+     everything else in, so it reads as native rather than as a web page — and
+     nothing blocks first paint on a font download. */
+  --font-sans:  -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto,
+                'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --font-mono:  'Source Code Pro', 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -202,30 +208,22 @@ html, body {
 .aurora-2 { background: radial-gradient(circle at 70% 60%, #618764, transparent 60%); animation: aurora-drift-2 22s ease-in-out infinite alternate; }
 .aurora-3 { background: radial-gradient(circle at 50% 80%, #9CB080, transparent 55%); animation: aurora-drift-3 26s ease-in-out infinite alternate; opacity: 0.3; }
 
-/* Light hero: soft pastel base + gentle blurred colour blobs that drift slowly
-   (calm, not pointer-reactive). Gives the light theme depth so it isn't washed
-   out. */
+/* Light hero: a near-white page with ONE soft blob drifting behind the
+   headline. The previous version layered four saturated radials plus two
+   coloured blobs, which fought the text for attention; the page should read as
+   paper, with the type doing the work. */
 .aurora-light {
-  background:
-    radial-gradient(ellipse 50% 46% at 18% 22%, #a5b4fc 0%, transparent 56%),
-    radial-gradient(ellipse 46% 42% at 86% 14%, #f9a8d4 0%, transparent 56%),
-    radial-gradient(ellipse 54% 50% at 74% 84%, #7dd3fc 0%, transparent 58%),
-    radial-gradient(ellipse 50% 46% at 20% 90%, #67e8f9 0%, transparent 56%),
-    linear-gradient(180deg, #f5f3ff 0%, #eef2ff 100%);
-}
-.aurora-light::before, .aurora-light::after {
-  content: ''; position: absolute; border-radius: 9999px; filter: blur(60px);
-  opacity: 0.85; will-change: transform; pointer-events: none;
+  background: linear-gradient(180deg, #ffffff 0%, rgb(var(--c-bg)) 100%);
 }
 .aurora-light::before {
-  width: 44vw; height: 44vw; left: 6%; top: 4%;
-  background: radial-gradient(circle, #818cf8, transparent 68%);
-  animation: blob-a 28s ease-in-out infinite alternate;
-}
-.aurora-light::after {
-  width: 48vw; height: 48vw; right: 2%; bottom: -10%;
-  background: radial-gradient(circle, #f472b6, transparent 68%);
-  animation: blob-b 34s ease-in-out infinite alternate;
+  content: ''; position: absolute; border-radius: 9999px;
+  width: 62vw; height: 62vw; left: 50%; top: -14%; margin-left: -31vw;
+  filter: blur(90px); opacity: 0.5; pointer-events: none; will-change: transform;
+  background: radial-gradient(circle,
+    rgba(148, 163, 184, 0.55) 0%,
+    rgba(203, 213, 225, 0.30) 45%,
+    transparent 70%);
+  animation: blob-a 34s ease-in-out infinite alternate;
 }
 .aurora-grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
@@ -268,49 +266,26 @@ html, body {
   /* static grain — the animated translate caused edge flicker */
 }
 
-/* ── Liquid-glass headings (Apple-style frosted, specular sweep) ─────────── */
+/* ── Display headings ────────────────────────────────────────────────────
+   Solid near-black (near-white in dark), set large and tight. This replaced an
+   animated blue→pink→indigo gradient sweep: rainbow text on every section
+   heading read as decoration rather than hierarchy, and it competed with the
+   content it was labelling. */
 .t-liquid {
-  position: relative;
   font-family: var(--font-sans);
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: rgb(var(--c-ink));
+}
+
+/* Large display type wants tighter tracking than body copy; at hero sizes the
+   default spacing looks slack. */
+.t-hero {
+  font-family: var(--font-sans);
+  font-weight: 600;
   letter-spacing: -0.03em;
-  color: transparent;
-  background-image: linear-gradient(
-    105deg,
-    #2563eb 0%, #7c3aed 22%, #db2777 40%,
-    #ffffff 50%,
-    #db2777 60%, #7c3aed 78%, #2563eb 100%
-  );
-  background-size: 250% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: liquid-sheen 6s linear infinite;
-  filter: drop-shadow(0 2px 12px rgb(124 58 237 / 0.18));
-}
-/* Bright blue → indigo → pink sheen (both themes), eye-catching not muddy. */
-.t-liquid {
-  background-image: linear-gradient(
-    105deg,
-    #2563eb 0%, #6366f1 22%, #db2777 42%,
-    #4f46e5 50%,
-    #db2777 58%, #6366f1 78%, #2563eb 100%
-  );
-}
-.dark .t-liquid {
-  background-image: linear-gradient(
-    105deg,
-    #60a5fa 0%, #a5b4fc 22%, #f472b6 42%,
-    #c7d2fe 50%,
-    #f472b6 58%, #a5b4fc 78%, #60a5fa 100%
-  );
-}
-@keyframes liquid-sheen {
-  0%   { background-position: 0% 0; }
-  100% { background-position: 250% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .t-liquid { animation: none; }
+  line-height: 1.05;
+  color: rgb(var(--c-ink));
 }
 
 /* ── Yjs remote cursors ─────────────────────────────────────────────────── */
