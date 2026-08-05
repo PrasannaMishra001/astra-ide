@@ -50,8 +50,8 @@ async def telemetry_main_loop() -> None:
     # elapses, which looks like a broken dashboard after each restart.
     try:
         if cluster_state._use_k8s():
-            cluster_state.refresh_from_kubernetes()
-        _refresh_carbon()
+            await asyncio.to_thread(cluster_state.refresh_from_kubernetes)
+        await asyncio.to_thread(_refresh_carbon)
     except Exception as e:
         logger.warning("Initial telemetry priming failed: %s", e)
 
@@ -69,7 +69,13 @@ async def telemetry_main_loop() -> None:
             if t - last_drift > TICK_TELEMETRY_S:
                 # On a real cluster (ASTRA_USE_K8S_METRICS=1) read live node metrics;
                 # otherwise drift the in-memory simulator.
-                if not (cluster_state._use_k8s() and cluster_state.refresh_from_kubernetes()):
+                #
+                # Off the event loop: these are blocking HTTP calls to every
+                # member cluster, and a stopped region black-holes them. Run
+                # inline, one unreachable cluster froze the whole app for the
+                # length of the read (45 s measured with Belgium powered off).
+                if not (cluster_state._use_k8s()
+                        and await asyncio.to_thread(cluster_state.refresh_from_kubernetes)):
                     cluster_state.tick_telemetry()
                 last_drift = t
 
@@ -78,7 +84,7 @@ async def telemetry_main_loop() -> None:
                 last_event = t
 
             if t - last_carbon > TICK_CARBON_REFRESH_S:
-                _refresh_carbon()
+                await asyncio.to_thread(_refresh_carbon)     # outbound HTTP per zone
                 last_carbon = t
 
             if t - last_prune > TICK_PRUNE_S:

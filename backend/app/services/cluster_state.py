@@ -206,6 +206,11 @@ def _parse_mem(q: str) -> float:
 
 CLUSTERS_FILE = os.getenv("ASTRA_CLUSTERS_FILE", "/etc/astra/clusters.json")
 
+# Per-call ceiling when reading a member cluster. Generous enough for a healthy
+# cross-continent hop (Mumbai→Virginia is ~350 ms RTT) and short enough that an
+# unreachable region is written off quickly instead of holding up the refresh.
+CLUSTER_READ_TIMEOUT_S = 6
+
 
 def load_cluster_registry() -> List[dict]:
     """Clusters this deployment federates over.
@@ -256,9 +261,15 @@ def _read_cluster(entry: dict) -> Optional[Cluster]:
             api = client.ApiClient()
         core = client.CoreV1Api(api)
         custom = client.CustomObjectsApi(api)
-        nodes = core.list_node().items
+        # Bound every call. A cluster whose VM is stopped does not refuse the
+        # connection, it black-holes it, so an untimed read blocks for the full
+        # TCP retry window (~45 s observed) — long enough that one dead region
+        # stalls the dashboard and the public topology endpoint.
+        nodes = core.list_node(_request_timeout=CLUSTER_READ_TIMEOUT_S).items
         usage = {i["metadata"]["name"]: i["usage"] for i in
-                 custom.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")["items"]}
+                 custom.list_cluster_custom_object(
+                     "metrics.k8s.io", "v1beta1", "nodes",
+                     _request_timeout=CLUSTER_READ_TIMEOUT_S)["items"]}
     except Exception as e:
         logger.warning("cluster %s unreachable: %s", cid, e)
         return None
@@ -315,7 +326,8 @@ def federation_status() -> dict:
         config.load_kube_config(config_file=kubeconfig, client_configuration=cfg)
         api = client.CustomObjectsApi(client.ApiClient(cfg))
         items = api.list_cluster_custom_object(
-            "cluster.karmada.io", "v1alpha1", "clusters").get("items", [])
+            "cluster.karmada.io", "v1alpha1", "clusters",
+            _request_timeout=CLUSTER_READ_TIMEOUT_S).get("items", [])
         ready = 0
         for c in items:
             conds = (c.get("status") or {}).get("conditions") or []
