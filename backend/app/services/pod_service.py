@@ -221,6 +221,36 @@ def _delete_via_karmada(ws_id: int) -> None:
             pass
 
 
+def _wait_ready(target: Target, pod: str, appear_s: int = 90, ready_s: int = 240) -> bool:
+    """Wait for a pod to exist on the member cluster, then to become Ready.
+
+    Two phases, because `kubectl wait` treats a missing object as an error and
+    returns instantly rather than waiting for it. When Karmada propagates the
+    pod there is a gap — the controller has to create a ResourceBinding and a
+    Work object first — during which the member cluster legitimately has no such
+    pod. Waiting for Ready straight away turned that normal delay into a failure
+    and sent every cross-region workspace down the local-container fallback.
+    """
+    import time
+    deadline = time.time() + appear_s
+    while time.time() < deadline:
+        r = _kubectl(target, ["get", "pod", pod, "-o", "jsonpath={.metadata.name}"], timeout=20)
+        if r.returncode == 0 and r.stdout.strip() == pod:
+            break
+        time.sleep(2)
+    else:
+        logger.warning("pod %s never appeared on %s within %ss", pod, target.id, appear_s)
+        return False
+
+    # Pulling a language image into a cold region can take a while.
+    w = _kubectl(target, ["wait", "--for=condition=Ready", f"pod/{pod}",
+                          f"--timeout={ready_s}s"], timeout=ready_s + 20)
+    if w.returncode != 0:
+        logger.warning("pod %s not Ready on %s: %s", pod, target.id, w.stderr.strip()[:300])
+        return False
+    return True
+
+
 def start(ws) -> bool:
     """Create the workspace pod on the cluster CP-PPO chose. True on success."""
     if not available():
@@ -248,12 +278,8 @@ def start(ws) -> bool:
         # Wait against the MEMBER cluster either way: that is where the pod
         # actually has to be running before a terminal can attach to it, and it
         # is the only check that proves propagation really happened.
-        # Pulling a language image into a cold region can take a while.
-        w = _kubectl(target, ["wait", "--for=condition=Ready", f"pod/{_name(ws.id)}",
-                              "--timeout=240s"], timeout=260)
-        if w.returncode != 0:
-            logger.warning("pod %s not Ready on %s (via %s): %s",
-                           _name(ws.id), target.id, via, w.stderr.strip()[:300])
+        if not _wait_ready(target, _name(ws.id)):
+            logger.warning("pod %s not Ready on %s (via %s)", _name(ws.id), target.id, via)
             return False
         logger.info("workspace %s running on cluster %s (%s) via %s",
                     ws.id, target.id, target.location, via)
