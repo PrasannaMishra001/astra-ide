@@ -120,8 +120,14 @@ def get_node(cluster_id: str, node_name: str) -> Optional[Node]:
     return c.nodes.get(node_name)
 
 
+# Last carbon reading per cluster id, kept even while a cluster is unreachable
+# so a recovering region does not report 0 until the next refresh.
+_LAST_CARBON: Dict[str, tuple[float, str]] = {}
+
+
 def set_carbon_intensity(cluster_id: str, value: float, source: str = "api") -> None:
     with _lock:
+        _LAST_CARBON[cluster_id] = (value, source)
         if cluster_id in _CLUSTERS:
             _CLUSTERS[cluster_id].carbon_gco2 = value
             _CLUSTERS[cluster_id].carbon_source = source
@@ -301,11 +307,19 @@ def _read_cluster(entry: dict) -> Optional[Cluster]:
 
     # Carry the carbon reading forward; the carbon service owns that number and
     # refreshes it per zone. Never invent one here.
+    #
+    # An unreachable cluster is dropped from _CLUSTERS entirely, so on recovery
+    # there is no `prev` to inherit from and the dashboard showed a flat 0 until
+    # the next carbon tick up to 10 minutes later. _LAST_CARBON outlives the
+    # outage so a returning region shows its real figure immediately.
     prev = _CLUSTERS.get(cid)
+    if prev:
+        carbon, source = prev.carbon_gco2, prev.carbon_source
+    else:
+        carbon, source = _LAST_CARBON.get(cid, (0.0, "unknown"))
     return Cluster(id=cid, location=entry.get("location", cid),
                    zone=entry.get("zone", "IN-NO"), nodes=new_nodes,
-                   carbon_gco2=prev.carbon_gco2 if prev else 0.0,
-                   carbon_source=prev.carbon_source if prev else "unknown")
+                   carbon_gco2=carbon, carbon_source=source)
 
 
 def federation_status() -> dict:
